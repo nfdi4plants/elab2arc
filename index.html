@@ -209,19 +209,24 @@
       </div>
 
       <div class="btn-group d-none g-0 d-md-block dropdown col-auto">
-        <button type="button" onclick="location.href=location.href.split('#')[0]+'#isacheck'" class="btn  btn-nav"
-          id="isacheckNavBtn">
-          Fetch eLabFTW &nbsp;
-        </button>
-        <button type="button" onclick="location.href=location.href.split('#')[0]+'#a2j'" class="btn btn-nav"
+        
+        <button type="button" onclick="location.href=location.href.split('#')[0]+'#elab'" class="btn  btn-nav"
+        id="submitNavBtn">
+        Fetch eLabFTW &nbsp;
+      </button>
+        
+        <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav"
           id="a2jNavBtn">
           Fetch ARCs&nbsp;
         </button>
         
+
+
         <button type="button" onclick="location.href=location.href.split('#')[0]+'#submit'" class="btn  btn-nav"
-          id="submitNavBtn">
+          id="isacheckNavBtn">
           Update ARC and Resubmit &nbsp;
         </button>
+
         <button type="button" class="btn border-0 rounded-0 g-0 btn-nav" data-bs-toggle="dropdown" aria-expanded="false"
           id="conversion_tools">
           Menu &nbsp;
@@ -246,48 +251,45 @@
   </div>
   <div class="container">
     <div name="tab" class=" col-12 justify-content-center nav-link text-center" id="introTab">
-      <a href="#a2j">
+      <a href="#elab">
         <h1>Fetch eLabFTW experiments </h1>
       </a>
-      <a href="#isacheck">
+      <a href="#arc">
         <h1>Fetch ARCs from DataHub </h1>
       </a>
       <a href="#submit">
-        <h1>Update ARC and push to DataHub</h1>
+        <h1>Update ARC and push to DataHub </h1>
       </a>
+     
     </div>
 
-    <div name="tab" class="row justify-content-center d-none" id="submissionTab">
-      <h1 class="center">DataHub Submission </h1>
+    <div name="tab" class="row justify-content-center d-none" id="elabTab">
+      <h1 class="center">eLabFTW to ARC </h1>
 
 
       <form id="authForm" class="row justify-content-center">
         <div class="mb-3 col-2">
-          <label for="username" class="form-label">ENA Username</label>
+          <label for="username" class="form-label">Experiment ID</label>
           <input type="text" class="form-control" id="username" aria-describedby="usernameHelp">
           <div id="usernameHelp" class="form-text d-none">The user name and password are used for token generation.
           </div>
         </div>
         <div class="mb-3 col-2">
-          <label for="password" class="form-label">Password</label>
-          <input type="password" class="form-control" id="password">
+          <label for="elabToken" class="form-label">eLabFTW Access Token</label>
+          <input type="password" class="form-control" id="elabToken">
         </div>
-        <div class="mb-3 form-check d-none">
-          <input type="checkbox" class="form-check-input " id="passwordCheck">
-          <label class="form-check-label" for="passwordCheck">Check me out</label>
+
+        <div class="mb-3 col-2">
+          <label for="datahubToken" class="form-label">DataHub Access Token</label>
+          <input type="password" class="form-control" id="datahubToken">
         </div>
-        <div class="mb-3 col-2 d-none">
-          <label id="tokenHelp" class="form-text">Only collect token if you need.</label>
-          <br>
-          <button type="submit" id="formSubmit" class="btn btn-primary" aria-describedby="tokenHelp">Collect
-            Token</button>
-        </div>
+        
       </form>
       <div class="col-6 m-auto">
       <div class="accordion" id="accordionExample">
         <div class="accordion-item">
           <h2 class="accordion-header" id="headingOne">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#exampleTest" aria-expanded="true" aria-controls="exampleTest">
+            <button class="accordion-button d-none" type="button" data-bs-toggle="collapse" data-bs-target="#exampleTest" aria-expanded="true" aria-controls="exampleTest">
               Use prepared ISA-JSON example to test the basic functions
             </button>
           </h2>
@@ -329,7 +331,7 @@
       
     </div>
 
-    <div name="tab" class=" col-12 d-none" id="ARC2JSONTab">
+    <div name="tab" class=" col-12 d-none" id="arcTab">
       <div class="" style="height: 50vh; overflow-y: scroll">
 
         <table class="table table-striped table-hover" style="table-layout:auto ; width:100%; ">
@@ -423,7 +425,7 @@
 
 
     </div>
-    <div name="tab" class=" col-8 d-none align-items-center m-auto" id="isacheckTab">
+    <div name="tab" class=" col-8 d-none align-items-center m-auto" id="updateTab">
 
       <div class=" area uploadarea my-3" id="importArea" ondragenter="this.className='area uploadarea dragging'"
         ondrop=";DragAndDrop(event)" style=" width:100%">
@@ -479,14 +481,14 @@
   <script type="text/javascript">
     var fs = FS.fs;
         // Define the API endpoint
-    const elabftwServerUrl = 'https://demo.elabftw.net/api/v2/';
+    const elabftwServerUrl = 'https://cors-anywhere.herokuapp.com/https://demo.elabftw.net/api/v2/';
 
     // Define the API key
     const apiKey = '2-b93f0e18b0a4a609dd3d96aa2d1616fc9e023c5640a0766d12a22d4816678e605d5ba388d434014f3e622';
     const headers = {'accept': 'application/json', 'Authorization': apiKey, 'Origin': 'null'};
     // Make the fetch request
     fetch(`${elabftwServerUrl}experiments`, { headers, method: 'GET'}).then(res => res.json()).then(json => {
-      document.getElementById('output').innerText = JSON.stringify(json); });
+      document.getElementById('alertPlace').innerText = JSON.stringify(json); });
     
     addEventListener("hashchange", (event) => {
 
@@ -551,31 +553,40 @@
       const urlRoute = window.location.href.split("#");
       const para = urlRoute.slice(-1)[0];
       switch (para) {
+        case "elab":
+          document.querySelectorAll('div[name="tab"]').forEach((e) => {
+            if (e.id == "elabTab") { e.classList.remove("d-none") }
+            else { e.classList.add("d-none") }
+          }
+
+          )
+          break;
+        case "arc":
+          document.querySelectorAll('div[name="tab"]').forEach((e) => {
+            if (e.id == "arcTab") { e.classList.remove("d-none") }
+            else { e.classList.add("d-none") }
+          }
+
+          )
+          break;
         case "submit":
           document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "submissionTab") { e.classList.remove("d-none") }
+            if (e.id == "updateTab") { e.classList.remove("d-none") }
             else { e.classList.add("d-none") }
           }
 
           )
           break;
-        case "a2j":
+          case "":
           document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "ARC2JSONTab") { e.classList.remove("d-none") }
-            else { e.classList.add("d-none") }
-          }
-
-          )
-          break;
-        case "isacheck":
-          document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "isacheckTab") { e.classList.remove("d-none") }
+            if (e.id == "elabTab") { e.classList.remove("d-none") }
             else { e.classList.add("d-none") }
           }
 
           )
           break;
         default:
+          
 
       }
 
