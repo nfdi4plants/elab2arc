@@ -460,8 +460,9 @@
       // Make the fetch request
       
       try {
-       var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET'});
-       return response.json();
+       const response = await fetch(elabftwServerUrl, { headers, method: 'GET'});
+       const json = await response.json();
+       return json;
 
       } catch (error) {
         alert("Access of eLabFTW is not successful, error message is "+ error)
@@ -499,32 +500,66 @@
       var res = await fetchElabJSON(elabtoken, "experiments/"+expid);
       let extra_fields;
       let datahubURL;
+      let studyId;
       try {
-        extra_fields = JSON.parse(res.metadata);
-        datahubURL = extra_fields.extra_fields.datahub_url;
+        const metadata = JSON.parse(res.metadata);
+        extra_fields = metadata.extra_fields
+        datahubURL = extra_fields.datahub_url.value;
+        studyId = extra_fields.study_id.value;
       } catch (error) {
         alert("please check the extra_fields in your elabFTW experiment" + error);
 
-      }
+      };
+      let dir ="arc";
+      console.log("datahubURL: "+datahubURL);
+      const [begin, end] = datahubURL.split("//");
+      url = begin + "//oath2:" + datahubtoken + "@" + end;
+          console.log(url);
+      const cloneResponse = await git.clone({
+          fs,
+          http,
+          dir,
+          corsProxy: 'https://cors.isomorphic-git.org',
+          url: url,
+          ref: 'main',
+          singleBranch: true,
+          depth: 1,
+          force: true,
+          onProgress: event => {
+            updateLabel(event.phase)
+            if (event.total) {
+              updateProgressBar(event.loaded / event.total)
+            } else {
+              updateIndeterminateProgressBar(event.loaded)
+            }
+          }
+        });
+      await fs.promises.writeFile('arc/studies/'+studyId+'/protocols/protocol.html' , res.body);
+      await git.add({ fs, dir: 'arc', filepath: 'studies/'+studyId+'/protocols/protocol.html' })
       const uploads = res.uploads;
+
       for (const [index, ele] of Object.entries(uploads)){
 
-        await fetchElabFiles( elabtoken, "experiments/"+ expid+ "/uploads/"+ ele.id +"?format=´binary´");
-
+        const blobs = await fetchElabFiles( elabtoken, "experiments/"+ expid+ "/uploads/"+ ele.id +"?format=´binary´");
+        let data = new Uint8Array(await blobs.arrayBuffer());
+        // const extension = blobs.type.split("/").slice(-1)[0];
+        const path = "arc/assays/"+res.uploads[index].real_name;
+        await fs.promises.writeFile(path , data);
+        await git.add({ fs, dir: '/', filepath: path })
         }
 
 
         
-        await git.add({ fs, dir: '/'+currentGit, filepath: 'studies/Study_1_growth/protocols/protocol.html' })
+        
         console.log('done')
         let sha = await git.commit({
           fs,
-          dir: '/'+currentGit,
+          dir: '/arc',
           author: {
             name: 'elab2arc',
             email: 'x.zhou@fz-juelich.de',
           },
-          message: 'Testing automatic update tool elab2arc, adding protocol.html'
+          message: 'Testing automatic update tool elab2arc, addall'
         })
 
 
@@ -537,7 +572,8 @@
           onAuth: () => ({ username: datahubtoken }),
         })
         console.log(pushResult)  
-      //const objectURL = URL.createObjectURL(fi);
+      
+      
     }
 
     addEventListener("hashchange", (event) => {
@@ -565,6 +601,7 @@
         window.repoList = post;
         var tableHTML = '';
         let newIndex = 0;
+        
         post.forEach((element, index) => {
           if (element.description !== null) {
 
@@ -597,7 +634,7 @@
         alert(e);
       }});
 
-
+      
 
       function softRoute() {
       const urlRoute = window.location.href.split("#");
