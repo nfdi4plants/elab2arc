@@ -264,14 +264,14 @@
     </div>
 
     <div name="tab" class="row justify-content-center d-none" id="elabTab">
-      <h1 class="center">eLabFTW to ARC </h1>
+      <h1 class="center"> Collect eLabFTW Experiment </h1>
 
 
       <form id="authForm" class="row justify-content-center">
         <div class="mb-3 col-2">
-          <label for="username" class="form-label">Experiment ID</label>
-          <input type="text" class="form-control" id="username" aria-describedby="usernameHelp">
-          <div id="usernameHelp" class="form-text d-none">The user name and password are used for token generation.
+          <label for="elabexperimentid" class="form-label">Experiment ID</label>
+          <input type="text" class="form-control" id="elabexperimentid" aria-describedby="elabexpHelp">
+          <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
           </div>
         </div>
         <div class="mb-3 col-2">
@@ -283,50 +283,17 @@
           <label for="datahubToken" class="form-label">DataHub Access Token</label>
           <input type="password" class="form-control" id="datahubToken">
         </div>
-        
+        <div class="mb-3 col-3">
+          <label for="elabsubmit" class="form-label">One click submit or progressive</label>
+          <button class="btn btn-primary" class="form-control" id="elabsubmit" style="display:inline"  data-bs-target="#cModal"
+          id="cModalButton"> Start Submission </button>
+        </div>
       </form>
       <div class="col-6 m-auto">
-      <div class="accordion" id="accordionExample">
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="headingOne">
-            <button class="accordion-button d-none" type="button" data-bs-toggle="collapse" data-bs-target="#exampleTest" aria-expanded="true" aria-controls="exampleTest">
-              Use prepared ISA-JSON example to test the basic functions
-            </button>
-          </h2>
-          <div id="exampleTest" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
-            <div class="accordion-body">
-              <div class="center">
-                DataPLANT test JSON -> BioSamples, click <a href="#" onclick="checkall(checklist_biosamples, window.dataplant_json).then(json => submitAll('biosamples', json)) ">here</a>
-                <br>
-                DataHub test JSON -> BioSamples, click <a href="#" onclick="submitAll('biosamples', window.datahub_json)">here</a> <br>
-                DataPLANT test JSON -> ENA, click <a href="#"
-                  onclick="submitAll('ena', dataplant_biosamples_returned_json)">here</a> <br>
-                DataHub test JSON -> ENA, click <a href="#" onclick="enatest(datahub_biosamples_returned_json)">here</a>
-                <br>
-                <input class="btn btn-primary d-inline d-none" type="file" id="input_json" name="json" multiple />
-                <br>
-
-                <div class="d-flex justify-content-center d-none" id="waiting">
-                  <div class="spinner-grow btn-primary" style="width: 3rem; height: 3rem;" role="status">
-                    <br>
-                    <span class="sr-only d-none">Loading...</span>
-                  </div>
-                </div>
-                <div class="m-auto" id="xml_output">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
       
       </div>
       <div class="row justify-content-center m-3">
-        <div class="col-2">
-        <button class="btn btn-primary" style="display:inline" data-bs-toggle="modal" data-bs-target="#cModal"
-        id="cModalButton"> Start Submissions </button>
-      </div>
+        <img id="bbb"></img>
       </div>
       
     </div>
@@ -480,16 +447,99 @@
   </div>
   <script type="text/javascript">
     var fs = FS.fs;
-        // Define the API endpoint
-    const elabftwServerUrl = 'https://cors-anywhere.herokuapp.com/https://demo.elabftw.net/api/v2/';
+    var elabJSON;
 
-    // Define the API key
-    const apiKey = '2-b93f0e18b0a4a609dd3d96aa2d1616fc9e023c5640a0766d12a22d4816678e605d5ba388d434014f3e622';
-    const headers = {'accept': 'application/json', 'Authorization': apiKey, 'Origin': 'null'};
-    // Make the fetch request
-    fetch(`${elabftwServerUrl}experiments`, { headers, method: 'GET'}).then(res => res.json()).then(json => {
-      document.getElementById('alertPlace').innerText = JSON.stringify(json); });
+    async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://cors-anywhere.herokuapp.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
+
+      // Define the API endpoint
+      const elabftwServerUrl = corsproxy + elabURL + query;
+
+      // Define the API key
+      
+      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'null'};
+      // Make the fetch request
+      
+      try {
+       var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET'});
+       return response.json();
+
+      } catch (error) {
+        alert("Access of eLabFTW is not successful, error message is "+ error)
+      }
+
+    }
+    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://cors-anywhere.herokuapp.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
+
+      // Define the API endpoint
+      const elabftwServerUrl = corsproxy + elabURL + query;
+
+      // Define the API key
+
+      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'null'};
+      // Make the fetch request
+
+      try {
+      var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET'});
+      return response.blob();
+
+      } catch (error) {
+        alert("Access of eLabFTW is not successful, error message is "+ error)
+      }
+
+      }
     
+
+  
+    //fs.writeFileSync(path+name+"."+extension, content);
+
+    async function updateAll(){
+      const expid = document.getElementById("elabexperimentid").value;
+      const elabtoken = document.getElementById("elabToken").value;
+      const datahubtoken = document.getElementById("datahubToken").value;
+      var res = await fetchElabJSON(elabtoken, "experiments/"+expid);
+      let extra_fields;
+      let datahubURL;
+      try {
+        extra_fields = JSON.parse(res.metadata);
+        datahubURL = extra_fields.extra_fields.datahub_url;
+      } catch (error) {
+        alert("please check the extra_fields in your elabFTW experiment" + error);
+
+      }
+      const uploads = res.uploads;
+      for (const [index, ele] of Object.entries(uploads)){
+
+        await fetchElabFiles( elabtoken, "experiments/"+ expid+ "/uploads/"+ ele.id +"?format=´binary´");
+
+        }
+
+
+        
+        await git.add({ fs, dir: '/'+currentGit, filepath: 'studies/Study_1_growth/protocols/protocol.html' })
+        console.log('done')
+        let sha = await git.commit({
+          fs,
+          dir: '/'+currentGit,
+          author: {
+            name: 'elab2arc',
+            email: 'x.zhou@fz-juelich.de',
+          },
+          message: 'Testing automatic update tool elab2arc, adding protocol.html'
+        })
+
+
+        let pushResult = await git.push({
+          fs,
+          http,
+          dir: '/'+currentGit,
+          remote: 'origin',
+          ref: 'main',
+          onAuth: () => ({ username: datahubtoken }),
+        })
+        console.log(pushResult)  
+      //const objectURL = URL.createObjectURL(fi);
+    }
+
     addEventListener("hashchange", (event) => {
 
     if (true) {
@@ -679,10 +729,7 @@
     }
   </script>
 
-  <!-- Button trigger modal -->
-  <button type="button" class="d-none btn btn-primary">
-    Launch convert modal
-  </button>
+
   <!--Modal for submission-->
   <div class="modal fade" id="cModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="cModalLabel"
     aria-hidden="true" style="z-index:1001">
@@ -700,7 +747,7 @@
                     <div class="form-check">
                       <input class="form-check-input" type="checkbox" value="1" id="biosamples" name="repo" checked>
                       <label class="form-check-label" for="biosamples">
-                        BioSamples
+                        Fetch eLabFTW 
 
                       </label>
 
@@ -716,11 +763,9 @@
                     <div class="form-check">
                       <input class="form-check-input" type="checkbox" value="" id="ena" name="repo">
                       <label class="form-check-label" for="ENA">
-                        ENA
+                        Clone ARC
                       </label>
                     </div>
-
-
                     <div class="spinner-border text-primary d-none" id="ENAloading" role="status">
                       <span class="visually-hidden">Loading...</span>
                     </div>
@@ -730,7 +775,7 @@
                     <div class="form-check">
                       <input class="form-check-input" type="checkbox" value="" id="metabolights" name="repo">
                       <label class="form-check-label" for="metabolights">
-                        Metabolites
+                        Update ARC and Resubmit
                       </label>
                     </div>
 
@@ -758,77 +803,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Button trigger modal -->
-  <button type="button" class="btn btn-primary d-none" data-bs-toggle="modal" data-bs-target="#status_modal"
-    id="status_modal_button">
-    Show Status
-  </button>
-
-  <!-- Modal -->
-  <div class="modal modal-xl fade" id="status_modal" tabindex="-1" data-bs-backdrop="static"
-    aria-labelledby="status_modal_label" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="status_modal_label">Status Table</h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <span id="init_word"> </span>
-          <br>
-          <span></span> Submission Status<br>
-
-          <table id="infoTable" class="table table-bordered table-hover" style="table-layout:auto; width: 100%;">
-            <thead>
-              <tr>
-                <th scope="col">Repositories</th>
-                <th scope="col">Submission Status</th>
-                <th scope="col">Returned</th>
-                <th scope="col">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">Token</th>
-                <td  id="tokenStatus">not asked</td>
-                <td>
-                  <div class="scrollTable" id="tokenText" ></div>
-                </td>
-                <td><button class="btn btn-primary"  disabled>Copy Token</button><button class="btn btn-primary"disabled>Download Token</button></td>
-              </tr>
-              <tr>
-                <th scope="row">BioSamples</th>
-                <td id="biosamplesStatus">not asked</td>
-                <td  ><div class="scrollTable" id="biosamplesText"> </div> </td>
-                <td><button class="btn btn-primary" id="copyreturnedjson" onclick="copyById('biosamplesText')" >Copy Returned JSON</button>
-                  <button class="btn btn-primary" id="downloadreturnedjson" onclick="dlText(document.getElementById('biosamplesText').innerText, 'biosamples_returned_'+window.current_file+'.json' )" >Download Returned JSON</button></td>
-              </tr>
-              <tr>
-                <th scope="row">ENA</th>
-                <td id="enaStatus">not asked</td>
-                <td>
-                  <div id="enaText"></div>
-                </td>
-                <td>...</td>
-              </tr>
-
-            </tbody>
-          </table>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button d-none" class="btn btn-secondary" data-bs-dismiss="modal">download files</button>
-
-        </div>
-      </div>
-    </div>
-    <!-- Modal -->
-
-  </div>
-
-  <!-- Button trigger modal -->
-
 
 </body>
 <script>
