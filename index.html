@@ -267,25 +267,25 @@
       <h1 class="center"> Collect eLabFTW Experiment </h1>
 
 
-      <form id="authForm" class="row justify-content-center">
+      <form id="authForm" autocomplete="on" class="row justify-content-center">
         <div class="mb-3 col-2">
           <label for="elabexperimentid" class="form-label">Experiment ID</label>
-          <input type="text" class="form-control" id="elabexperimentid" aria-describedby="elabexpHelp">
-          <div id="elabexpHelp" autocomplete="on" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
+          <input type="text" class="form-control" id="elabexperimentid" aria-describedby="elabexpHelp" required>
+          <div id="elabexpHelp" autocomplete="address-line1" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
           </div>
         </div>
         <div class="mb-3 col-2">
           <label for="elabToken" class="form-label">eLabFTW Access Token</label>
-          <input type="text" autocomplete="on" class="form-control" id="elabToken">
+          <input type="text" autocomplete="address-line2" class="form-control" id="elabToken" required>
         </div>
 
         <div class="mb-3 col-2">
           <label for="datahubToken" class="form-label">DataHub Access Token</label>
-          <input type="password" autocomplete="on" class="form-control" id="datahubToken">
+          <input type="password" autocomplete="address-line3" class="form-control" id="datahubToken" required>
         </div>
         <div class="mb-3 col-3">
           <label for="elabsubmit" class="form-label">One click submit or progressive</label>
-          <button class="btn btn-primary" type="submit" onclick="updateAll()" id="elabsubmit" > Submit </button>
+          <button class="btn btn-primary"  id="elabsubmit" type="submit" onclick="updateAll()" > Submit </button>
           
         </div>
         
@@ -515,8 +515,8 @@
           message: 'Testing automatic update tool elab2arc, add all'
         })
 
-
-        let pushResult = await git.push({
+        try {
+          let pushResult = await git.push({
           fs,
           http,
           dir: '/arc',
@@ -525,6 +525,11 @@
           onAuth: () => ({ username: datahubtoken }),
         });
         console.log(pushResult)  ;
+        alert( datahubURL +"ARC has been updated")
+        } catch (error) {
+          
+        }
+        
       
       
     }
