@@ -271,23 +271,24 @@
         <div class="mb-3 col-2">
           <label for="elabexperimentid" class="form-label">Experiment ID</label>
           <input type="text" class="form-control" id="elabexperimentid" aria-describedby="elabexpHelp">
-          <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
+          <div id="elabexpHelp" autocomplete="on" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
           </div>
         </div>
         <div class="mb-3 col-2">
           <label for="elabToken" class="form-label">eLabFTW Access Token</label>
-          <input type="password" class="form-control" id="elabToken">
+          <input type="text" autocomplete="on" class="form-control" id="elabToken">
         </div>
 
         <div class="mb-3 col-2">
           <label for="datahubToken" class="form-label">DataHub Access Token</label>
-          <input type="password" class="form-control" id="datahubToken">
+          <input type="password" autocomplete="on" class="form-control" id="datahubToken">
         </div>
         <div class="mb-3 col-3">
           <label for="elabsubmit" class="form-label">One click submit or progressive</label>
-          <button class="btn btn-primary" class="form-control" id="elabsubmit" style="display:inline"  data-bs-target="#cModal"
-          id="cModalButton"> Start Submission </button>
+          <button class="btn btn-primary" type="submit" onclick="updateAll()" id="elabsubmit" > Submit </button>
+          
         </div>
+        
       </form>
       <div class="col-6 m-auto">
       
@@ -331,59 +332,7 @@
         </div>
         <div class="col-7">
 
-          <form class="">
-            <div class="row g-3 align-items-center">
-              <div class="col-3 text-end">
-                <label for="repoURL" class="col-form-label">ARC gitlab URL</label>
-              </div>
-              <div class="col-5">
-                <input type="text" id="repoURL"
-                  value='https://git.nfdi4plants.org/ai.krueger/2024_GrowthCoupledHemeBiosensor.git'
-                  class="form-control" aria-describedby="repoURLLabel" required>
-              </div>
-              <div class="col-4">
-                <span id="repoURLLabel" class="form-text">
-                  ARC Repository URL can be copied from the "Clone with HTTPS" section under code. It should start with
-                  "https://" and end with ".git"
-                </span>
-              </div>
-            </div>
-
-
-            <div class="row g-3 align-items-center d-none">
-              <div class="col-3 text-end">
-                <label for="gitusername" class="col-form-label">Username</label>
-              </div>
-              <div class="col-5">
-                <input type="Gitusername" id="gitusername" class="form-control" aria-describedby="UsernameHelpInline">
-              </div>
-              <div class="col-4">
-                <span id="UsernameHelpInline" class="form-text">
-                  The username or of DataHUB
-                </span>
-              </div>
-            </div>
-
-            <div class="row g-3 align-items-center">
-              <div class="col-3 text-end">
-                <label for="gitpassword" class="col-form-label">Access Token</label>
-              </div>
-              <div class="col-5">
-                <input type="Gitpassword" placeholder="can be left empty" id="gitpassword" class="form-control"
-                  aria-describedby="passwordHelpInline">
-              </div>
-              <div class="col-4">
-                <span id="passwordHelpInline" class="form-text">
-                  The personal access token can be left empty if the repository is publicly accessible.
-                </span>
-              </div>
-            </div>
-            <div class="col-3 m-auto align-items-center">
-              <br>
-              <button class="btn btn-primary" id="submitURL" onclick="event.preventDefault(); cloneARC()">Export
-                ARC-JSON</button>
-            </div>
-          </form>
+         
         </div>
       </div>
       <div id="ARCInfo" class="row m-auto">
@@ -493,6 +442,32 @@
   
     //fs.writeFileSync(path+name+"."+extension, content);
 
+
+    async function datahubClone(datahubURL, dir, datahubtoken){
+      const [begin, end] = datahubURL.split("//");
+      url = begin + "//oath2:" + datahubtoken + "@" + end;
+          console.log(url);
+      const cloneResponse = await git.clone({
+          fs,
+          http,
+          dir,
+          corsProxy: 'https://cors.isomorphic-git.org',
+          url: url,
+          ref: 'main',
+          singleBranch: true,
+          depth: 10,
+          force: true,
+          onProgress: event => {
+            updateLabel(event.phase)
+            if (event.total) {
+              updateProgressBar(event.loaded / event.total)
+            } else {
+              updateIndeterminateProgressBar(event.loaded)
+            }
+          }
+        });
+
+    }
     async function updateAll(){
       const expid = document.getElementById("elabexperimentid").value;
       const elabtoken = document.getElementById("elabToken").value;
@@ -510,47 +485,25 @@
         alert("please check the extra_fields in your elabFTW experiment" + error);
 
       };
-      let dir ="arc";
+      
       console.log("datahubURL: "+datahubURL);
-      const [begin, end] = datahubURL.split("//");
-      url = begin + "//oath2:" + datahubtoken + "@" + end;
-          console.log(url);
-      const cloneResponse = await git.clone({
-          fs,
-          http,
-          dir,
-          corsProxy: 'https://cors.isomorphic-git.org',
-          url: url,
-          ref: 'main',
-          singleBranch: true,
-          depth: 1,
-          force: true,
-          onProgress: event => {
-            updateLabel(event.phase)
-            if (event.total) {
-              updateProgressBar(event.loaded / event.total)
-            } else {
-              updateIndeterminateProgressBar(event.loaded)
-            }
-          }
-        });
+      let dir ="arc";
+      await datahubClone(datahubURL, dir, datahubtoken);
+
       await fs.promises.writeFile('arc/studies/'+studyId+'/protocols/protocol.html' , res.body);
       await git.add({ fs, dir: 'arc', filepath: 'studies/'+studyId+'/protocols/protocol.html' })
       const uploads = res.uploads;
-
+      let fileList = [];
       for (const [index, ele] of Object.entries(uploads)){
 
         const blobs = await fetchElabFiles( elabtoken, "experiments/"+ expid+ "/uploads/"+ ele.id +"?format=´binary´");
         let data = new Uint8Array(await blobs.arrayBuffer());
         // const extension = blobs.type.split("/").slice(-1)[0];
-        const path = "arc/assays/"+res.uploads[index].real_name;
+        const path = "arc/assays/"+index+"_"+res.uploads[index].real_name;
         await fs.promises.writeFile(path , data);
         await git.add({ fs, dir: '/', filepath: path })
         }
 
-
-        
-        
         console.log('done')
         let sha = await git.commit({
           fs,
@@ -559,19 +512,19 @@
             name: 'elab2arc',
             email: 'x.zhou@fz-juelich.de',
           },
-          message: 'Testing automatic update tool elab2arc, addall'
+          message: 'Testing automatic update tool elab2arc, add all'
         })
 
 
         let pushResult = await git.push({
           fs,
           http,
-          dir: '/'+currentGit,
+          dir: '/arc',
           remote: 'origin',
           ref: 'main',
           onAuth: () => ({ username: datahubtoken }),
-        })
-        console.log(pushResult)  
+        });
+        console.log(pushResult)  ;
       
       
     }
