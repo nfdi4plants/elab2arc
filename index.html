@@ -267,7 +267,7 @@
       <h1 class="center"> Collect eLabFTW Experiment </h1>
 
 
-      <form id="authForm" autocomplete="on" onSubmit="Event.preventDefault();Event.stopPropagation();updateAll() " class="row justify-content-center">
+      <form id="authForm" autocomplete="on" onSubmit="Event.preventDefault();Event.stopPropagation();" class="row justify-content-center">
         <div class="mb-3 col-2">
           <label for="elabexperimentid" class="form-label">Experiment ID</label>
           <input type="text"  name="username" autocomplete="username"  id="elabexperimentid" aria-describedby="elabexpHelp" required>
@@ -285,7 +285,7 @@
         </div>
         <div class="mb-3 col-3">
           <label for="elabsubmit" class="form-label">One click submit or progressive</label>
-          <button class="btn btn-primary"  id="elabsubmit" type="submit" > Submit </button>
+          <button class="btn btn-primary"  id="elabsubmit" type="submit" onclick="Event.preventDefault();Event.stopPropagation();updateAll()" > Submit </button>
           
         </div>
         
