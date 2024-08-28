@@ -215,14 +215,14 @@
         Fetch eLabFTW &nbsp;
       </button>
         
-        <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav"
+        <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav d-none"
           id="a2jNavBtn">
           Fetch ARCs&nbsp;
         </button>
         
 
 
-        <button type="button" onclick="location.href=location.href.split('#')[0]+'#submit'" class="btn  btn-nav"
+        <button type="button" onclick="location.href=location.href.split('#')[0]+'#submit'" class="btn  btn-nav d-none"
           id="isacheckNavBtn">
           Update ARC and Resubmit &nbsp;
         </button>
@@ -240,10 +240,10 @@
             <button id="converterlong" class="dropdown-item d-none" onclick=''>Converter</button>
           </li>
           <li>
-            <a id="ghlinklong" class="dropdown-item" href="elab2ARC">GitHub</a>
+            <a id="ghlinklong" class="dropdown-item" href="https://github.com/xiaoranzhou/elab2arc/tree/main">GitHub</a>
           </li>
           <li>
-            <a id="aboutlong" class="dropdown-item" href=''>About</a>
+            <a id="aboutlong" class="dropdown-item d-none" href=''>About</a>
           </li>
         </ul>
       </div>
@@ -267,31 +267,67 @@
       <h1 class="center"> Collect eLabFTW Experiment </h1>
 
 
-      <form id="authForm" autocomplete="on" class="row justify-content-center">
+      <form id="authForm"  action="/#elab" class="row justify-content-center">
         <div class="mb-3 col-2">
           <label for="elabexperimentid" class="form-label">Experiment ID</label>
-          <input type="text"  name="username" autocomplete="username"  id="elabexperimentid" aria-describedby="elabexpHelp" required>
+          <input type="text"  name="elabid" class="form-control" autocomplete="username"  id="elabexperimentid" aria-describedby="elabexpHelp" required>
           <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
           </div>
         </div>
         <div class="mb-3 col-2">
           <label for="elabToken" class="form-label">eLabFTW Access Token</label>
-          <input type="text" name="password" autocomplete="email"  id="elabToken" required>
+          <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken" required>
         </div>
 
         <div class="mb-3 col-2">
           <label for="datahubToken" class="form-label">DataHub Access Token</label>
-          <input type="text" name="token" autocomplete="address"  id="datahubToken" required>
+          <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" required>
         </div>
         <div class="mb-3 col-3">
           <label for="elabsubmit" class="form-label">One click submit or progressive</label>
-          <button class="btn btn-primary"  id="elabsubmit" onclick="event.preventDefault(); updateAll()" > Submit </button>
+          <button class="btn btn-primary"  id="elabsubmit" type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="exampleTest" > Submit </button>
           
         </div>
         
       </form>
-      <div id="toolstatus"  class="col-6 m-auto">
-      
+      <div id="toolstatus"  class="col-10 m-auto">
+        <div class="accordion" id="accordionUI">
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="statusHeading">
+              <button class="accordion-button" id="pbarLabel" type="button" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus">
+                Submission Status
+
+              </button>
+              <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
+                  aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
+                  style="width: 1%">
+                </div>
+              </div>
+            </h2>
+            <div id="submitStatus" class="accordion-collapse collapse" aria-labelledby="statusHeading" data-bs-parent="#accordionUI">
+              <div class="accordion-body" id="detailedStatus">
+
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="elabHeading">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#elabInfo" aria-expanded="true" aria-controls="elabInfo">
+                Files Changed in ARC 
+
+              </button>
+             
+            </h2>
+            <div id="elabInfo" class="accordion-collapse collapse" aria-labelledby="elabHeading" data-bs-parent="#accordionUI">
+              <div class="accordion-body">
+                <div class="center" id="filesChanged">
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="row justify-content-center m-3">
         <img id="bbb"></img>
@@ -379,13 +415,8 @@
 
 
           </div>
-          <span id="pbarLabel"> </span>
-          <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
-              aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
-              style="width: 1%">
-            </div>
-          </div>
+         
+
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -397,7 +428,7 @@
   <script type="text/javascript">
     var fs = FS.fs;
     var elabJSON;
-
+    const detailedInfo = document.getElementById("detailedStatus");
     async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://cors-anywhere.herokuapp.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
 
       // Define the API endpoint
@@ -462,50 +493,16 @@
             if (event.total) {
               updateProgressBar(event.loaded / event.total)
             } else {
-              updateIndeterminateProgressBar(event.loaded)
+              //updateIndeterminateProgressBar(event.loaded)
             }
           }
         });
 
     }
-    async function updateAll(){
-      const expid = document.getElementById("elabexperimentid").value;
-      const elabtoken = document.getElementById("elabToken").value;
-      const datahubtoken = document.getElementById("datahubToken").value;
-      var res = await fetchElabJSON(elabtoken, "experiments/"+expid);
-      let extra_fields;
-      let datahubURL;
-      let studyId;
-      try {
-        const metadata = JSON.parse(res.metadata);
-        extra_fields = metadata.extra_fields
-        datahubURL = extra_fields.datahub_url.value;
-        studyId = extra_fields.study_id.value;
-      } catch (error) {
-        alert("please check the extra_fields in your elabFTW experiment" + error);
 
-      };
-      
-      console.log("datahubURL: "+datahubURL);
-      let dir ="arc";
-      await datahubClone(datahubURL, dir, datahubtoken);
+    async function commitPush(datahubtoken, datahubURL ){
 
-      await fs.promises.writeFile('arc/studies/'+studyId+'/protocols/protocol.html' , res.body);
-      await git.add({ fs, dir: 'arc', filepath: 'studies/'+studyId+'/protocols/protocol.html' })
-      const uploads = res.uploads;
-      let fileList = [];
-      for (const [index, ele] of Object.entries(uploads)){
-
-        const blobs = await fetchElabFiles( elabtoken, "experiments/"+ expid+ "/uploads/"+ ele.id +"?format=´binary´");
-        let data = new Uint8Array(await blobs.arrayBuffer());
-        // const extension = blobs.type.split("/").slice(-1)[0];
-        const path = "arc/assays/"+index+"_"+res.uploads[index].real_name;
-        await fs.promises.writeFile(path , data);
-        await git.add({ fs, dir: '/', filepath: path })
-        }
-
-        console.log('done')
-        let sha = await git.commit({
+      let sha = await git.commit({
           fs,
           dir: '/arc',
           author: {
@@ -513,8 +510,8 @@
             email: 'x.zhou@fz-juelich.de',
           },
           message: 'Testing automatic update tool elab2arc, add all'
-        })
-
+        });
+        console.log("commit finished");
         try {
           let pushResult = await git.push({
           fs,
@@ -527,8 +524,74 @@
         console.log(pushResult)  ;
         alert( datahubURL +"ARC has been updated")
         } catch (error) {
-          
+          alert( "push to git failed. The error is "+ error)
         }
+    }
+    async function createAssay(assayId){
+
+      try {
+        fs.statSync("arc/assays/"+assayId+"/protocols")
+      } catch (error) {
+        fs.mkdirSync("arc/assays/"+assayId+"/protocols",{ recursive: true } )
+      } 
+
+    }
+    function updateInfo(text, percent){
+      updateLabel(text);
+      updateProgressBar(percent);
+      const event = new Date();
+      detailedInfo.innerHTML += event.toLocaleString('en-GB', { timeZone: 'UTC' }) +"&nbsp; &nbsp; &nbsp;" + text +"\t " + "<br>";
+      
+    }
+    async function updateAll(elabid, elabtoken, datahubtoken, instance="https://demo.elabftw.net/api/v2/"){
+      elabid = elabid || document.getElementById("elabexperimentid").value;
+      elabtoken = elabtoken || document.getElementById("elabToken").value;
+      datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
+      const maxage = 60*60*24*31; //max age is one month
+      document.cookie = "elabid="+elabid+"; SameSite=lax; max-age=2678400; Secure";
+      document.cookie = "elabtoken="+elabtoken+"; SameSite=lax; max-age=2678400; Secure";
+      document.cookie = "datahubtoken="+datahubtoken+"; SameSite=lax; max-age=2678400; Secure";
+      updateInfo("Start to fetch metadata from eLabFTW, instance is "+instance, "10" );
+      var res = await fetchElabJSON(elabtoken, "experiments/"+elabid);
+      let extra_fields;
+      let datahubURL;
+      let assayId;
+      try {
+        const metadata = JSON.parse(res.metadata);
+        extra_fields = metadata.extra_fields
+        datahubURL = extra_fields.datahub_url.value;
+        assayId = res.title;
+      } catch (error) {
+        alert("please check the extra_fields in your elabFTW experiment" + error);
+
+      };
+      updateInfo("DataHUB URL fetched "+datahubURL, "20" );
+      
+      const dir ="arc";
+      await datahubClone(datahubURL, dir, datahubtoken);
+      updateInfo("ARC successfully loaded from "+datahubURL+". Start to add eLabFTW fils to assays " + assayId, "30" );
+      await createAssay(assayId);
+      await fs.promises.writeFile('arc/assays/'+assayId+'/protocols/protocol.html' , res.body);
+      await git.add({ fs, dir: dir, filepath: 'assays/'+assayId+'/protocols/protocol.html' });
+
+      updateInfo("finished adding protocal files in ARC", "50" );
+      const uploads = res.uploads;
+      let fileList = [];
+      for (const [index, ele] of Object.entries(uploads)){
+
+        const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´");
+        let data = new Uint8Array(await blobs.arrayBuffer());
+        // const extension = blobs.type.split("/").slice(-1)[0];
+        const path = "assays/"+assayId+"/"+index+"_"+ele.real_name;
+        await fs.promises.writeFile(dir+"/"+path , data);
+        await git.add({ fs, dir: dir, filepath: path })
+        updateInfo("Added file " + ele.real_name, 50+(index/uploads.length * 30) );
+        }
+
+        console.log('done')
+        await commitPush(datahubtoken, datahubURL );
+        updateInfo("Conversion from eLabFTW to ARC has been finished " , "100" );
+        
         
       
       
@@ -594,8 +657,37 @@
 
       
 
+      function extractCookie(name){
+        const cookie = document.cookie;
+        const values = cookie.split("; ");
+        let value = "";
+        values.forEach(e=> { if (e.split("=")[0]===name){ value = e.split("=")[1]} }  );
+        return value;
+
+      }
+
       function softRoute() {
       const urlRoute = window.location.href.split("#");
+      const url1 =  urlRoute[0].split("?")[1];
+      console.log(url1);
+      if (url1){
+        
+        const submitData = url1.split("&");
+        let submitJSON = {};
+      submitData.forEach(e=>
+        { submitJSON[e.split("=")[0]] = e.split("=")[1]}
+      ),
+        updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken );
+      } else {
+      }
+      try {
+          const cookie = document.cookie;
+          document.getElementById("elabexperimentid").value = extractCookie("elabid");
+          document.getElementById("elabToken").value = extractCookie("elabtoken");
+          document.getElementById("datahubToken").value = extractCookie("datahubtoken");
+        } catch (error) {
+          
+        }
       const para = urlRoute.slice(-1)[0];
       switch (para) {
         case "elab":
@@ -631,9 +723,10 @@
           )
           break;
         default:
-          
 
       }
+      
+      
 
     }
 
@@ -669,7 +762,7 @@
             if (event.total) {
               updateProgressBar(event.loaded / event.total)
             } else {
-              updateIndeterminateProgressBar(event.loaded)
+              //updateIndeterminateProgressBar(event.loaded)
             }
           }
         });
