@@ -267,7 +267,7 @@
       <h1 class="center"> Collect eLabFTW Experiment </h1>
 
 
-      <form id="authForm" autocomplete="on" onSubmit="Event.preventDefault();Event.stopPropagation();" class="row justify-content-center">
+      <form id="authForm" autocomplete="on" class="row justify-content-center">
         <div class="mb-3 col-2">
           <label for="elabexperimentid" class="form-label">Experiment ID</label>
           <input type="text"  name="username" autocomplete="username"  id="elabexperimentid" aria-describedby="elabexpHelp" required>
@@ -276,16 +276,16 @@
         </div>
         <div class="mb-3 col-2">
           <label for="elabToken" class="form-label">eLabFTW Access Token</label>
-          <input type="password" name="password" autocomplete="current-password"  id="elabToken" required>
+          <input type="text" name="password" autocomplete="email"  id="elabToken" required>
         </div>
 
         <div class="mb-3 col-2">
           <label for="datahubToken" class="form-label">DataHub Access Token</label>
-          <input type="password" name="token" autocomplete="one-time-code"  id="datahubToken" required>
+          <input type="text" name="token" autocomplete="address"  id="datahubToken" required>
         </div>
         <div class="mb-3 col-3">
           <label for="elabsubmit" class="form-label">One click submit or progressive</label>
-          <button class="btn btn-primary"  id="elabsubmit" type="submit" onclick="Event.preventDefault();Event.stopPropagation();updateAll()" > Submit </button>
+          <button class="btn btn-primary"  id="elabsubmit" onclick="event.preventDefault(); updateAll()" > Submit </button>
           
         </div>
         
