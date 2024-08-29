@@ -254,12 +254,7 @@
       <a href="#elab">
         <h1>Fetch eLabFTW experiments </h1>
       </a>
-      <a href="#arc">
-        <h1>Fetch ARCs from DataHub </h1>
-      </a>
-      <a href="#submit">
-        <h1>Update ARC and push to DataHub </h1>
-      </a>
+     
      
     </div>
 
@@ -445,7 +440,8 @@
        return json;
 
       } catch (error) {
-        alert("Access of eLabFTW is not successful, error message is "+ error)
+        alert("Access of eLabFTW is not successful, error message is "+ error);
+        return error;
       }
 
     }
@@ -464,7 +460,8 @@
       return response.blob();
 
       } catch (error) {
-        alert("Access of eLabFTW is not successful, error message is "+ error)
+        alert("Access of eLabFTW is not successful, error message is "+ error);
+        return error;
       }
 
       }
@@ -714,6 +711,22 @@
 
           )
           break;
+          case "https://xrzhou.com/elab2arc/":
+          document.querySelectorAll('div[name="tab"]').forEach((e) => {
+            if (e.id == "elabTab") { e.classList.remove("d-none") }
+            else { e.classList.add("d-none") }
+          }
+
+          )
+          break;
+          case "http://127.0.0.1:8000/":
+          document.querySelectorAll('div[name="tab"]').forEach((e) => {
+            if (e.id == "elabTab") { e.classList.remove("d-none") }
+            else { e.classList.add("d-none") }
+          }
+
+          )
+          break;
           case "":
           document.querySelectorAll('div[name="tab"]').forEach((e) => {
             if (e.id == "elabTab") { e.classList.remove("d-none") }
@@ -722,6 +735,7 @@
 
           )
           break;
+          
         default:
 
       }
