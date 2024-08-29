@@ -429,14 +429,14 @@
     var fs = FS.fs;
     var elabJSON;
     const detailedInfo = document.getElementById("detailedStatus");
-    async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://cors-anywhere.herokuapp.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
+    async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
 
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
 
       // Define the API key
       
-      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'null'};
+      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with'};
       // Make the fetch request
       
       try {
@@ -449,14 +449,14 @@
       }
 
     }
-    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://cors-anywhere.herokuapp.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
+    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
 
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
 
       // Define the API key
 
-      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'null'};
+      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with'};
       // Make the fetch request
 
       try {
