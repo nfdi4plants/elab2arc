@@ -259,7 +259,7 @@
     </div>
 
     <div name="tab" class="row justify-content-center d-none" id="elabTab">
-      <h1 class="center"> Collect eLabFTW Experiment </h1>
+      <h1 class="center"> eLabFTW to ARC </h1>
 
 
       <form id="authForm"  action="/elab2arc/#elab" class="row justify-content-center">
@@ -423,7 +423,12 @@
   <script type="text/javascript">
     var fs = FS.fs;
     var elabJSON;
+    var statusInfo;
+    const version = 290824;
+    var blobb = [];
     const detailedInfo = document.getElementById("detailedStatus");
+    const filesChanged =document.getElementById("filesChanged");
+
     async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
 
       // Define the API endpoint
@@ -470,7 +475,25 @@
   
     //fs.writeFileSync(path+name+"."+extension, content);
 
-
+    function gitUrlCheck(url){
+      if (/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/.test(url)){
+        updateInfo("DataHub URL collected successfully" ,"30");
+        return url;
+      }else{
+        updateInfo("DataHub URL is not correct, automatic patches are done" ,"30");
+        if (!url.endsWith(".git")){
+        url = url + ".git";
+        updateInfo("Added \" .git\" at the end, current url is"+ url ,"30");
+      }
+      if (!url.startWith("https://")){
+        url = "https://" + url ;
+        updateInfo("Added \" https:// \" at the start, current url is"+ url ,"30");
+      }
+      return url;
+      }
+      
+    }
+    
     async function datahubClone(datahubURL, dir, datahubtoken){
       const [begin, end] = datahubURL.split("//");
       url = begin + "//oath2:" + datahubtoken + "@" + end;
@@ -497,16 +520,15 @@
 
     }
 
-    async function commitPush(datahubtoken, datahubURL ){
-
+    async function commitPush( datahubtoken, datahubURL, fullname, email ){
       let sha = await git.commit({
           fs,
           dir: '/arc',
           author: {
-            name: 'elab2arc',
-            email: 'x.zhou@fz-juelich.de',
+            name: fullname,
+            email: email,
           },
-          message: 'Testing automatic update tool elab2arc, add all'
+          message: "Automatically commited by eLabFTW2ARC tool with version"+ version +".  "+ statusInfo
         });
         console.log("commit finished");
         try {
@@ -537,10 +559,14 @@
       updateLabel(text);
       updateProgressBar(percent);
       const event = new Date();
-      detailedInfo.innerHTML += event.toLocaleString('en-GB', { timeZone: 'UTC' }) +"&nbsp; &nbsp; &nbsp;" + text +"\t " + "<br>";
+      statusInfo += event.toLocaleString('en-GB', { timeZone: 'UTC' }) +"&nbsp; &nbsp; &nbsp;" + text +"\t " + "<br>";
+      detailedInfo.innerHTML = statusInfo; 
       
     }
     async function updateAll(elabid, elabtoken, datahubtoken, instance="https://demo.elabftw.net/api/v2/"){
+      try {   
+      filesChanged.innerHTML="";
+      statusInfo = "";
       elabid = elabid || document.getElementById("elabexperimentid").value;
       elabtoken = elabtoken || document.getElementById("elabToken").value;
       datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
@@ -549,26 +575,39 @@
       document.cookie = "elabtoken="+elabtoken+"; SameSite=lax; max-age=2678400; Secure";
       document.cookie = "datahubtoken="+datahubtoken+"; SameSite=lax; max-age=2678400; Secure";
       updateInfo("Start to fetch metadata from eLabFTW, instance is "+instance, "10" );
-      var res = await fetchElabJSON(elabtoken, "experiments/"+elabid);
-      let extra_fields;
-      let datahubURL;
-      let assayId;
-      try {
-        const metadata = JSON.parse(res.metadata);
-        extra_fields = metadata.extra_fields
-        datahubURL = extra_fields.datahub_url.value;
-        assayId = res.title;
-      } catch (error) {
-        alert("please check the extra_fields in your elabFTW experiment" + error);
-
-      };
-      updateInfo("DataHUB URL fetched "+datahubURL, "20" );
+      
+      const res = await fetchElabJSON(elabtoken, "experiments/"+elabid);
+      const users = await fetchElabJSON(elabtoken, "users");
+      const extra_fields = res.metadata_decoded.extra_fields;
+      const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
+      const assayId  = res.title;
+      const fullname = res.fullname;
+      const user = users.find(e=> e.fullname == fullname)
+      const email = user.email;
+      const protocol = res.body;
+      updateInfo("DataHUB URL fetched from elab is \""+datahubURL, "\" 20" );
       
       const dir ="arc";
       await datahubClone(datahubURL, dir, datahubtoken);
-      updateInfo("ARC successfully loaded from "+datahubURL+". Start to add eLabFTW fils to assays " + assayId, "30" );
+      const ls = fs.readdirSync("arc")
+      updateInfo("ARC successfully loaded, files are "+ ls +". Starting to add eLabFTW files to assays " + assayId, "30" );
       await createAssay(assayId);
-      await fs.promises.writeFile('arc/assays/'+assayId+'/protocols/protocol.html' , res.body);
+      statusHTML =  
+      `
+      <div class="container text-center">
+        <div class="row">
+          <div class="col">
+            `+ protocol.replace(/<[^>]*>/g, '') +`
+          </div>
+          <div class="col">
+            Submitted
+          </div>
+        </div>
+      
+      
+      
+      `
+      await fs.promises.writeFile('arc/assays/'+assayId+'/protocols/protocol.html' , protocol);
       await git.add({ fs, dir: dir, filepath: 'assays/'+assayId+'/protocols/protocol.html' });
 
       updateInfo("finished adding protocal files in ARC", "50" );
@@ -577,19 +616,46 @@
       for (const [index, ele] of Object.entries(uploads)){
 
         const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´");
+        blobb.push(blobs);
+        const objectURL = URL.createObjectURL(blobs);
+        
         let data = new Uint8Array(await blobs.arrayBuffer());
         // const extension = blobs.type.split("/").slice(-1)[0];
         const path = "assays/"+assayId+"/"+index+"_"+ele.real_name;
         await fs.promises.writeFile(dir+"/"+path , data);
         await git.add({ fs, dir: dir, filepath: path })
         updateInfo("Added file " + ele.real_name, 50+(index/uploads.length * 30) );
+        if(blobs.type.includes("image") ){
+          statusHTML +=  
+      `
+        <div class="row">
+          <div class="col">
+            <img class="img-fluid" src="`+ objectURL +`">
+          </div>
+          <div class="col">
+            Submitted
+            path is: `+path+`.
+          </div>
+        </div>
+
+      `
+
+        }
         }
 
+        updateInfo("all files are added to ARC, start to push ARC to DataHUB "+instance, "80" );
         console.log('done')
-        await commitPush(datahubtoken, datahubURL );
+        //await commitPush(datahubtoken, datahubURL, fullname, email );
         updateInfo("Conversion from eLabFTW to ARC has been finished " , "100" );
-        
-        
+
+
+
+        statusHTML += "</div>"
+        filesChanged.innerHTML=statusHTML;
+
+      } catch (error) {
+        alert( "ELabFTW to ARC conversion failed, error is"+ error);
+      }
       
       
     }
