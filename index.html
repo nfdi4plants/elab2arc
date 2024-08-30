@@ -670,6 +670,8 @@
       } catch (error) {
         if (error.includes("401")){
           alert( "ELabFTW to ARC conversion failed, error is "+ error+". Please check the DataHub Token is matched to the datahub_url in the eLabFTW extra_fields. ");
+        }else{
+          alert( "ELabFTW to ARC conversion failed, error is "+ error);
         }
         
       }      
