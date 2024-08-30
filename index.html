@@ -156,9 +156,11 @@
       overflow-y: scroll;
       max-width: 80vw;
     }
-  </style>
+    button:hover span{
+       content: "under construction" !important; 
+      }
 
-  
+  </style>  
   <link href="./css/bootstrap.min.css" rel="stylesheet">
   <script src="./js/bootstrap.bundle.min.js"></script>
   <link href="./css/custom2607.css" rel="stylesheet" />
@@ -264,7 +266,7 @@
 
       <form id="authForm"  action="/elab2arc/#elab" class="row justify-content-center">
         <div class="mb-3 col-2">
-          <label for="elabexperimentid" class="form-label">Experiment ID</label>
+          <label for="elabexperimentid" class="form-label">eLabFTW Experiment ID</label>
           <input type="text"  name="elabid" class="form-control" autocomplete="username"  id="elabexperimentid" aria-describedby="elabexpHelp" required>
           <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
           </div>
@@ -278,14 +280,27 @@
           <label for="datahubToken" class="form-label">DataHub Access Token</label>
           <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" required>
         </div>
-        <div class="mb-3 col-3">
-          <label for="elabsubmit" class="form-label">One click submit or progressive</label>
-          <button class="btn btn-primary"  id="elabsubmit" type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="exampleTest" > Submit </button>
-          
+        <div class="mb-3 col-4">
+          <label for="elabsubmit" class="form-label">Submit Options</label><br>
+          <div class="btn-group " role="group"  id="elabsubmit" aria-label="Basic example">
+            
+            <button class="btn btn-primary"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
+            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-title="Under Construction">
+            <button type="button" class="btn btn-primary"  disabled><span> Step by Step </span></button>
+          </span>
+
+          </div>
+                   
         </div>
         
       </form>
       <div id="toolstatus"  class="col-10 m-auto">
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
+            aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
+            style="width: 1%">
+          </div>
+        </div>
         <div class="accordion" id="accordionUI">
           <div class="accordion-item">
             <h2 class="accordion-header" id="statusHeading">
@@ -293,12 +308,7 @@
                 Submission Status
 
               </button>
-              <div class="progress">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
-                  aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
-                  style="width: 1%">
-                </div>
-              </div>
+
             </h2>
             <div id="submitStatus" class="accordion-collapse collapse" aria-labelledby="statusHeading" data-bs-parent="#accordionUI">
               <div class="accordion-body" id="detailedStatus">
@@ -586,10 +596,6 @@
             <th scope="col">ARC files updated</th>
           </tr>   
       </thead>
-            
-          
-            
-        
         <tbody>
           <tr>
             <td>
@@ -676,47 +682,53 @@
       keyboard: true, show: false
     });
 
-    addEventListener("load", (event) => {try{var repoList;
-      softRoute();
-    fetch('https://git.nfdi4plants.org/api/v4/projects')
-      .then(data => {
-        if (data.status >= 400 && data.status < 600) {
-      throw alert("Bad response from server, please check the availability of the server");
-        }
-        return data.json();
-      })
-      .then(post => {
-        window.repoList = post;
-        var tableHTML = '';
-        let newIndex = 0;        
-        post.forEach((element, index) => {
-          if (element.description !== null) {
-            const pathName = element.path_with_namespace.split("/");
-            newIndex += 1;
-            tableHTML += `
-        <tr>
-          <th scope="row">`+ newIndex + ` </th>
-          <td>
-          `+ pathName[0] + `
-            </td>
-             <td>
-          <a href="`+ element.web_url + `" target="_blank">` + pathName[1] + `</a>
-            </td>
-             <td>
-              <div class="btn-group" role="group" aria-label="Basic example">          
-          <button type="button" onclick="document.getElementById('repoURL').value='`+ element.http_url_to_repo + `'; cloneARC(false)" class="btn btn-secondary">Import ARC</button>  
-          </div>
-          </td>
-        </tr>
-        `
-          }
-        }), document.getElementById("datahubTable").innerHTML = tableHTML;
-      }).catch((error) => {
-          // Your error is here!
-          alert(error)
-        });}catch(e){
-        alert(e);
-      }});
+    addEventListener("load", (event) => { 
+      const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+      const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+      softRoute(); 
+    
+      // try{var repoList;
+    // fetch('https://git.nfdi4plants.org/api/v4/projects')
+    //   .then(data => {
+    //     if (data.status >= 400 && data.status < 600) {
+    //   throw alert("Bad response from server, please check the availability of the server");
+    //     }
+    //     return data.json();
+    //   })
+    //   .then(post => {
+    //     window.repoList = post;
+    //     var tableHTML = '';
+    //     let newIndex = 0;        
+    //     post.forEach((element, index) => {
+    //       if (element.description !== null) {
+    //         const pathName = element.path_with_namespace.split("/");
+    //         newIndex += 1;
+    //         tableHTML += `
+    //     <tr>
+    //       <th scope="row">`+ newIndex + ` </th>
+    //       <td>
+    //       `+ pathName[0] + `
+    //         </td>
+    //          <td>
+    //       <a href="`+ element.web_url + `" target="_blank">` + pathName[1] + `</a>
+    //         </td>
+    //          <td>
+    //           <div class="btn-group" role="group" aria-label="Basic example">          
+    //       <button type="button" onclick="document.getElementById('repoURL').value='`+ element.http_url_to_repo + `'; cloneARC(false)" class="btn btn-secondary">Import ARC</button>  
+    //       </div>
+    //       </td>
+    //     </tr>
+    //     `
+    //       }
+    //     }), document.getElementById("datahubTable").innerHTML = tableHTML;
+    //   }).catch((error) => {
+    //       // Your error is here!
+    //       alert(error)
+    //     });}catch(e){
+    //     alert(e);
+    //   }
+    }
+    );
 
       
 
@@ -731,8 +743,9 @@
       function softRoute() {
       const urlRoute = window.location.href.split("#");
       const url1 =  urlRoute[0].split("?")[1];
-      console.log(url1);
-      if (url1){        
+      console.log("submission url is "+ url1);
+      try {
+        if (url1){        
         const submitData = url1.split("&");
         let submitJSON = {};
         submitData.forEach(e=>
@@ -750,6 +763,11 @@
         } catch (error) {
           
         }
+      } catch (error) {
+        alert("submission URL is wrong, error is " + error+". Please check your URL or remove everything after /elab2arc/")
+      }
+      
+      
       const para = urlRoute.slice(-1)[0];
       switch (para) {
         case "elab":
