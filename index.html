@@ -308,7 +308,7 @@
           </div>
           <div class="accordion-item">
             <h2 class="accordion-header" id="elabHeading">
-              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#elabInfo" aria-expanded="true" aria-controls="elabInfo">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" id="filesAcc" data-bs-target="#elabInfo" aria-expanded="true" aria-controls="elabInfo">
                 Files Changed in ARC 
 
               </button>
@@ -430,51 +430,36 @@
     const filesChanged =document.getElementById("filesChanged");
 
     async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
-
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
-
-      // Define the API key
-      
+      // Define the API key      
       const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with'};
-      // Make the fetch request
-      
+      // Make the fetch request      
       try {
        const response = await fetch(elabftwServerUrl, { headers, method: 'GET'});
        const json = await response.json();
        return json;
-
       } catch (error) {
         alert("Access of eLabFTW is not successful, error message is "+ error);
         return error;
       }
-
     }
-    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
 
+    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
-
       // Define the API key
-
       const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with'};
       // Make the fetch request
-
       try {
       var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET'});
       return response.blob();
-
       } catch (error) {
         alert("Access of eLabFTW is not successful, error message is "+ error);
         return error;
       }
-
       }
     
-
-  
-    //fs.writeFileSync(path+name+"."+extension, content);
-
     function gitUrlCheck(url){
       if (/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/.test(url)){
         updateInfo("DataHub URL collected successfully" ,"30");
@@ -511,13 +496,12 @@
           onProgress: event => {
             updateLabel(event.phase)
             if (event.total) {
-              updateProgressBar(event.loaded / event.total)
+              updateProgressBar(50 + (event.loaded / event.total)*30)
             } else {
-              //updateIndeterminateProgressBar(event.loaded)
+              updateIndeterminateProgressBar(50 + (event.loaded / 100)*30)
             }
           }
         });
-
     }
 
     async function commitPush( datahubtoken, datahubURL, fullname, email ){
@@ -546,23 +530,23 @@
           alert( "push to git failed. The error is "+ error)
         }
     }
+    
     async function createAssay(assayId){
-
       try {
         fs.statSync("arc/assays/"+assayId+"/protocols")
       } catch (error) {
         fs.mkdirSync("arc/assays/"+assayId+"/protocols",{ recursive: true } )
       } 
-
     }
+
     function updateInfo(text, percent){
       updateLabel(text);
       updateProgressBar(percent);
       const event = new Date();
       statusInfo += event.toLocaleString('en-GB', { timeZone: 'UTC' }) +"&nbsp; &nbsp; &nbsp;" + text +"\t " + "<br>";
-      detailedInfo.innerHTML = statusInfo; 
-      
+      detailedInfo.innerHTML = statusInfo;       
     }
+
     async function updateAll(elabid, elabtoken, datahubtoken, instance="https://demo.elabftw.net/api/v2/"){
       try {   
       filesChanged.innerHTML="";
@@ -594,18 +578,29 @@
       await createAssay(assayId);
       statusHTML =  
       `
-      <div class="container text-center">
-        <div class="row">
-          <div class="col">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            
+            <th scope="col">eLabFTW text and files</th>
+            <th scope="col">ARC files updated</th>
+          </tr>   
+      </thead>
+            
+          
+            
+        
+        <tbody>
+          <tr>
+            <td>
             `+ protocol.replace(/<[^>]*>/g, '') +`
-          </div>
-          <div class="col">
-            Submitted
-          </div>
-        </div>
-      
-      
-      
+            </td>
+            <td>
+              ARC file path is arc/assays/`+assayId+`/protocols/protocol.html
+               <br>
+              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/assays/`+assayId+`/protocols/protocol.html" target="_blank" >click to check the file</a>
+            </td>  
+          </tr>     
       `
       await fs.promises.writeFile('arc/assays/'+assayId+'/protocols/protocol.html' , protocol);
       await git.add({ fs, dir: dir, filepath: 'assays/'+assayId+'/protocols/protocol.html' });
@@ -614,58 +609,67 @@
       const uploads = res.uploads;
       let fileList = [];
       for (const [index, ele] of Object.entries(uploads)){
-
         const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´");
         blobb.push(blobs);
-        const objectURL = URL.createObjectURL(blobs);
-        
+        const objectURL = URL.createObjectURL(blobs);        
         let data = new Uint8Array(await blobs.arrayBuffer());
         // const extension = blobs.type.split("/").slice(-1)[0];
-        const path = "assays/"+assayId+"/"+index+"_"+ele.real_name;
+        const realname =  ele.real_name;
+        const path = "assays/"+assayId+"/"+index+"_"+realname;
         await fs.promises.writeFile(dir+"/"+path , data);
         await git.add({ fs, dir: dir, filepath: path })
-        updateInfo("Added file " + ele.real_name, 50+(index/uploads.length * 30) );
+        updateInfo("Added file " + realname, 50+(index/uploads.length * 30) );
         if(blobs.type.includes("image") ){
           statusHTML +=  
-      `
-        <div class="row">
-          <div class="col">
-            <img class="img-fluid" src="`+ objectURL +`">
-          </div>
-          <div class="col">
-            Submitted
-            path is: `+path+`.
-          </div>
-        </div>
+        `
+          <tr>
+            <td>
+              <img class="img-fluid" src="`+ objectURL +`">
+            </td>
+            <td>
+              Submitted
+              ARC file path is: `+path+`.
+              <br>
+              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/`+path+`" target="_blank" >click to check the file</a>
+            </td>
+          </tr>
 
-      `
+        `
+          } else {
+            statusHTML +=  
+        `
+          <tr>
+            <td>
+              file name is `+realname+` 
+            </tb>
+            <td>
+              Submitted
+              ARC file path is: `+path+`.
+              <br>
+              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/`+path+`" target="_blank" >click to check the file</a>
+            </td>
+          </tr>
 
+        `
+          }
         }
-        }
-
         updateInfo("all files are added to ARC, start to push ARC to DataHUB "+instance, "80" );
         console.log('done')
-        //await commitPush(datahubtoken, datahubURL, fullname, email );
-        updateInfo("Conversion from eLabFTW to ARC has been finished " , "100" );
-
-
-
-        statusHTML += "</div>"
+        await commitPush(datahubtoken, datahubURL, fullname, email );
+        updateInfo("ARC updated Successfully" , "100" );
+        document.getElementById("filesAcc").click();
+        statusHTML += "</tbody> </table>";
         filesChanged.innerHTML=statusHTML;
 
       } catch (error) {
         alert( "ELabFTW to ARC conversion failed, error is"+ error);
-      }
-      
-      
+      }      
     }
 
     addEventListener("hashchange", (event) => {
-
-    if (true) {
-      softRoute();
-    }
-
+      if (true) {
+        softRoute();
+      }
     });
       
     const loading = new bootstrap.Modal(document.getElementById('loadingModal'), {
@@ -684,12 +688,9 @@
       .then(post => {
         window.repoList = post;
         var tableHTML = '';
-        let newIndex = 0;
-        
+        let newIndex = 0;        
         post.forEach((element, index) => {
           if (element.description !== null) {
-
-
             const pathName = element.path_with_namespace.split("/");
             newIndex += 1;
             tableHTML += `
@@ -702,8 +703,7 @@
           <a href="`+ element.web_url + `" target="_blank">` + pathName[1] + `</a>
             </td>
              <td>
-              <div class="btn-group" role="group" aria-label="Basic example">
-          
+              <div class="btn-group" role="group" aria-label="Basic example">          
           <button type="button" onclick="document.getElementById('repoURL').value='`+ element.http_url_to_repo + `'; cloneARC(false)" class="btn btn-secondary">Import ARC</button>  
           </div>
           </td>
@@ -726,22 +726,21 @@
         let value = "";
         values.forEach(e=> { if (e.split("=")[0]===name){ value = e.split("=")[1]} }  );
         return value;
-
       }
 
       function softRoute() {
       const urlRoute = window.location.href.split("#");
       const url1 =  urlRoute[0].split("?")[1];
       console.log(url1);
-      if (url1){
-        
+      if (url1){        
         const submitData = url1.split("&");
         let submitJSON = {};
-      submitData.forEach(e=>
+        submitData.forEach(e=>
         { submitJSON[e.split("=")[0]] = e.split("=")[1]}
       ),
         updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken );
       } else {
+
       }
       try {
           const cookie = document.cookie;
@@ -786,6 +785,7 @@
           )
           break;
           case "http://127.0.0.1:8000/":
+          window.location.href = "http://127.0.0.1:8000/elab2arc/"
           document.querySelectorAll('div[name="tab"]').forEach((e) => {
             if (e.id == "elabTab") { e.classList.remove("d-none") }
             else { e.classList.add("d-none") }
