@@ -480,7 +480,7 @@
         url = url + ".git";
         updateInfo("Added \" .git\" at the end, current url is"+ url ,"30");
       }
-      if (!url.startWith("https://")){
+      if (!url.startsWith("https://")){
         url = "https://" + url ;
         updateInfo("Added \" https:// \" at the start, current url is"+ url ,"30");
       }
@@ -668,7 +668,7 @@
         filesChanged.innerHTML=statusHTML;
 
       } catch (error) {
-        if (error.includes("401")){
+        if (error.message.includes("401")){
           alert( "ELabFTW to ARC conversion failed, error is "+ error+". Please check the DataHub Token is matched to the datahub_url in the eLabFTW extra_fields. ");
         }else{
           alert( "ELabFTW to ARC conversion failed, error is "+ error);
