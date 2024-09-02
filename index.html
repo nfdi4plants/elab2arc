@@ -674,8 +674,8 @@
         await fs.promises.writeFile('arc/assays/'+assayId+'/protocols/protocol.md' , markdown);
         await git.add({ fs, dir: dir, filepath: 'assays/'+assayId+'/protocols/protocol.md' });
 
-        updateInfo("finished adding protocal files in ARC", "70" );
-        updateInfo("all files are added to ARC, start to push ARC to DataHUB "+instance, "80" );
+        updateInfo("Finished adding protocol files in ARC", "70" );
+        updateInfo("All files have been added to ARC, starting to push ARC to DataHUB "+instance, "80" );
         console.log('done')
         await commitPush(datahubtoken, datahubURL, fullname, email );
         updateInfo("ARC updated Successfully" , "100" );
