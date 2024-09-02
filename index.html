@@ -168,6 +168,7 @@
   <script src="./js/bs5-intro-tour.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/git.js"></script>
   <script src="./js/main.js" type="text/javascript"></script>
+  <script src="./js/turndown.js" type="text/javascript"></script>
   <script type="module">
     import http from './js/http.js'
     window.http = http;
@@ -438,7 +439,7 @@
     var blobb = [];
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged =document.getElementById("filesChanged");
-
+    var turndownService = new TurndownService();
     async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
@@ -474,7 +475,8 @@
       if (/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/.test(url)){
         updateInfo("DataHub URL collected successfully" ,"30");
         return url;
-      }else{
+      }
+      else{
         updateInfo("DataHub URL is not correct, automatic patches are done" ,"30");
         if (!url.endsWith(".git")){
         url = url + ".git";
@@ -546,6 +548,11 @@
         fs.statSync("arc/assays/"+assayId+"/protocols")
       } catch (error) {
         fs.mkdirSync("arc/assays/"+assayId+"/protocols",{ recursive: true } )
+      };
+      try {
+        fs.statSync("arc/assays/"+assayId+"/dataset")
+      } catch (error) {
+        fs.mkdirSync("arc/assays/"+assayId+"/dataset",{ recursive: true } )
       } 
     }
 
@@ -578,7 +585,8 @@
       const fullname = res.fullname;
       const user = users.find(e=> e.fullname == fullname)
       const email = user.email;
-      const protocol = res.body;
+      let protocol = res.body;
+      let markdown = turndownService.turndown(protocol)
       updateInfo("DataHUB URL fetched from elab is \""+datahubURL, "\" 20" );
       
       const dir ="arc";
@@ -598,22 +606,20 @@
       </thead>
         <tbody>
           <tr>
-            <td>
-            `+ protocol.replace(/<[^>]*>/g, '') +`
+            <td id="protocolHTML">
+            `+ protocol +`
             </td>
             <td>
-              ARC file path is arc/assays/`+assayId+`/protocols/protocol.html
+              ARC file path is arc/assays/`+assayId+`/protocols/protocol.md
                <br>
-              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/assays/`+assayId+`/protocols/protocol.html" target="_blank" >click to check the file</a>
+              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/assays/`+assayId+`/protocols/protocol.md" target="_blank" >click to check the file</a>
             </td>  
           </tr>     
       `
-      await fs.promises.writeFile('arc/assays/'+assayId+'/protocols/protocol.html' , protocol);
-      await git.add({ fs, dir: dir, filepath: 'assays/'+assayId+'/protocols/protocol.html' });
 
-      updateInfo("finished adding protocal files in ARC", "50" );
       const uploads = res.uploads;
       let fileList = [];
+      //let filedict = {};
       for (const [index, ele] of Object.entries(uploads)){
         const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´");
         blobb.push(blobs);
@@ -621,7 +627,12 @@
         let data = new Uint8Array(await blobs.arrayBuffer());
         // const extension = blobs.type.split("/").slice(-1)[0];
         const realname =  ele.real_name;
-        const path = "assays/"+assayId+"/"+index+"_"+realname;
+        const longname = ele.long_name;
+        const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
+        //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
+        statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/main/`+path );
+        
+        markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/main/`+path );
         await fs.promises.writeFile(dir+"/"+path , data);
         await git.add({ fs, dir: dir, filepath: path })
         updateInfo("Added file " + realname, 50+(index/uploads.length * 30) );
@@ -630,7 +641,7 @@
         `
           <tr>
             <td>
-              <img class="img-fluid" src="`+ objectURL +`">
+              <img  src="`+ objectURL +`">
             </td>
             <td>
               Submitted
@@ -659,13 +670,19 @@
         `
           }
         }
+        
+        await fs.promises.writeFile('arc/assays/'+assayId+'/protocols/protocol.md' , markdown);
+        await git.add({ fs, dir: dir, filepath: 'assays/'+assayId+'/protocols/protocol.md' });
+
+        updateInfo("finished adding protocal files in ARC", "70" );
         updateInfo("all files are added to ARC, start to push ARC to DataHUB "+instance, "80" );
         console.log('done')
         await commitPush(datahubtoken, datahubURL, fullname, email );
         updateInfo("ARC updated Successfully" , "100" );
         document.getElementById("filesAcc").click();
         statusHTML += "</tbody> </table>";
-        filesChanged.innerHTML=statusHTML;
+        statusHTML = statusHTML.replaceAll( "<img", "<img class='img-fluid'" );
+        filesChanged.innerHTML = statusHTML;
 
       } catch (error) {
         if (error.message.includes("401")){
@@ -673,7 +690,7 @@
         }else{
           alert( "ELabFTW to ARC conversion failed, error is "+ error);
         }
-        
+        updateInfo("ARC updated failed" , "0" );
       }      
     }
 
@@ -688,6 +705,8 @@
     });
 
     addEventListener("load", (event) => { 
+      
+      //alert("sorry there is currently a connection problem between this tool and DataHUB, please try again later.")
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
       softRoute(); 
