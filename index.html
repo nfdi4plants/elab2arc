@@ -8,6 +8,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
+  <link rel="icon" type="image/x-icon" href="favicon.png">
   <style>
     .center {
       position: relative;
@@ -217,7 +218,15 @@
         id="submitNavBtn">
         Fetch eLabFTW &nbsp;
       </button>
-        
+      
+        <button class="btn btn-nav dropdown-toggle" id="instance" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          eLabFTW Instance: HHU
+        </button>
+        <ul class="dropdown-menu">
+          <li><button class="dropdown-item" onclick="window.elabURL = 'https://demo.elabftw.net/api/v2/'; document.getElementById('instance').innerText='eLabFTW Instance: Demo'" type="button">eLabFTW Instance: Demo</button></li>
+          <li><button class="dropdown-item" onclick="window.elabURL = 'https://elabftw.hhu.de/api/v2/' ; document.getElementById('instance').innerText='eLabFTW Instance: HHU'" type="button">eLabFTW Instance: HHU</button></li>
+        </ul>
+      
         <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav d-none"
           id="a2jNavBtn">
           Fetch ARCs&nbsp;
@@ -437,10 +446,11 @@
     var statusInfo;
     const version = 290824;
     var blobb = [];
+    var elabURL = "https://elabftw.hhu.de/api/v2/"
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged =document.getElementById("filesChanged");
     var turndownService = new TurndownService();
-    async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
+    async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = window.elabURL){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
       // Define the API key      
@@ -456,7 +466,7 @@
       }
     }
 
-    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = 'https://demo.elabftw.net/api/v2/'){
+    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = window.elabURL){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
       // Define the API key
@@ -477,14 +487,14 @@
         return url;
       }
       else{
-        updateInfo("DataHub URL is not correct, automatic patches are done" ,"30");
+        updateInfo("DataHub URL is not correct, automatic patches are done " ,"30");
         if (!url.endsWith(".git")){
         url = url + ".git";
-        updateInfo("Added \" .git\" at the end, current url is"+ url ,"30");
+        updateInfo("Added \" .git\" at the end, current url is "+ url ,"30");
       }
       if (!url.startsWith("https://")){
         url = "https://" + url ;
-        updateInfo("Added \" https:// \" at the start, current url is"+ url ,"30");
+        updateInfo("Added \" https:// \" at the start, current url is "+ url ,"30");
       }
       return url;
       }
