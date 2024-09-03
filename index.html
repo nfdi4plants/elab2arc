@@ -564,6 +564,12 @@
       } catch (error) {
         fs.mkdirSync("arc/assays/"+assayId+"/dataset",{ recursive: true } )
       } 
+      try {
+        fs.statSync("arc/assays/"+assayId+"/isa.assay.xlsx")
+      } catch (error) {
+        await newAssay(assayId, "new metadata table");
+        updateLabel("No isa.assay.xlsx detected. Generate new assays/"+assayId+"new isa.assay.xlsx");
+      } 
     }
 
     function updateInfo(text, percent){
@@ -644,7 +650,8 @@
         
         markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/main/`+path );
         await fs.promises.writeFile(dir+"/"+path , data);
-        await git.add({ fs, dir: dir, filepath: path })
+        await git.add({ fs, dir: dir, filepath: path });
+        await git.add({ fs, dir: dir, filepath: "assays/"+assayId+"/isa.assay.xlsx"})
         updateInfo("Added file " + realname, 50+(index/uploads.length * 30) );
         if(blobs.type.includes("image") ){
           statusHTML +=  
