@@ -640,7 +640,7 @@
         const longname = ele.long_name;
         const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
         //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
-        statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/main/`+path );
+        statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
         
         markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/main/`+path );
         await fs.promises.writeFile(dir+"/"+path , data);
