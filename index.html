@@ -168,7 +168,7 @@
   <link href="./css/bs5-intro-tour.css" rel="stylesheet" />
   <script src="./js/bs5-intro-tour.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/git.js"></script>
-  <script src="./js/main.js" type="text/javascript"></script>
+  <script src="./js/main060924.js" type="text/javascript"></script>
   <script src="./js/turndown.js" type="text/javascript"></script>
   <script type="module">
     import http from './js/http.js'
@@ -223,8 +223,8 @@
           eLabFTW Instance: HHU
         </button>
         <ul class="dropdown-menu">
-          <li><button class="dropdown-item" onclick="window.elabURL = 'https://demo.elabftw.net/api/v2/'; document.getElementById('instance').innerText='eLabFTW Instance: Demo'" type="button">eLabFTW Instance: Demo</button></li>
-          <li><button class="dropdown-item" onclick="window.elabURL = 'https://elabftw.hhu.de/api/v2/' ; document.getElementById('instance').innerText='eLabFTW Instance: HHU'" type="button">eLabFTW Instance: HHU</button></li>
+          <li><button class="dropdown-item" onclick="window.elabURL = 'https://demo.elabftw.net/api/v2/'; getElementById('elabURLInput').value='https://demo.elabftw.net/api/v2/' ; document.getElementById('instance').innerText='eLabFTW Instance: Demo'" type="button">eLabFTW Instance: Demo</button></li>
+          <li><button class="dropdown-item" onclick="window.elabURL = 'https://elabftw.hhu.de/api/v2/'; getElementById('elabURLInput').value='https://elabftw.hhu.de/api/v2/' ; document.getElementById('instance').innerText='eLabFTW Instance: HHU'" type="button">eLabFTW Instance: HHU</button></li>
         </ul>
       
         <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav d-none"
@@ -290,6 +290,12 @@
           <label for="datahubToken" class="form-label">DataHub Access Token</label>
           <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" required>
         </div>
+
+        <div class="mb-3 col-lg-2 d-none">
+          <label for="elabURLInput" class="form-label">elabURL</label>
+          <input type="text" name="elabURL" value="https://demo.elabftw.net/api/v2/" class="form-control" autocomplete="password"  id="elabURLInput" required>
+        </div>
+
         <div class="mb-3 col-lg-4">
           <label for="elabsubmit" class="form-label">Submit Options</label><br>
          
@@ -450,7 +456,7 @@
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged =document.getElementById("filesChanged");
     var turndownService = new TurndownService();
-    async function fetchElabJSON( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = window.elabURL){
+    async function fetchElabJSON( elabToken, query='experiments/',  elabURL , corsproxy ='https://corsproxy.cplantbox.com/'){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
       // Define the API key      
@@ -466,7 +472,7 @@
       }
     }
 
-    async function fetchElabFiles( elabToken, query='experiments/',  corsproxy ='https://corsproxy.cplantbox.com/', elabURL = window.elabURL){
+    async function fetchElabFiles( elabToken, query='experiments/',  elabURL, corsproxy ='https://corsproxy.cplantbox.com/' ){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
       // Define the API key
@@ -575,7 +581,7 @@
       detailedInfo.innerHTML = statusInfo;       
     }
 
-    async function updateAll(elabid, elabtoken, datahubtoken, instance="https://demo.elabftw.net/api/v2/"){
+    async function updateAll(elabid, elabtoken, datahubtoken, instance){
       try {   
       filesChanged.innerHTML="";
       statusInfo = "";
@@ -588,8 +594,8 @@
       document.cookie = "datahubtoken="+datahubtoken+"; SameSite=lax; max-age=2678400; Secure";
       updateInfo("Start to fetch metadata from eLabFTW, instance is "+instance, "10" );
       
-      const res = await fetchElabJSON(elabtoken, "experiments/"+elabid);
-      const users = await fetchElabJSON(elabtoken, "users");
+      const res = await fetchElabJSON(elabtoken, "experiments/"+elabid,  instance);
+      const users = await fetchElabJSON(elabtoken, "users", instance);
       const extra_fields = res.metadata_decoded.extra_fields;
       const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
       const assayId  = res.title;
@@ -645,7 +651,7 @@
       let fileList = [];
       //let filedict = {};
       for (const [index, ele] of Object.entries(uploads)){
-        const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´");
+        const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´",instance);
         blobb.push(blobs);
         const objectURL = URL.createObjectURL(blobs);        
         let data = new Uint8Array(await blobs.arrayBuffer());
@@ -801,8 +807,8 @@
         let submitJSON = {};
         submitData.forEach(e=>
         { submitJSON[e.split("=")[0]] = e.split("=")[1]}
-      ),
-        updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken );
+      ),console.log("submitJSON.elabid "+(submitJSON.elabid.toString()=="284")),
+      submitJSON.elabid.toString()=="284" ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://demo.elabftw.net/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.elabURL );
       } else {
 
       }
