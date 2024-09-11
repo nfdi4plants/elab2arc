@@ -631,7 +631,8 @@
       const users = await fetchElabJSON(elabtoken, "users", instance);
       const extra_fields = res.metadata_decoded.extra_fields;
       const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
-      const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
+      // const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
+      const assayId  = res.title.replaceAll(".", " ").replaceAll("/", " ");
       const fullname = res.fullname;
       const user = users.find(e=> e.fullname == fullname)
       const email = user.email;
