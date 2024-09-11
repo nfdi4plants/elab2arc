@@ -467,7 +467,7 @@
        const json = await response.json();
        return json;
       } catch (error) {
-        alert("Access of eLabFTW is not successful, error message is "+ error);
+        showError("Access of eLabFTW is not successful, error message is "+ error);
         return error;
       }
     }
@@ -482,7 +482,7 @@
       var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET'});
       return response.blob();
       } catch (error) {
-        alert("Access of eLabFTW is not successful, error message is "+ error);
+        showError("Access of eLabFTW is not successful, error message is "+ error);
         return error;
       }
       }
@@ -511,14 +511,15 @@
       const [begin, end] = datahubURL.split("//");
       url = begin + "//oath2:" + datahubtoken + "@" + end;
           console.log(url);
-      const cloneResponse = await git.clone({
+      try {
+        const cloneResponse = await git.clone({
           fs,
           http,
           dir,
           corsProxy: 'https://cors.isomorphic-git.org',
           url: url,
           ref: 'main',
-          singleBranch: true,
+          
           depth: 10,
           force: true,
           onProgress: event => {
@@ -530,6 +531,28 @@
             }
           }
         });
+      } catch (error) {
+        const cloneResponse = await git.clone({
+          fs,
+          http,
+          dir,
+          corsProxy: 'https://cors.isomorphic-git.org',
+          url: url,
+          ref: 'master',
+          
+          depth: 10,
+          force: true,
+          onProgress: event => {
+            updateLabel(event.phase)
+            if (event.total) {
+              updateProgressBar(50 + (event.loaded / event.total)*30)
+            } else {
+              updateIndeterminateProgressBar(50 + (event.loaded / 100)*30)
+            }
+          }
+        });
+      }
+      
     }
 
     async function commitPush( datahubtoken, datahubURL, fullname, email ){
@@ -553,9 +576,19 @@
           onAuth: () => ({ username: datahubtoken }),
         });
         console.log(pushResult)  ;
-        alert( datahubURL +"ARC has been updated")
+        showError( datahubURL +"ARC has been updated")
         } catch (error) {
-          alert( "push to git failed. The error is "+ error)
+          let pushResult = await git.push({
+          fs,
+          http,
+          dir: '/arc',
+          remote: 'origin',
+          ref: 'master',
+          onAuth: () => ({ username: datahubtoken }),
+        });
+        console.log(pushResult)  ;
+        showError( datahubURL +"ARC has been updated")
+          //showError( "push to git failed. The error is "+ error)
         }
     }
     
@@ -598,7 +631,7 @@
       const users = await fetchElabJSON(elabtoken, "users", instance);
       const extra_fields = res.metadata_decoded.extra_fields;
       const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
-      const assayId  = res.title;
+      const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
       const fullname = res.fullname;
       const user = users.find(e=> e.fullname == fullname)
       const email = user.email;
@@ -719,9 +752,9 @@
 
       } catch (error) {
         if (error.message.includes("401")){
-          alert( "ELabFTW to ARC conversion failed, error is "+ error+". Please check the DataHub Token is matched to the datahub_url in the eLabFTW extra_fields. ");
+          showError( "ELabFTW to ARC conversion failed, error is "+ error+". Please check the DataHub Token is matched to the datahub_url in the eLabFTW extra_fields. ");
         }else{
-          alert( "ELabFTW to ARC conversion failed, error is "+ error);
+          showError( "ELabFTW to ARC conversion failed, error is "+ error);
         }
         updateInfo("ARC updated failed" , "0" );
       }      
@@ -739,7 +772,7 @@
 
     addEventListener("load", (event) => { 
       
-      //alert("sorry there is currently a connection problem between this tool and DataHUB, please try again later.")
+      //showError("sorry there is currently a connection problem between this tool and DataHUB, please try again later.")
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
       softRoute(); 
@@ -748,7 +781,7 @@
     // fetch('https://git.nfdi4plants.org/api/v4/projects')
     //   .then(data => {
     //     if (data.status >= 400 && data.status < 600) {
-    //   throw alert("Bad response from server, please check the availability of the server");
+    //   throw showError("Bad response from server, please check the availability of the server");
     //     }
     //     return data.json();
     //   })
@@ -780,14 +813,18 @@
     //     }), document.getElementById("datahubTable").innerHTML = tableHTML;
     //   }).catch((error) => {
     //       // Your error is here!
-    //       alert(error)
+    //       showError(error)
     //     });}catch(e){
-    //     alert(e);
+    //     showError(e);
     //   }
     }
     );
 
-      
+      function showError(text){
+        alert(text);
+        updateInfo(text,"0")
+
+      }
 
       function extractCookie(name){
         const cookie = document.cookie;
@@ -821,7 +858,7 @@
           
         }
       } catch (error) {
-        alert("submission URL is wrong, error is " + error+". Please check your URL or remove everything after /elab2arc/")
+        showError("submission URL is wrong, error is " + error+". Please check your URL or remove everything after /elab2arc/")
       }
       
       
@@ -948,7 +985,7 @@
         }
       } catch (error) {
         document.getElementById("a2jNavBtn").click();
-        throw alert(error),
+        throw showError(error),
         console.error(error);
       }
 
