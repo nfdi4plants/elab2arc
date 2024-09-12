@@ -519,8 +519,8 @@
           corsProxy: 'https://cors.isomorphic-git.org',
           url: url,
           ref: 'main',
-          
-          depth: 10,
+          singleBranch:true,
+          depth: 1,
           force: true,
           onProgress: event => {
             updateLabel(event.phase)
@@ -532,6 +532,7 @@
           }
         });
       } catch (error) {
+        updateInfo("Clone branch main failed, now try to clone branch master", "50")
         const cloneResponse = await git.clone({
           fs,
           http,
@@ -539,8 +540,8 @@
           corsProxy: 'https://cors.isomorphic-git.org',
           url: url,
           ref: 'master',
-          
-          depth: 10,
+          singleBranch:true,
+          depth: 1,
           force: true,
           onProgress: event => {
             updateLabel(event.phase)
@@ -572,16 +573,20 @@
           http,
           dir: '/arc',
           remote: 'origin',
+          force: true,
           ref: 'main',
           onAuth: () => ({ username: datahubtoken }),
         });
         console.log(pushResult)  ;
-        showError( datahubURL +"ARC has been updated")
+        updateInfo("Success pushed", "100")
+        //
         } catch (error) {
+          updateInfo( error+" Push to main failed, now try to push to branch master", "0");
           let pushResult = await git.push({
           fs,
           http,
           dir: '/arc',
+          force: true,
           remote: 'origin',
           ref: 'master',
           onAuth: () => ({ username: datahubtoken }),
