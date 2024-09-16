@@ -456,6 +456,7 @@
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged =document.getElementById("filesChanged");
     var turndownService = new TurndownService();
+    var mainOrMaster = "main";
     turndownService.keep(['table']);
     async function fetchElabJSON( elabToken, query='experiments/',  elabURL , corsproxy ='https://corsproxy.cplantbox.com/'){
       // Define the API endpoint
@@ -532,6 +533,7 @@
             }
           }
         });
+        mainOrMaster = "main";
       } catch (error) {
         updateInfo("Clone branch main failed, now try to clone branch master", "50")
         const cloneResponse = await git.clone({
@@ -553,6 +555,7 @@
             }
           }
         });
+        mainOrMaster = "master";
       }
       
     }
@@ -682,7 +685,7 @@
             <td>
               ARC file path is arc/assays/`+assayId+`/protocols/eLabFTW_protocol.md
                <br>
-              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/assays/`+assayId+`/protocols/eLabFTW_protocol.md" target="_blank" >click to check the file</a>
+              <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/assays/`+assayId+`/protocols/eLabFTW_protocol.md" target="_blank" >click to check the file</a>
             </td>  
           </tr>     
       `
@@ -702,7 +705,7 @@
         //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
 
         statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
-        markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/main/`+path );
+        markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+path );
         await fs.promises.writeFile(dir+"/"+path , data);
         await git.add({ fs, dir: dir, filepath: path });
         
@@ -718,7 +721,7 @@
               Submitted
               ARC file path is: `+path+`.
               <br>
-              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/`+path+`" target="_blank" >click to check the file</a>
+              <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+path+`" target="_blank" >click to check the file</a>
             </td>
           </tr>
 
@@ -734,7 +737,7 @@
               Submitted
               ARC file path is: `+path+`.
               <br>
-              <a href="`+datahubURL.slice(0,-4)+`/-/blob/main/`+path+`" target="_blank" >click to check the file</a>
+              <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+path+`" target="_blank" >click to check the file</a>
             </td>
           </tr>
 
