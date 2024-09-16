@@ -456,6 +456,7 @@
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged =document.getElementById("filesChanged");
     var turndownService = new TurndownService();
+    turndownService.keep(['table']);
     async function fetchElabJSON( elabToken, query='experiments/',  elabURL , corsproxy ='https://corsproxy.cplantbox.com/'){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
