@@ -850,8 +850,8 @@
         let submitJSON = {};
         submitData.forEach(e=>
         { submitJSON[e.split("=")[0]] = e.split("=")[1]}
-      ),console.log("submitJSON.elabid "+(submitJSON.elabid.toString()=="284")),
-      submitJSON.elabid.toString()=="284" ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://demo.elabftw.net/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.elabURL );
+      ),console.log("submitJSON.elabid "+(submitJSON.elabid.toString()=="273")),
+      parseInt(submitJSON.elabid.toString())<1000 ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://demo.elabftw.net/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.elabURL );
       } else {
 
       }
