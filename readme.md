@@ -1,6 +1,6 @@
 # eLabFTW to ARC Converter
 
-This project provides a tool for converting eLabFTW experiment data into ARC (Analysis Result Container) format. It allows researchers to easily fetch experiment data from eLabFTW instances and update or push these files to DataHUB in ARC format. The application streamlines the management of data from lab experiments to repositories, improving efficiency in scientific data handling.
+This project provides a tool for converting eLabFTW experiment data into ARC (Annotated Research Context) format. It allows researchers to easily fetch experiment data from eLabFTW instances and update or push these files to DataHUB in ARC format. The application streamlines the management of data from lab experiments to repositories, improving efficiency in scientific data handling.
 
 ![eLab2ARC jpg (1)](https://github.com/user-attachments/assets/ed6fac10-afcc-49f7-9475-f984395d7735)
 
