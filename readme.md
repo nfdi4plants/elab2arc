@@ -12,7 +12,7 @@ This project provides a tool for converting eLabFTW experiment data into ARC (An
 - **Supports Multiple eLabFTW Instances:** Choose between different eLabFTW instances like HHU or a custom URL.
 
 ## How to Use
-
+A detailed user guide can be found here: [User Guide Document](https://github.com/nfdi4plants/elab2arc/blob/main/docs/User%20guide_%20elab2ARC%20tool.md)
 1. **Setup:**
    - Ensure you have an eLabFTW account and a DataHub repository ready.
    - Obtain the API key from your eLabFTW account.
