@@ -26,7 +26,7 @@ This project provides a tool for converting eLabFTW experiment data into ARC (An
    - The converted files include protocols and any associated datasets.
 
 4. **DataHub Integration:**
-   - After conversion, you can push your ARC files to your DataHub repository.
+   - After conversion, you can push your ARC files to your DataHUB repository.
    - The tool will ask for your DataHub access token to authenticate and submit the updated ARC files.
 
 
