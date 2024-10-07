@@ -42,11 +42,11 @@ https://nfdi4plants.github.io/elab2arc/
 5. Press **One Click Submission** Button
 
 ### Tool should 
-o	create a new assay folder with elabFTW experiment name as assay name
-o	create the ARC folder structure (dataset/ protocols/ isa.assay)
-o	convert experiment main text as protocol file in protocols
-o	add experiment attachments in dataset folder
-o	enter your name/email/affiliation in the isa.assay sheet
+- create a new assay folder with elabFTW experiment name as assay name
+- create the ARC folder structure (dataset/ protocols/ isa.assay)
+- convert experiment main text as protocol file in protocols
+- add experiment attachments in dataset folder
+- enter your name/email/affiliation in the isa.assay sheet
 
 
 
