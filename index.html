@@ -978,7 +978,7 @@
         let comments_m = arctrl.Comment$.create("name","value");
         
         // Create annotation table
-        if (fs.statSync("/arc/assays/"+assayName+"/isa.assay.xlsx").isFile()){
+        if (fs.existsSync("/arc/assays/"+assayName+"/isa.assay.xlsx")){
          try {        
             console.log("isa.assay.xlsx file exist");
             assay = await Xlsx.fromXlsxFile("/arc/assays/"+assayName+"/isa.assay.xlsx");
