@@ -721,10 +721,12 @@
         const realname =  ele.real_name;
         const longname = ele.long_name;
         const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
+        const markdownPath = "assays/"+escape(assayId)+"/dataset/"+index+"_"+realname;
+
         //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
 
         statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
-        markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+path );
+        markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
         await fs.promises.writeFile(dir+"/"+path , data);
         await git.add({ fs, dir: dir, filepath: path });
         
