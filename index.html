@@ -223,8 +223,8 @@
           eLabFTW Instance: HHU
         </button>
         <ul class="dropdown-menu">
-          <li><button class="dropdown-item" onclick="window.elabURL = 'https://demo.elabftw.net/api/v2/'; getElementById('elabURLInput').value='https://demo.elabftw.net/api/v2/' ; document.getElementById('instance').innerText='eLabFTW Instance: Demo'" type="button">eLabFTW Instance: Demo</button></li>
-          <li><button class="dropdown-item" onclick="window.elabURL = 'https://elabftw.hhu.de/api/v2/'; getElementById('elabURLInput').value='https://elabftw.hhu.de/api/v2/' ; document.getElementById('instance').innerText='eLabFTW Instance: HHU'" type="button">eLabFTW Instance: HHU</button></li>
+          <li><button class="dropdown-item" onclick="setelabURL('https://demo.elabftw.net/api/v2/') " type="button">eLabFTW Instance: Demo</button></li>
+          <li><button class="dropdown-item" onclick=" setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
         </ul>
       
         <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav d-none"
@@ -452,12 +452,20 @@
     var statusInfo;
     const version = "24-09-04";
     var blobb = [];
-    var elabURL = "https://elabftw.hhu.de/api/v2/"
+    
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged =document.getElementById("filesChanged");
+    
     var turndownService = new TurndownService();
     var mainOrMaster = "main";
     turndownService.keep(['table']);
+    function setelabURL(elabURL){
+      var elabURL1 = unescape(elabURL);
+      window.localStorage.setItem('elabURL',elabURL1); 
+      document.getElementById('elabURLInput').value=elabURL1 ;
+      document.getElementById('instance').innerHTML = 'instance: '+elabURL1; 
+      document.getElementById('elabURLInput').value = elabURL1;
+    }
     async function fetchElabJSON( elabToken, query='experiments/',  elabURL , corsproxy ='https://corsproxy.cplantbox.com/'){
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
@@ -469,7 +477,11 @@
        const json = await response.json();
        return json;
       } catch (error) {
-        showError("Access of eLabFTW is not successful, error message is "+ error);
+        if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`)){
+          showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, or you are using a wrong instance. Please first check the eLabFTW instance and then go to the settings of the eLabFTW to create a new API key and use it");
+        }else{
+          showError("Access of eLabFTW is not successful, error message is "+ error);
+        }
         return error;
       }
     }
@@ -484,7 +496,12 @@
       var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET'});
       return response.blob();
       } catch (error) {
-        showError("Access of eLabFTW is not successful, error message is "+ error);
+        if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`)){
+          showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, please go to settings to create a new API key and use it");
+        }else{
+          showError("Access of eLabFTW is not successful, error message is "+ error);
+        }
+        
         return error;
       }
       }
@@ -623,13 +640,15 @@
       detailedInfo.innerHTML = statusInfo;       
     }
 
-    async function updateAll(elabid, elabtoken, datahubtoken, instance){
+    async function updateAll(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
       try {   
       filesChanged.innerHTML="";
       statusInfo = "";
       elabid = elabid || document.getElementById("elabexperimentid").value;
       elabtoken = elabtoken || document.getElementById("elabToken").value;
       datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
+      setelabURL(instance);
+      instance = unescape(instance);
       const maxage = 60*60*24*31; //max age is one month
       document.cookie = "elabid="+elabid+"; SameSite=lax; max-age=2678400; Secure";
       document.cookie = "elabtoken="+elabtoken+"; SameSite=lax; max-age=2678400; Secure";
@@ -641,12 +660,12 @@
       const extra_fields = res.metadata_decoded.extra_fields;
       const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
       // const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
-      const assayId  = res.title.replaceAll(".", " ").replaceAll("/", " ");
+      const assayId  = res.title.replaceAll(/[^a-zA-Z0-9 ]/g, " ");
       const fullname = res.fullname;
       const user = users.find(e=> e.fullname == fullname)
       const email = user.email;
       let protocol = res.body;
-      const elabWWW= elabURL.replace("api/v2/", "");
+      const elabWWW= instance.replace("api/v2/", "");
       protocol = protocol.replaceAll(/\w+\.php\?mode=view/g, elabWWW+"/$&"  )
       console.log("protocol is" + protocol)
       let markdown = turndownService.turndown(protocol);
@@ -978,7 +997,7 @@
         let comments_m = arctrl.Comment$.create("name","value");
         
         // Create annotation table
-        if (fs.statSync("/arc/assays/"+assayName+"/isa.assay.xlsx").isFile()){
+        if (fs.existsSync("/arc/assays/"+assayName+"/isa.assay.xlsx")){
          try {        
             console.log("isa.assay.xlsx file exist");
             assay = await Xlsx.fromXlsxFile("/arc/assays/"+assayName+"/isa.assay.xlsx");
@@ -993,6 +1012,7 @@
             await Xlsx.toFile(outPath,spreadsheet);
          } catch (error) {
           console.log(error);
+          
          }
         }else{
           //growth.AddColumn(arctrl.CompositeHeader.characteristic(oa_species), [arctrl.CompositeCell.createTerm(oa_chlamy )]);
@@ -1037,8 +1057,13 @@
         let submitJSON = {};
         submitData.forEach(e=>
         { submitJSON[e.split("=")[0]] = e.split("=")[1]}
-      ),console.log("submitJSON.elabid "+(submitJSON.elabid.toString()=="273")),
-      parseInt(submitJSON.elabid.toString())<1000 ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://demo.elabftw.net/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.elabURL );
+      );
+      if (submitData.length <4 ){
+        parseInt(submitJSON.elabid.toString())<1000 ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://demo.elabftw.net/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.localStorage.elabURL );
+      }else{
+        updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
+      }
+      
       } else {
 
       }
