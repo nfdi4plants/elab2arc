@@ -455,7 +455,7 @@
        const json = await response.json();
        return json;
       } catch (error) {
-        if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`)){
+        if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`) || error.message.includes(`!DOCTYPE`)){
           showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, or you are using a wrong instance. Please first check the eLabFTW instance and then go to the settings of the eLabFTW to create a new API key and use it");
         }else{
           showError("Access of eLabFTW is not successful, error message is "+ error);
