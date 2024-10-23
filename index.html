@@ -644,8 +644,9 @@
       const email = user.email;
       let protocol = res.body;
       const elabWWW= instance.replace("api/v2/", "");
-      protocol = protocol.replaceAll(/\w+\.php\?mode=view/g, elabWWW+"/$&"  )
-      console.log("protocol is" + protocol)
+      protocol = protocol.replaceAll(/\w+\.php\?mode=view/g, elabWWW+"/$&"  );
+      
+      console.log("protocol is" + protocol);
       let markdown = turndownService.turndown(protocol);
       updateInfo("DataHUB URL fetched from elab is \""+datahubURL, "\" 20" );
       
@@ -693,7 +694,8 @@
       for (const [index, ele] of Object.entries(uploads)){
         const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´",instance);
         blobb.push(blobs);
-        const objectURL = URL.createObjectURL(blobs);        
+        let objectURL = URL.createObjectURL(blobs)
+        objectURL= objectURL.replaceAll( /&storage=./g , "" );        
         let data = new Uint8Array(await blobs.arrayBuffer());
         // const extension = blobs.type.split("/").slice(-1)[0];
         const realname =  ele.real_name;
@@ -703,8 +705,14 @@
 
         //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
 
-        statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
-        markdown = markdown.replaceAll( "app/download.php?f="+longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
+        //statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
+        statusHTML = statusHTML.replaceAll( /app\/download\.php(.*)f=/g, "" );
+        statusHTML = statusHTML.replaceAll( longname , objectURL );
+        statusHTML = statusHTML.replaceAll( "&amp;storage=1" , "" );
+        statusHTML = statusHTML.replaceAll( "&amp;storage=2" , "" );
+        markdown = markdown.replaceAll(/app\/download\.php(.*)f=/g, "")
+        markdown = markdown.replaceAll(/&storage=./g, "")
+        markdown = markdown.replaceAll( longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
         await fs.promises.writeFile(dir+"/"+path , data);
         await git.add({ fs, dir: dir, filepath: path });
         
