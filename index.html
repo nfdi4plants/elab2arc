@@ -428,7 +428,7 @@
     var fs = FS.fs;
     var elabJSON;
     var statusInfo;
-    const version = "24-10-25";
+    const version = "08-11-25";
     var blobb = [];
     
     const detailedInfo = document.getElementById("detailedStatus");
@@ -651,13 +651,13 @@
           const extra_fields = res.metadata_decoded.extra_fields;
           const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
           // const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
-          const assayId  = res.title.replaceAll(/[^a-zA-Z0-9 ]/g, " ");
+          const assayId  = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_.,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
           const fullname = res.fullname;
           const user = users.find(e=> e.fullname == fullname)
           const email = user.email;
           let protocol = res.body;
           const elabWWW= instance.replace("api/v2/", "");
-          protocol = protocol.replaceAll(/\w+\.php\?mode=view/g, elabWWW+"/$&"  );
+          protocol = protocol.replace(/\w+\.php\?mode=view/g, elabWWW+"/$&"  );
           
           console.log("protocol is" + protocol);
           let markdown = turndownService.turndown(protocol);
@@ -695,9 +695,9 @@
                 `+ protocol +`
                 </td>
                 <td>
-                  ARC file path is  `+ dir+`assays/`+assayId+`/protocols/eLabFTW_protocol.md
+                  ARC file path is  `+ dir+`assays/`+encodeURIComponent(assayId)+`/protocols/eLabFTW_protocol.md
                   <br>
-                  <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/assays/`+assayId+`/protocols/eLabFTW_protocol.md" target="_blank" >click to check the file</a>
+                  <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/assays/`+encodeURIComponent(assayId)+`/protocols/eLabFTW_protocol.md" target="_blank" >click to check the file</a>
                 </td>  
               </tr>     
           `
@@ -709,23 +709,23 @@
             const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´",instance);
             blobb.push(blobs);
             let objectURL = URL.createObjectURL(blobs)
-            objectURL= objectURL.replaceAll( /&storage=./g , "" );        
+            objectURL= objectURL.replace( /&storage=./g , "" );        
             let data = new Uint8Array(await blobs.arrayBuffer());
             // const extension = blobs.type.split("/").slice(-1)[0];
-            const realname =  ele.real_name;
+            const realname =  ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
             const longname = ele.long_name;
             const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
-            const markdownPath = "assays/"+escape(assayId)+"/dataset/"+index+"_"+realname;
+            const markdownPath = "assays/"+encodeURIComponent(assayId)+"/dataset/"+index+"_"+realname;
 
             //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
 
             //statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
-            statusHTML = statusHTML.replaceAll( /app\/download\.php(.*)f=/g, "" );
+            statusHTML = statusHTML.replace( /app\/download\.php(.*)f=/g, "" );
             statusHTML = statusHTML.replaceAll( longname , objectURL );
             statusHTML = statusHTML.replaceAll( "&amp;storage=1" , "" );
             statusHTML = statusHTML.replaceAll( "&amp;storage=2" , "" );
-            markdown = markdown.replaceAll(/app\/download\.php(.*)f=/g, "")
-            markdown = markdown.replaceAll(/&storage=./g, "")
+            markdown = markdown.replace(/app\/download\.php(.*)f=/g, "")
+            markdown = markdown.replace(/&storage=./g, "")
             markdown = markdown.replaceAll( longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
             await fs.promises.writeFile(dir+"/"+path , data);
             await git.add({ fs, dir: dir, filepath: path });
@@ -742,7 +742,7 @@
                   Submitted
                   ARC file path is: `+path+`.
                   <br>
-                  <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+path+`" target="_blank" >click to check the file</a>
+                  <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+encodeURIComponent(path)+`" target="_blank" >click to check the file</a>
                 </td>
               </tr>
 
@@ -758,7 +758,7 @@
                   Submitted
                   ARC file path is: `+path+`.
                   <br>
-                  <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+path+`" target="_blank" >click to check the file</a>
+                  <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+encodeURIComponent(path)+`" target="_blank" >click to check the file</a>
                 </td>
               </tr>
 
