@@ -1032,7 +1032,7 @@
         }else{
           //growth.AddColumn(arctrl.CompositeHeader.characteristic(oa_species), [arctrl.CompositeCell.createTerm(oa_chlamy )]);
 
-          const myAssay = arctrl.ArcAssay.create("myassay", void 0, void 0, void 0, [growth], void 0,[person], [comments_m]);
+          const myAssay = arctrl.ArcAssay.create(assayName, void 0, void 0, void 0, [growth], void 0,[person], [comments_m]);
           // -------- 2. Transform object to generic spreadsheet ----------
           let spreadsheet = arctrl.XlsxController.Assay.toFsWorkbook(myAssay);
           // -------- 3. Write spreadsheet to xlsx file (or bytes) ----------
