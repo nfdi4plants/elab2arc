@@ -437,6 +437,16 @@
     var turndownService = new TurndownService();
     var mainOrMaster = "main";
     turndownService.keep(['table']);
+    function connectionTest(url){
+
+    }
+
+    function proxySwitch(){
+
+
+
+    }
+
     function setelabURL(elabURL){
       var elabURL1 = unescape(elabURL);
       window.localStorage.setItem('elabURL',elabURL1); 
@@ -487,7 +497,7 @@
     
     function gitUrlCheck(url){
       if (/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/.test(url)){
-        updateInfo("DataHub URL collected successfully" ,"30");
+        updateInfo("DataHub URL was collected successfully" ,"30");
         return url;
       }
       else{
@@ -579,7 +589,7 @@
           onAuth: () => ({ username: datahubtoken }),
         });
         console.log(pushResult)  ;
-        updateInfo("Success pushed, ARC updated Successfully <br>", "100")
+        updateInfo("PLANTDataHUB has been updated.  <br>", "100")
         //
         } catch (error) {
           console.error(error);
@@ -651,7 +661,7 @@
           const extra_fields = res.metadata_decoded.extra_fields;
           const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
           // const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
-          const assayId  = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_.,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+          const assayId  = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
           const fullname = res.fullname;
           const user = users.find(e=> e.fullname == fullname)
           const email = user.email;
