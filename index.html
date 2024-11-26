@@ -661,7 +661,7 @@
           const extra_fields = res.metadata_decoded.extra_fields;
           const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
           // const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
-          const assayId  = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+          const assayId  = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
           const fullname = res.fullname;
           const user = users.find(e=> e.fullname == fullname)
           const email = user.email;
