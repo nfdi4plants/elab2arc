@@ -254,18 +254,29 @@
 
       <form id="authForm"  action="/elab2arc/#elab" class="row justify-content-center align-items-center">
         <div class="mb-3 col-lg-3">
-          <label for="elabexperimentid" class="form-label">eLabFTW Experiment ID (use comma "," to seperate multiple IDs)</label>
+          <label for="elabexperimentid" class="form-label">
+            <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
+              eLabFTW Experiment ID &#128712;</button>
+            (use comma "," to seperate multiple IDs)</label>
           <textarea type="text"  name="elabid" class="form-control" autocomplete="username"  id="elabexperimentid" aria-describedby="elabexpHelp" required></textarea>
           <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
           </div>
         </div>
         <div class="mb-3 col-lg-2 ">
-          <label for="elabToken" class="form-label">eLabFTW API Key</label>
+          <label for="elabToken" class="form-label">
+           
+            <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
+              eLabFTW  API Key&nbsp;&#128712;</button>
+          </label>
           <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken" required>
         </div>
 
         <div class="mb-3 col-lg-2">
-          <label for="datahubToken" class="form-label">DataHub Access Token</label>
+          <label for="datahubToken" class="form-label">
+            <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#datahubTokenCanvas" aria-controls="datahubTokenCanvas">
+              DataHub   Access Token&nbsp;&#128712;</button>
+            
+          </label>
           <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" required>
         </div>
 
@@ -1318,6 +1329,63 @@
     </div>
   </div>
 
+
+  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="experimentIdCanvas" aria-labelledby="experimentIdCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="experimentIdCanvasLabel">eLabFTW Experiment Id</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div>
+        ELabFTW experiment ID can be found in the address bar or in the experiment description. 
+        <br>
+        <img src="/images/experimentId.png" class="rounded mx-auto d-block w-100" alt="...">
+        A detailed user guide can be found <a target="_blank" href="https://github.com/nfdi4plants/elab2arc/blob/main/docs/User%20guide_%20elab2ARC%20tool.md"> here </a>
+      </div>
+      
+    </div>
+  </div>
+  
+
+  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="elabTokenCanvas" aria-labelledby="elabTokenCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="elabTokenCanvasLabel">eLabFTW API keys </h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div>
+        eLabFTW API keys can be generated from settings -> API keys  
+        <br>
+        <img src="/images/elabToken.png" class="rounded mx-auto d-block w-100" alt="...">
+        <br>
+        The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as anyone with the token can access eLabFTW. 
+        <br>
+        A detailed user guide can be found <a target="_blank" href="https://github.com/nfdi4plants/elab2arc/blob/main/docs/User%20guide_%20elab2ARC%20tool.md"> here </a>
+      </div>
+      
+    </div>
+  </div>
+
+  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="datahubTokenCanvas" aria-labelledby="datahubTokenCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="datahubTokenCanvasLabel">eLabFTW API keys </h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div>
+        To generate a DataHub access token, go to Settings → Access Tokens → Create. Set the Role to "Maintainer" and select the Scopes: "read_repository" and "write_repository."
+        <br>
+        <img src="/images/datahubToken.png" class="rounded mx-auto d-block w-100" alt="...">
+        <br>
+        The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as anyone with the token can access and modify the DataHUB repo. 
+        <br>
+        A detailed user guide can be found <a target="_blank" href="https://github.com/nfdi4plants/elab2arc/blob/main/docs/User%20guide_%20elab2ARC%20tool.md"> here </a>
+      </div>
+      
+    </div>
+  </div>
+
+  
 </body>
 <script>
 
