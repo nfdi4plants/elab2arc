@@ -735,7 +735,7 @@
             let data = new Uint8Array(await blobs.arrayBuffer());
             // const extension = blobs.type.split("/").slice(-1)[0];
             const realname =  ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-            const longname = ele.long_name;
+            const longname = encodeURIComponent(ele.long_name);
             const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
             const markdownPath = "assays/"+encodeURIComponent(assayId)+"/dataset/"+index+"_"+realname;
 
