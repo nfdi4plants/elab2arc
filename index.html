@@ -203,7 +203,7 @@
         <ul class="dropdown-menu">
           <li><button class="dropdown-item" onclick="setelabURL('https://demo.elabftw.net/api/v2/') " type="button">eLabFTW Instance: Demo</button></li>
           <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
-          <li><input type="text" id="customElab" onchange="setelabURL(this.value)"></li>
+          <li>Add other eLabFTW instance below<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"></li>
         </ul>
       
         <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav d-none"
