@@ -440,7 +440,7 @@
     var fs = FS.fs;
     var elabJSON;
     var statusInfo;
-    const version = "08-11-25";
+    const version = "2024-12-09";
     var blobb = [];
     
     const detailedInfo = document.getElementById("detailedStatus");
@@ -587,7 +587,7 @@
             name: fullname,
             email: email,
           },
-          message: "Automatically commited by eLabFTW2ARC tool with version"+ version +".  "+ statusInfo
+          message: "eLabFTW2ARC version "+ version +".  "+ statusInfo
         });
         console.log("commit finished");
         try {
@@ -735,7 +735,13 @@
             let data = new Uint8Array(await blobs.arrayBuffer());
             // const extension = blobs.type.split("/").slice(-1)[0];
             const realname =  ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-            const longname = encodeURIComponent(ele.long_name);
+            let longname;
+            if (instance == "https://elabftw.hhu.de/api/v2/"){
+              longname = ele.long_name;
+            }else{
+              longname = encodeURIComponent(ele.long_name);
+            }
+            
             const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
             const markdownPath = "assays/"+encodeURIComponent(assayId)+"/dataset/"+index+"_"+realname;
 
