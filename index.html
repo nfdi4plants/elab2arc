@@ -736,7 +736,7 @@
             // const extension = blobs.type.split("/").slice(-1)[0];
             const realname =  ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
             const longname= ele.long_name;
-            let longname2= encodeURIComponent(ele.long_name);
+            const longname2= encodeURIComponent(ele.long_name);
             
             
             const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
@@ -753,6 +753,7 @@
             markdown = markdown.replace(/app\/download\.php(.*)f=/g, "")
             markdown = markdown.replace(/&storage=./g, "")
             markdown = markdown.replaceAll( longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
+            markdown = markdown.replaceAll( longname2 , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
             await fs.promises.writeFile(dir+"/"+path , data);
             await git.add({ fs, dir: dir, filepath: path });
             
