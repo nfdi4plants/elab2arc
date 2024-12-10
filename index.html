@@ -735,12 +735,9 @@
             let data = new Uint8Array(await blobs.arrayBuffer());
             // const extension = blobs.type.split("/").slice(-1)[0];
             const realname =  ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-            let longname;
-            if (instance == "https://elabftw.hhu.de/api/v2/"){
-              longname = ele.long_name;
-            }else{
-              longname = encodeURIComponent(ele.long_name);
-            }
+            const longname= ele.long_name;
+            let longname2= encodeURIComponent(ele.long_name);
+            
             
             const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
             const markdownPath = "assays/"+encodeURIComponent(assayId)+"/dataset/"+index+"_"+realname;
@@ -750,6 +747,7 @@
             //statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
             statusHTML = statusHTML.replace( /app\/download\.php(.*)f=/g, "" );
             statusHTML = statusHTML.replaceAll( longname , objectURL );
+            statusHTML = statusHTML.replaceAll( longname2 , objectURL );
             statusHTML = statusHTML.replaceAll( "&amp;storage=1" , "" );
             statusHTML = statusHTML.replaceAll( "&amp;storage=2" , "" );
             markdown = markdown.replace(/app\/download\.php(.*)f=/g, "")
