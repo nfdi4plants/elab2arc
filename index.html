@@ -461,9 +461,10 @@
 
     function setelabURL(elabURL){
       var elabURL1 = unescape(elabURL);
+      elabURL1.slice(-1)=="/"? {} : elabURL1= elabURL1 +"/"  ;
       try {
         const split =  elabURL1.split("/api");
-        split.length ==1?  elabURL1= elabURL1 +"/api/v2": {}  ;
+        split.length ==1?  elabURL1= elabURL1 +"api/v2/": {}  ;
       } catch (error) {
         
       }
