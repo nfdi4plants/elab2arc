@@ -203,7 +203,7 @@
         <ul class="dropdown-menu">
           <li><button class="dropdown-item" onclick="setelabURL('https://demo.elabftw.net/api/v2/') " type="button">eLabFTW Instance: Demo</button></li>
           <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
-          <li>Add other eLabFTW instance below<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"></li>
+          <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2" </li>
         </ul>
       
         <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav d-none"
@@ -461,6 +461,12 @@
 
     function setelabURL(elabURL){
       var elabURL1 = unescape(elabURL);
+      try {
+        const split =  elabURL1.split("/api");
+        split.length ==1?  elabURL1= elabURL1 +"/api/v2": {}  ;
+      } catch (error) {
+        
+      }
       window.localStorage.setItem('elabURL',elabURL1); 
       document.getElementById('elabURLInput').value=elabURL1 ;
       document.getElementById('instance').innerHTML = 'instance: '+elabURL1; 
