@@ -168,7 +168,7 @@
   <link href="./css/bs5-intro-tour.css" rel="stylesheet" />
   <script src="./js/bs5-intro-tour.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/git.js"></script>
-  <script src="./js/main060924.js" type="text/javascript"></script>
+  <script src="./js/main-25-01-21.js" type="text/javascript"></script>
   <script src="./js/turndown.js" type="text/javascript"></script>
   <script type="module">
     import http from './js/http.js'
@@ -201,7 +201,8 @@
           eLabFTW Instance: HHU
         </button>
         <ul class="dropdown-menu">
-          <li><button class="dropdown-item" onclick="setelabURL('https://demo.elabftw.net/api/v2/') " type="button">eLabFTW Instance: Demo</button></li>
+          <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')" type="button">eLabFTW Instance: DataPLAN</button></li>
+          <li><button class="dropdown-item" onclick="setelabURL('https://demo.elabftw.net/api/v2/')" type="button">eLabFTW Instance: Demo</button></li>
           <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
           <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2" </li>
         </ul>
@@ -484,8 +485,8 @@
        const json = await response.json();
        return json;
       } catch (error) {
-        if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`) || error.message.includes(`!DOCTYPE`)){
-          showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, or you are using a wrong instance. Please first check the eLabFTW instance and then go to the settings of the eLabFTW to create a new API key and use it");
+        if (error.message.includes(`is not valid JSON`)||error.message.includes(`Invalid host`) || error.message.includes(`!DOCTYPE`)){
+          showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, or the elabFTW instance might be wrong. Please first check the eLabFTW instance and then go to the settings of the eLabFTW to create a new API key and use it");
         }else{
           showError("Access of eLabFTW is not successful, error message is "+ error);
         }
@@ -690,7 +691,7 @@
           
           console.log("protocol is" + protocol);
           let markdown = turndownService.turndown(protocol);
-          updateInfo("DataHUB URL fetched from elab is \""+datahubURL, "\"" + ratio*20 );
+          updateInfo("DataHUB URL fetched from elabFTW's extra_field is \""+datahubURL, "\"" + ratio*20 );
           
       
       
@@ -818,10 +819,15 @@
         }
       } catch (error) {
         if (error.message.includes("401")){
-          showError( "ELabFTW to ARC conversion failed, error is "+ error+". Please check the DataHub Token is matched to the datahub_url in the eLabFTW extra_fields. ");
+          showError( "Error: Unable to access PLANTdataHUB, error is "+ error+". Please verify that the DataHub Token matches the datahub_url in the extra_fields of eLabFTW. ");
           console.error(error);
-        }else{
-          showError( "ELabFTW to ARC conversion failed, error is "+ error);
+        }else if(error.message.includes("Cannot read properties of undefined")){
+          showError("eLabFTW accessed successfully, but extra_fields is missing. Please check the experiment ID and extra_fields in eLabFTW, error is "+ error+".");
+        }else if(error.message.includes("403")){
+          showError("Error: Error: PLANTdataHUB can not be acccessed. Please verify that the datahub_url in the extra_fields of eLabFTW is correct. error is "+ error+". ");
+        }
+         else{
+          showError( "Error: eLabFTW to ARC conversion failed, error is "+ error);
           console.error(error);
         }
         updateInfo("ARC updated failed" , "0" );
