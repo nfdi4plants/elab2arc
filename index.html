@@ -201,8 +201,8 @@
           eLabFTW Instance: HHU
         </button>
         <ul class="dropdown-menu">
-          <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')" type="button">eLabFTW Instance: DataPLAN</button></li>
-          <li><button class="dropdown-item" onclick="setelabURL('https://demo.elabftw.net/api/v2/')" type="button">eLabFTW Instance: Demo</button></li>
+          <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')" type="button">eLabFTW Instance: DataPLANT</button></li>
+          <li><button class="dropdown-item d-none" onclick="setelabURL('https://demo.elabftw.net/api/v2/')" type="button">eLabFTW Instance: Demo</button></li>
           <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
           <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2" </li>
         </ul>
@@ -254,8 +254,9 @@
       <h1 class="center"> eLabFTW to ARC </h1>
 
 
-      <form id="authForm"  action="/elab2arc/#elab" class="row justify-content-center align-items-center">
-        <div class="mb-3 col-lg-3">
+      <form id="authForm"  action="/elab2arc/#elab" >
+        <div class="row justify-content-center align-items-end">
+        <div class="m-3 col-lg-3">
           <label for="elabexperimentid" class="form-label">
             <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
               eLabFTW Experiment ID &#128712;</button>
@@ -264,7 +265,7 @@
           <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
           </div>
         </div>
-        <div class="mb-3 col-lg-2 ">
+        <div class="m-3 col-lg-2 ">
           <label for="elabToken" class="form-label">
            
             <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
@@ -273,7 +274,7 @@
           <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken" required>
         </div>
 
-        <div class="mb-3 col-lg-2">
+        <div class="m-3 col-lg-2">
           <label for="datahubToken" class="form-label">
             <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#datahubTokenCanvas" aria-controls="datahubTokenCanvas">
               DataHub   Access Token&nbsp;&#128712;</button>
@@ -282,24 +283,26 @@
           <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" required>
         </div>
 
-        <div class="mb-3 col-lg-2 d-none">
+        <div class="m-3 col-lg-2 d-none">
           <label for="elabURLInput" class="form-label">elabURL</label>
           <input type="text" name="elabURL" value="https://elabftw.hhu.de/api/v2/" class="form-control" autocomplete="password"  id="elabURLInput" required>
         </div>
 
-        <div class="mb-3 col-lg-3 ">
+        <div class="mb-3 col-lg-2 ">
           <label for="elabsubmit" class="form-label">Submit Options</label><br>
          
             
             <button class="btn btn-primary"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
+            <br>
             <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-title="Under Construction">
+              
             <button type="button" class="btn btn-primary"  disabled><span> Step by Step </span></button>
           </span>
 
          
                    
         </div>
-        
+      </div>
       </form>
       <div id="toolstatus"  class="col-10 m-auto">
         <div class="progress">
