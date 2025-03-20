@@ -207,17 +207,20 @@
           <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2" </li>
         </ul>
       
-        <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav d-none"
-          id="a2jNavBtn">
-          Fetch ARCs&nbsp;
+
+        <button type="button" onclick="location.href=location.href.split('#')[0]+'#elab'" class="btn  btn-nav"
+        id="elab2arcNavBtn">
+        elab2ARC (1-click)&nbsp;
+        </button>
+        
+        <button type="button" onclick="location.href=location.href.split('#')[0]+'#arc'" class="btn btn-nav "
+          id="stepByStepBtn">
+        Step by Step&nbsp;
         </button>
         
 
 
-        <button type="button" onclick="location.href=location.href.split('#')[0]+'#submit'" class="btn  btn-nav d-none"
-          id="isacheckNavBtn">
-          Update ARC and Resubmit &nbsp;
-        </button>
+       
 
         <button type="button" class="btn border-0 rounded-0 g-0 btn-nav" data-bs-toggle="dropdown" aria-expanded="false"
           id="conversion_tools">
@@ -242,7 +245,7 @@
     </div>
   </div>
   <div class="container">
-    <div name="tab" class=" col-12 justify-content-center nav-link text-center" id="introTab">
+    <div name="tab" class=" col-12 justify-content-center d-none nav-link text-center" id="introTab">
       <a href="#elab">
         <h1>Fetch eLabFTW experiments </h1>
       </a>
@@ -250,7 +253,7 @@
      
     </div>
 
-    <div name="tab" class="row justify-content-center d-none" id="elabTab">
+    <div name="tab" class="row justify-content-center" id="elabTab">
       <h1 class="center"> eLabFTW to ARC </h1>
 
 
@@ -294,16 +297,17 @@
             
             <button class="btn btn-primary"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
             <br>
-            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-title="Under Construction">
+            <!-- <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-title="Under Construction"> -->
               
-            <button type="button" class="btn btn-primary"  disabled><span> Step by Step </span></button>
-          </span>
+            
+          <!-- </span> -->
 
          
                    
         </div>
       </div>
       </form>
+      <button type="button" class="btn btn-primary" onclick="startStepByStep()" ><span> Step by Step </span></button>
       <div id="toolstatus"  class="col-10 m-auto">
         <div class="progress">
           <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
@@ -362,7 +366,7 @@
               <th scope="col">Actions</th>
             </tr>
           </thead>
-          <tbody id="datahubTable">
+          <tbody id="userProjectsTable">
           </tbody>
         </table>
       </div>
@@ -458,10 +462,193 @@
     }
 
     function proxySwitch(){
+    }
+
+    const startStepByStep= async ()=>{
+
+      const datahubToken = document.getElementById("datahubToken").value;
+      const elabToken = document.getElementById("elabToken").value;
+      const elabURL = document.getElementById("elabURLInput").value;
+      const id = await fetchUser(datahubToken);
+      if (id){
+
+      fetchUserProjects(id.username, datahubToken) }
+      else{
+        return;
+      }
+
+
+
+
+      document.getElementById("stepByStepBtn").click();
 
 
 
     }
+
+    const fetchUser = async (accessToken ) => {
+      try {
+        // Define the API endpoint for fetching user-related projects
+        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/user`;
+
+        // Fetch the data from the API with the access token in the headers
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}` // Include the token in the Authorization header [[3]]
+          }
+        });
+
+        // Check for bad responses (status codes between 400 and 599)
+        if (response.status >= 400 && response.status < 600) {
+          throw new Error("Bad response from server, please check the availability of the server");
+        }
+
+        // Parse the JSON response
+        const userJSON = await response.json();
+
+        // Assign the fetched data to a global variable (if needed)
+        window.userId = userJSON;
+
+        // Build the HTML table dynamically
+       return userJSON;
+      } catch (error) {
+        // Handle any errors that occur during the fetch or processing
+        alert(error.message || error);
+      }
+    };
+
+
+    const fetchUserProjects = async (userId, accessToken) => {
+      try {
+        // Define the API endpoint for fetching user-related projects
+        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/users/${userId}/projects`;
+
+        // Fetch the data from the API with the access token in the headers
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}` // Include the token in the Authorization header [[3]]
+          }
+        });
+
+        // Check for bad responses (status codes between 400 and 599)
+        if (response.status >= 400 && response.status < 600) {
+          throw new Error("Bad response from server, please check the availability of the server");
+        }
+
+        // Parse the JSON response
+        const projects = await response.json();
+
+        // Assign the fetched data to a global variable (if needed)
+        window.userProjects = projects;
+
+        // Build the HTML table dynamically
+        let tableHTML = '';
+        let newIndex = 0;
+
+        projects.forEach((project) => {
+          if (project.name) { // Ensure the project has a valid name
+            newIndex += 1;
+
+            tableHTML += `
+              <tr>
+                <th scope="row">${newIndex}</th>
+                <td>${project.name}</td>
+                <td><a href="${project.web_url}" target="_blank">View Project</a></td>
+                <td>
+                  <div class="btn-group" role="group" aria-label="Basic example">
+                    <button type="button" onclick="document.getElementById('repoURL').value='${project.http_url_to_repo}'; cloneARC()" class="btn btn-primary">
+                      Convert to this ARC
+                    </button>
+                    <button type="button" onclick="document.getElementById('repoURL').value='${project.http_url_to_repo}'; cloneARC(false)" class="btn btn-secondary">
+                      Clone Only
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }
+        });
+
+        // Insert the generated table HTML into the DOM
+        document.getElementById("userProjectsTable").innerHTML = tableHTML;
+      } catch (error) {
+        // Handle any errors that occur during the fetch or processing
+        alert(error.message || error);
+      }
+    };
+
+
+    async function cloneARC(convert = true) {
+      try {
+        document.getElementById("loadingModalBtn").click();
+        var url;
+        const token = document.getElementById("gitpassword").value;
+        if (!token) {
+          url = document.getElementById("repoURL").value;
+          console.log(url)
+        } else {
+          [begin, end] = document.getElementById("repoURL").value.split("//")
+          url = begin + "//oath2:" + token + "@" + end;
+          console.log(url);
+        }
+        let date = Date().replaceAll(" ", "_").replaceAll(":", "-").split("(")[0];
+        let dir = "/" + url.split("/").slice(-1)[0] + date
+        FS.mkdirSync(dir);
+        window.current_file = dir;
+        const res = await git.clone({
+          fs,
+          http,
+          dir,
+          corsProxy: 'https://gitcors.cplantbox.com',
+          url: url,
+          ref: 'main',
+          singleBranch: true,
+          depth: 1,
+          force: true,
+          onProgress: event => {
+            updateLabel(event.phase)
+            if (event.total) {
+              updateProgressBar(event.loaded / event.total)
+            } else {
+              updateIndeterminateProgressBar(event.loaded)
+            }
+          }
+        });
+        let tableHTML = "";
+        const fileList = fs.readdirSync("/");
+        fileList.forEach((element, index) => {
+          if (!element.endsWith(".json")) {
+            const fileName = element.split(".git");
+            tableHTML += `
+                <tr>
+                <td>
+              `+ fileName[0] + `
+                </td>
+                <td>
+             `+ fileName[1] + `
+                </td>
+                <td>  
+              <button type="button" onclick=" runARC2JSON('`+ element + `')" class="btn btn-primary">Get ISA-JSON</button>
+              </td>
+            </tr>
+            `
+          }
+
+        });
+        document.getElementById("importedARCTable").innerHTML = tableHTML;
+
+      } catch (error) {
+       
+        throw alert(error),
+        console.error(error);
+      }
+
+      loading.hide();
+
+    }
+
 
     function setelabURL(elabURL){
       var elabURL1 = unescape(elabURL);
@@ -656,6 +843,123 @@
       statusInfo += event.toLocaleString('en-GB', { timeZone: 'UTC' }) +"&nbsp; &nbsp; &nbsp;" + text +"\t " + "<br>";
       detailedInfo.innerHTML = statusInfo;       
     }
+
+
+
+    function handleErrors(error) {
+        if (error.message.includes("401")) {
+          showError(
+            `Error: Unable to access PLANTdataHUB, error is ${error}. Please verify that the DataHub Token matches the datahub_url in the extra_fields of eLabFTW.`
+          );
+        } else if (error.message.includes("Cannot read properties of undefined")) {
+          showError(
+            `eLabFTW accessed successfully, but extra_fields is missing. Please check the experiment ID and extra_fields in eLabFTW, error is ${error}.`
+          );
+        } else if (error.message.includes("403")) {
+          showError(
+            `Error: PLANTdataHUB cannot be accessed. Please verify that the datahub_url in the extra_fields of eLabFTW is correct. Error is ${error}.`
+          );
+        } else {
+          showError(`Error: eLabFTW to ARC conversion failed, error is ${error}`);
+        }
+        updateInfo("ARC update failed", 0);
+      }
+
+      async function updateAll2(elabid, elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/") {
+        try {
+          filesChanged.innerHTML = "";
+          statusInfo = "";
+
+          // Set cookies and decode inputs
+          elabid = elabid || document.getElementById("elabexperimentid").value;
+          elabtoken = elabtoken || document.getElementById("elabToken").value;
+          datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
+          setCookies(elabid, elabtoken, datahubtoken);
+
+          instance = unescape(instance);
+          elabid = decodeURIComponent(elabid);
+          const elabidList = elabid.split(",");
+          const totalExp = elabidList.length;
+
+          for (const [expIndex, currentElabid] of Object.entries(elabidList)) {
+            if (!currentElabid) continue;
+
+            const ratio = (parseInt(expIndex) + 1) / totalExp;
+            updateInfo(`Fetching eLabFTW experiment <b>${currentElabid}</b>, instance is ${instance}`, ratio * 10);
+
+            // Fetch data from eLabFTW
+            const res = await fetchElabJSON(elabtoken, `experiments/${currentElabid}`, instance);
+            const users = await fetchElabJSON(elabtoken, "users", instance);
+            const extra_fields = res.metadata_decoded.extra_fields;
+            const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);
+
+            const assayId = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
+            const user = users.find((e) => e.fullname === res.fullname);
+            const email = user.email;
+
+            // Convert protocol to Markdown
+            let protocol = res.body.replace(/\w+\.php\?mode=view/g, `${instance.replace("api/v2/", "")}/$&`);
+            let markdown = convertToMarkdown(protocol);
+
+            // Process files and update links
+            const dir = `arc${currentElabid}`;
+            await datahubClone(datahubURL, dir, datahubtoken);
+            await processFiles(dir, assayId, res.uploads, elabtoken, instance);
+
+            markdown = updateLinks(markdown, datahubURL, mainOrMaster, assayId, res.uploads);
+
+            // Write Markdown and commit changes
+            await fs.promises.writeFile(`${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`, markdown);
+            await git.add({ fs, dir, filepath: `assays/${assayId}/protocols/eLabFTW_protocol.md` });
+
+            await commitPush(datahubtoken, datahubURL, res.fullname, email, dir);
+            updateInfo("ARC updated successfully", ratio * 100);
+          }
+        } catch (error) {
+          handleErrors(error);
+        }
+      }
+
+      async function processFiles(dir, assayId, uploads, elabtoken, instance) {
+        const blobb = [];
+        for (const [index, file] of Object.entries(uploads)) {
+          const blob = await fetchElabFiles(elabtoken, `experiments/${assayId}/uploads/${file.id}?format=binary`, instance);
+          blobb.push(blob);
+
+          const data = new Uint8Array(await blob.arrayBuffer());
+          const realname = file.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+          const path = `assays/${assayId}/dataset/${index}_${realname}`;
+
+          await fs.promises.writeFile(`${dir}/${path}`, data);
+          await git.add({ fs, dir, filepath: path });
+
+          updateInfo(`Added file ${realname}`, (index / uploads.length) * 10);
+        }
+      }
+
+
+      function updateLinks(markdown, datahubURL, mainOrMaster, assayId, uploads) {
+          let updatedMarkdown = markdown;
+          uploads.forEach((file, index) => {
+            const realname = file.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+            const markdownPath = `assays/${encodeURIComponent(assayId)}/dataset/${index}_${realname}`;
+            updatedMarkdown = updatedMarkdown.replaceAll(
+              file.long_name,
+              `${datahubURL.slice(0, -4)}/-/raw/${mainOrMaster}/${markdownPath}`
+            );
+          });
+          return updatedMarkdown;
+        }
+
+        function convertToMarkdown(htmlContent) {
+            return turndownService.turndown(htmlContent);
+          }
+          function setCookies(elabid, elabtoken, datahubtoken, maxAge = 60 * 60 * 24 * 31) {
+          document.cookie = `elabid=${encodeURIComponent(elabid)}; SameSite=lax; max-age=${maxAge}; Secure`;
+          document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+          document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+        }
+
 
     async function updateAll(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
       try {   
@@ -854,46 +1158,6 @@
       const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
       softRoute(); 
     
-      // try{var repoList;
-    // fetch('https://git.nfdi4plants.org/api/v4/projects')
-    //   .then(data => {
-    //     if (data.status >= 400 && data.status < 600) {
-    //   throw showError("Bad response from server, please check the availability of the server");
-    //     }
-    //     return data.json();
-    //   })
-    //   .then(post => {
-    //     window.repoList = post;
-    //     var tableHTML = '';
-    //     let newIndex = 0;        
-    //     post.forEach((element, index) => {
-    //       if (element.description !== null) {
-    //         const pathName = element.path_with_namespace.split("/");
-    //         newIndex += 1;
-    //         tableHTML += `
-    //     <tr>
-    //       <th scope="row">`+ newIndex + ` </th>
-    //       <td>
-    //       `+ pathName[0] + `
-    //         </td>
-    //          <td>
-    //       <a href="`+ element.web_url + `" target="_blank">` + pathName[1] + `</a>
-    //         </td>
-    //          <td>
-    //           <div class="btn-group" role="group" aria-label="Basic example">          
-    //       <button type="button" onclick="document.getElementById('repoURL').value='`+ element.http_url_to_repo + `'; cloneARC(false)" class="btn btn-secondary">Import ARC</button>  
-    //       </div>
-    //       </td>
-    //     </tr>
-    //     `
-    //       }
-    //     }), document.getElementById("datahubTable").innerHTML = tableHTML;
-    //   }).catch((error) => {
-    //       // Your error is here!
-    //       showError(error)
-    //     });}catch(e){
-    //     showError(e);
-    //   }
     }
     );
 
@@ -1107,7 +1371,7 @@
         { submitJSON[e.split("=")[0]] = e.split("=")[1]}
       );
       if (submitData.length <4 ){
-        parseInt(submitJSON.elabid.toString())<1000 ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://demo.elabftw.net/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.localStorage.elabURL );
+        parseInt(submitJSON.elabid.toString())<1000 ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://elabftw.hhu.de/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.localStorage.elabURL );
       }else{
         updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
       }
@@ -1251,7 +1515,7 @@
          
         }
       } catch (error) {
-        document.getElementById("a2jNavBtn").click();
+        
         throw showError(error),
         console.error(error);
       }
