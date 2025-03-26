@@ -18,8 +18,10 @@
   <link href="./css/custom2607.css" rel="stylesheet" />
   <link href="./css/bs5-intro-tour.css" rel="stylesheet" />
   <link href="./css/MEMfsGUI.css" rel="stylesheet" />
+  <link href="./css/elabGUI.css" rel="stylesheet" />
   <script src="./js/bs5-intro-tour.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/MEMfsGUI.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elabGUI.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/git.js"></script>
   <script src="./js/main-25-01-21.js" type="text/javascript"></script>
   <script src="./js/turndown.js" type="text/javascript"></script>
@@ -227,9 +229,35 @@
       </div>
       <div class="row m-3">
         <div class="col-12">
-          <div id="container">
+          <div id="fs-container">
             <div id="fileTree"></div>
         </div>
+        <div class="elab-container mt-3">
+          <div class="main-content">
+              <div class="section title">
+                  <h1 id="expTitle">Loading...</h1>
+              </div>
+              <div class="section content" id="expContent">
+                  <!-- HTML content will be injected here -->
+              </div>
+          </div>
+          <div class="sidebar ">
+              <div class="section metadata" id="expMetadata">
+                  <h3>Metadata</h3>
+                  <ul id="metadataList"></ul>
+              </div>
+              <div class="section uploads" id="expUploads">
+                  <h3>Attachments</h3>
+                  <div class="gallery" id="uploadGallery"></div>
+              </div>
+              <div class="section related" id="expRelatedItems">
+                  <h3>Related</h3>
+                  <div id="relatedItems"></div>
+                  <div id="relatedExps"></div>
+              </div>
+
+          </div>
+      </div>
           <!-- <h4> Imported ARCs </h4>
           <table class="table table-striped table-hover" style="table-layout:auto ; width:100%; ">
             <thead>
@@ -327,8 +355,8 @@
       const datahubToken = document.getElementById("datahubToken").value;
       const elabToken = document.getElementById("elabToken").value;
       const elabURL = document.getElementById("elabURLInput").value;
-
-      setCookies(elabURL, elabToken, datahubToken);
+      const elabid = document.getElementById("elabexperimentid").value;
+      setCookies( elabid, elabToken, datahubToken);
       const id = await fetchUser(datahubToken);
       if (id){
 
@@ -673,6 +701,14 @@
       
     }
 
+    function setCookies(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
+      const maxAge = 60*60*24*31;
+          document.cookie = `elabid=${encodeURIComponent(elabid)}; SameSite=lax; max-age=${maxAge}; Secure`;
+          document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+          document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+          window.localStorage.setItem(instance, instance); 
+    }
+
     function updateInfo(text, percent){
       updateLabel(text);
       updateProgressBar(percent);
@@ -680,123 +716,6 @@
       statusInfo += event.toLocaleString('en-GB', { timeZone: 'UTC' }) +"&nbsp; &nbsp; &nbsp;" + text +"\t " + "<br>";
       detailedInfo.innerHTML = statusInfo;       
     }
-
-
-
-    function handleErrors(error) {
-        if (error.message.includes("401")) {
-          showError(
-            `Error: Unable to access PLANTdataHUB, error is ${error}. Please verify that the DataHub Token matches the datahub_url in the extra_fields of eLabFTW.`
-          );
-        } else if (error.message.includes("Cannot read properties of undefined")) {
-          showError(
-            `eLabFTW accessed successfully, but extra_fields is missing. Please check the experiment ID and extra_fields in eLabFTW, error is ${error}.`
-          );
-        } else if (error.message.includes("403")) {
-          showError(
-            `Error: PLANTdataHUB cannot be accessed. Please verify that the datahub_url in the extra_fields of eLabFTW is correct. Error is ${error}.`
-          );
-        } else {
-          showError(`Error: eLabFTW to ARC conversion failed, error is ${error}`);
-        }
-        updateInfo("ARC update failed", 0);
-      }
-
-      async function updateAll2(elabid, elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/") {
-        try {
-          filesChanged.innerHTML = "";
-          statusInfo = "";
-
-          // Set cookies and decode inputs
-          elabid = elabid || document.getElementById("elabexperimentid").value;
-          elabtoken = elabtoken || document.getElementById("elabToken").value;
-          datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
-          setCookies(elabid, elabtoken, datahubtoken);
-
-          instance = unescape(instance);
-          elabid = decodeURIComponent(elabid);
-          const elabidList = elabid.split(",");
-          const totalExp = elabidList.length;
-
-          for (const [expIndex, currentElabid] of Object.entries(elabidList)) {
-            if (!currentElabid) continue;
-
-            const ratio = (parseInt(expIndex) + 1) / totalExp;
-            updateInfo(`Fetching eLabFTW experiment <b>${currentElabid}</b>, instance is ${instance}`, ratio * 10);
-
-            // Fetch data from eLabFTW
-            const res = await fetchElabJSON(elabtoken, `experiments/${currentElabid}`, instance);
-            const users = await fetchElabJSON(elabtoken, "users", instance);
-            const extra_fields = res.metadata_decoded.extra_fields;
-            const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);
-
-            const assayId = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
-            const user = users.find((e) => e.fullname === res.fullname);
-            const email = user.email;
-
-            // Convert protocol to Markdown
-            let protocol = res.body.replace(/\w+\.php\?mode=view/g, `${instance.replace("api/v2/", "")}/$&`);
-            let markdown = convertToMarkdown(protocol);
-
-            // Process files and update links
-            const dir = `arc${currentElabid}`;
-            await datahubClone(datahubURL, dir, datahubtoken);
-            await processFiles(dir, assayId, res.uploads, elabtoken, instance);
-
-            markdown = updateLinks(markdown, datahubURL, mainOrMaster, assayId, res.uploads);
-
-            // Write Markdown and commit changes
-            await fs.promises.writeFile(`${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`, markdown);
-            await git.add({ fs, dir, filepath: `assays/${assayId}/protocols/eLabFTW_protocol.md` });
-
-            await commitPush(datahubtoken, datahubURL, res.fullname, email, dir);
-            updateInfo("ARC updated successfully", ratio * 100);
-          }
-        } catch (error) {
-          handleErrors(error);
-        }
-      }
-
-      async function processFiles(dir, assayId, uploads, elabtoken, instance) {
-        const blobb = [];
-        for (const [index, file] of Object.entries(uploads)) {
-          const blob = await fetchElabFiles(elabtoken, `experiments/${assayId}/uploads/${file.id}?format=binary`, instance);
-          blobb.push(blob);
-
-          const data = new Uint8Array(await blob.arrayBuffer());
-          const realname = file.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-          const path = `assays/${assayId}/dataset/${index}_${realname}`;
-
-          await fs.promises.writeFile(`${dir}/${path}`, data);
-          await git.add({ fs, dir, filepath: path });
-
-          updateInfo(`Added file ${realname}`, (index / uploads.length) * 10);
-        }
-      }
-
-
-      function updateLinks(markdown, datahubURL, mainOrMaster, assayId, uploads) {
-          let updatedMarkdown = markdown;
-          uploads.forEach((file, index) => {
-            const realname = file.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-            const markdownPath = `assays/${encodeURIComponent(assayId)}/dataset/${index}_${realname}`;
-            updatedMarkdown = updatedMarkdown.replaceAll(
-              file.long_name,
-              `${datahubURL.slice(0, -4)}/-/raw/${mainOrMaster}/${markdownPath}`
-            );
-          });
-          return updatedMarkdown;
-        }
-
-        function convertToMarkdown(htmlContent) {
-            return turndownService.turndown(htmlContent);
-          }
-          function setCookies(elabid, elabtoken, datahubtoken, maxAge = 60 * 60 * 24 * 31) {
-          document.cookie = `elabid=${encodeURIComponent(elabid)}; SameSite=lax; max-age=${maxAge}; Secure`;
-          document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
-          document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
-        }
-
 
     async function updateAll(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
       try {   
@@ -808,10 +727,7 @@
       datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
       setelabURL(instance);
       instance = unescape(instance);
-      const maxage = 60*60*24*31; //max age is one month
-      document.cookie = "elabid="+elabid+"; SameSite=lax; max-age=2678400; Secure";
-      document.cookie = "elabtoken="+elabtoken+"; SameSite=lax; max-age=2678400; Secure";
-      document.cookie = "datahubtoken="+datahubtoken+"; SameSite=lax; max-age=2678400; Secure";
+      setCookies( elabid, elabtoken, datahubtoken);
       
       elabid = decodeURIComponent(elabid);
       elabidList = elabid.split(",");
@@ -820,7 +736,8 @@
         if (elabid){
           const ratio = (expIndex+1)/totalExp;
           updateInfo("Fetching eLabFTW experiment <b> "+ elabid +"</b>, instance is "+instance, ratio* 10);
-          const res = await fetchElabJSON(elabtoken, "experiments/"+elabid,  instance);
+          res = await fetchElabJSON(elabtoken, "experiments/"+elabid,  instance);
+          window.elabJSON = res;
           const users = await fetchElabJSON(elabtoken, "users", instance);
           const extra_fields = res.metadata_decoded.extra_fields;
           const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
@@ -978,11 +895,199 @@
       }      
     }
 
-    addEventListener("hashchange", (event) => {
-      if (true) {
-        softRoute();
-      }
-    });
+        // Helper Functions ----------------------------------------------------------
+
+        async function handleUserInput(elabid, elabtoken, datahubtoken, instance) {
+          elabid = elabid || document.getElementById("elabexperimentid").value;
+          elabtoken = elabtoken || document.getElementById("elabToken").value;
+          datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
+          instance = unescape(instance).replace(/\/$/, ""); // Remove trailing slash
+          
+          // Set cookies with 1 month expiration
+          setCookies(elabid, elabtoken, datahubtoken, instance);
+
+          return {
+            elabidList: elabid.split(',').map(id => id.trim()),
+            elabtoken,
+            datahubtoken,
+            instance: `${instance}/`
+          };
+        }
+
+        async function fetchElabExperimentData(elabid, elabtoken, instance) {
+          const res = await fetchElabJSON(elabtoken, `experiments/${elabid}`, instance);
+          const users = await fetchElabJSON(elabtoken, "users", instance);
+          const user = users.find(u => u.fullname === res.fullname);
+          
+          return {
+            metadata: res,
+            user,
+            assayId: res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_"),
+            protocolMarkdown: turndownService.turndown(
+              res.body.replace(/\w+\.php\?mode=view/g, `${instance.replace("/api/v2", "")}/$&`)
+            )
+          };
+        }
+
+        async function processUploadedFiles(params) {
+          const { uploads, elabid, elabtoken, instance, dir, assayId, datahubURL, markdown, mainOrMaster } = params;
+          let statusHTML = '';
+          let updatedMarkdown = markdown;
+          
+          for (const [index, upload] of Object.entries(uploads)) {
+            try {
+              const blob = await fetchElabFiles(
+                elabtoken, 
+                `experiments/${elabid}/uploads/${upload.id}?format=binary`, 
+                instance
+              );
+              
+              const realname = upload.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+              const filename = `${index}_${realname}`;
+              const filePath = `assays/${assayId}/dataset/${filename}`;
+              const absolutePath = `${dir}/${filePath}`;
+              
+              // Write file and stage
+              await fs.promises.writeFile(absolutePath, new Uint8Array(await blob.arrayBuffer()));
+              await git.add({ fs, dir, filepath: filePath });
+              
+              // Update markdown links
+              const datahubFileUrl = `${datahubURL.slice(0, -4)}/-/raw/${mainOrMaster}/${encodeURIComponent(filePath)}`;
+              updatedMarkdown = updatedMarkdown.replaceAll(upload.long_name, datahubFileUrl);
+              
+              // Generate HTML row
+              statusHTML += `
+                <tr>
+                  <td>${blob.type.includes('image') 
+                    ? `<img src="${URL.createObjectURL(blob)}" class="img-fluid">` 
+                    : `File: ${realname}`}</td>
+                  <td>
+                    ARC Path: ${filePath}<br>
+                    <a href="${datahubURL.slice(0, -4)}/-/blob/${mainOrMaster}/${encodeURIComponent(filePath)}" 
+                      target="_blank">View on DataHUB</a>
+                  </td>
+                </tr>
+              `;
+
+            } catch (error) {
+              statusHTML += `<tr><td colspan="2">Error processing ${upload.real_name}: ${error.message}</td></tr>`;
+              console.error(`File processing error: ${upload.id}`, error);
+            }
+          }
+
+          return { updatedMarkdown, statusHTML };
+        }
+
+        // Main Function -----------------------------------------------------------
+
+        async function updateAll2(elabid, elabtoken, datahubtoken, instance) {
+          try {
+            filesChanged.innerHTML = "";
+            const config = await handleUserInput(elabid, elabtoken, datahubtoken, instance);
+            const totalExp = config.elabidList.length;
+
+            for (const [expIndex, elabid] of Object.entries(config.elabidList)) {
+              try {
+                const ratio = (parseInt(expIndex) + 1) / totalExp;
+                updateInfo(`Processing experiment ${elabid}`, ratio * 10);
+                
+                // Fetch experiment data
+                const { metadata, user, assayId, protocolMarkdown } = 
+                  await fetchElabExperimentData(elabid, config.elabtoken, config.instance);
+                const datahubURL = gitUrlCheck(metadata.metadata_decoded.extra_fields.datahub_url.value);
+
+                // Setup directory and clone repo
+                const dir = `arc${elabid}`;
+                await datahubClone(datahubURL, dir, config.datahubtoken);
+                
+                // Process files and generate HTML
+                const { updatedMarkdown, statusHTML } = await processUploadedFiles({
+                  uploads: metadata.uploads,
+                  elabid,
+                  elabtoken: config.elabtoken,
+                  instance: config.instance,
+                  dir,
+                  assayId,
+                  datahubURL: 
+                  datahubURL
+                  ,
+                  markdown: protocolMarkdown,
+                  mainOrMaster: 'main' // Or detect branch name
+                });
+                
+                // Update protocol file
+                await fs.promises.writeFile(
+                  `${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`,
+                  updatedMarkdown
+                );
+                await git.add({ fs, dir, filepath: `assays/${assayId}/protocols/eLabFTW_protocol.md` });
+                
+                // Create assay and dataset readme
+                await createAssay(assayId, dir);
+                await fullAssay2(
+                  assayId,
+                  "new metadata table",
+                  metadata.lastname,
+                  metadata.firstname,
+                  user.email,
+                  metadata.team_name,
+                  "Generated by elab2ARC tool on " + new Date().toISOString(),
+                  dir
+                );
+                
+                // Commit and push changes
+                await commitPush(datahubtoken, datahubURL, user.fullname, user.email, dir);
+                // await commitAndPushChanges({
+                //   datahubtoken: config.datahubtoken,
+                //   datahubURL: gitlabURL,
+                //   user,
+                //   dir,
+                //   message: `Update assay ${assayId} via elab2ARC`
+                // });
+                
+                // Update UI
+                filesChanged.innerHTML += `
+                  <table class="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>eLabFTW Experiment ${elabid}</th>
+                        <th>ARC Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${statusHTML}
+                    </tbody>
+                  </table>
+                `;
+                
+              } catch (expError) {
+                handleError(expError, elabid);
+              }
+            }
+            
+          } catch (globalError) {
+            handleError(globalError);
+          }
+        }
+
+        // Error Handling ----------------------------------------------------------
+
+        function handleError(error, elabid = 'N/A') {
+          let message = `Error processing experiment ${elabid}: `;
+          
+          if (error.message.includes('401')) {
+            message += 'Authentication failed. Check your tokens and DataHUB URL.';
+          } else if (error.message.includes('403')) {
+            message += 'Access denied to DataHUB repository.';
+          } else if (error.message.includes('extra_fields')) {
+            message += 'Missing required extra_fields in eLabFTW experiment.';
+          } else {
+            message += error.message;
+          }
+          
+          showError(message);
+          console.error(`Error Details:`, error);
+        }
       
     const loading = new bootstrap.Modal(document.getElementById('loadingModal'), {
       keyboard: true, show: false
@@ -1174,19 +1279,13 @@
                 // file written successfully
               } catch (err) {
                 console.error(err);
-              }}
-        
-        
-        
+              }}        
         )
     }
 
     window.fullAssay2= async function(assayName, tableName ="newtable", firstName=void 0, familyName=void 0, email= void 0, affiliation= void 0, comment="generated by elab2arc", dir ){
         try {
         // -------- 1. Create and manipulate object in datamodel ----------
-
-
-
         const growth = arctrl.ArcTable.init(tableName);
         // Add input column with one value to table
         growth.AddColumn(arctrl.CompositeHeader.input(arctrl.IOType.source()), [arctrl.CompositeCell.createFreeText("Input1")]);
@@ -1444,6 +1543,12 @@
       pbar.setAttribute("style", 'width:' + progress + '%;')
       pbar.setAttribute("aria-valuenow", progress)
     }
+
+    addEventListener("hashchange", (event) => {
+      if (true) {
+        softRoute();
+      }
+    });
   </script>
 
 
