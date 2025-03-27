@@ -73,9 +73,9 @@ async function loadExperiment() {
         data.items_links.forEach(item => {
             relatedItems.innerHTML += `
                 <div>
-                    <span class="badge bg-primary ">${item.category_title}</span> <a href="${instance}/${item.page}?mode=view&id=${item.entityid}" target="_blank">
+                    <span class="badge bg-info ">Items</span><span class="badge bg-secondary ">${item.category_title}</span> <a href="${instance.replace("api/v2/", "")}/${item.page}?mode=view&id=${item.entityid}" target="_blank">
                         ${item.title}
-                    </a>   
+                    </a> &nbsp;&nbsp;  <button class="btn btn-primary btn-sm" id="item${item.entityid}Target" data-type="items" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" > Convert to ARC</button>
                 </div>
             `;
         });
@@ -83,9 +83,9 @@ async function loadExperiment() {
         data.experiments_links.forEach(item => {
             relatedExps.innerHTML += `
                 <div>
-                    <span class="badge bg-primary ">${item.category_title}</span> <a href="${instance}/${item.page}?mode=view&id=${item.entityid}" target="_blank">
+                    <span class="badge bg-info ">Experiment</span> <a href="${instance.replace("api/v2/", "")}/${item.page}?mode=view&id=${item.entityid}" target="_blank">
                         ${item.title}
-                    </a>   
+                    </a>  &nbsp;&nbsp; <button class="btn btn-primary btn-sm"  id="experiment${item.entityid}Target" data-type="experiments" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" > Convert to ARC</button>
                 </div>
             `;
         });
@@ -96,3 +96,21 @@ async function loadExperiment() {
     }
 }
 
+const getFTW = async (id, type, elabid) => {
+    try {
+        const elabtoken = getCookie('elabtoken');
+    const instance = window.localStorage.getItem('elabURL');
+    window.elabJSON = await fetchElabJSON(elabtoken, type+"/"+elabid, instance);
+    document.getElementById("arcBtn").click();    
+    document.getElementById("elabFTWInfo").innerHTML = window.elabJSON.title;   
+
+    } catch (error) {
+        console.error('Error loading experiment:', error);
+        alert('Access of related item failed, please check your credentials and access right of the item or experiment and try again');
+    
+    
+    }
+    
+    
+
+}
