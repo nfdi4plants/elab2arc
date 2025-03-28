@@ -1,0 +1,31 @@
+.elab-container {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 20px;
+}
+.main-content {
+    grid-column: 1 / 2;
+}
+.sidebar {
+    grid-column: 2 / 3;
+}
+.section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+.metadata { background: #e8f4ff; }
+.uploads { background: #fff3e0; }
+.related { background: #f0f8ff; }
+h1 { color: #2c3e50; }
+img {
+    max-width: 100%;
+    height: auto;
+    margin: 10px 0;
+}
+.gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
