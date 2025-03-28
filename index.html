@@ -156,9 +156,14 @@
             <button class="btn btn-primary"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
             <br>
             <button  class="btn btn-primary" type="button" onclick="startStepByStep()" ><span> Step by Step </span></button>
+            <button type="button" class="btn btn-secondary" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
+              Check Status
+            </button>
+            
             <div id="toolstatus"  class="col-10 m-auto">
             <!-- <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-title="Under Construction"> -->
-              
+             
+             
             
           <!-- </span> -->
 
@@ -212,6 +217,9 @@
           <span class="" id="elabFTWInfo"> Please select your ElabFTW  </span> <span class=" text-success" id=""> ====>>>  </span>
           <span class="" id="gitlabInfo"> GitLabe  </span> 
           <span class="" id="arcInfo"> Please select your ARC </span> <button type="button" class="btn btn-primary" onclick="singleConvert()">Start Convert</button>
+          <button type="button" class="btn btn-secondary" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
+            Check Status
+          </button>
           </div>
        
           <!-- <h4> Imported ARCs </h4>
@@ -399,7 +407,7 @@
     }
 
     const startStepByStep= async ()=>{
-
+      loading.show();
       const datahubToken = document.getElementById("datahubToken").value;
       const elabToken = document.getElementById("elabToken").value;
       const elabURL = document.getElementById("elabURLInput").value;
@@ -408,7 +416,9 @@
       const id = await fetchUser(datahubToken);
       if (id){
       document.getElementById("usernameInput").value = id.username;
-      fetchUserProjects(id.username, datahubToken) }
+      await fetchUserProjects(id.username, datahubToken) 
+      loading.hide();
+    }
       else{
         return;
       }
@@ -429,10 +439,15 @@
             'Authorization': `Bearer ${accessToken}` // Include the token in the Authorization header [[3]]
           }
         });
-
+        console.log(response);
         // Check for bad responses (status codes between 400 and 599)
-        if (response.status >= 400 && response.status < 600) {
-          throw new Error("Bad response from server, please check the availability of the server");
+        if (response.status == 401){
+          loading.hide();
+          throw new Error(" Unauthorized, the DataHUB token is wrong or expired. Or a project token has been used for step by step conversion. Please use a personal token with correct rights ");
+        }else if(response.status >= 400 && response.status < 500){
+          throw new Error(" ");
+        }else if (response.status >= 500 && response.status < 600) {
+          throw new Error("Bad response from server, please check the availability of the server. ");
         }
 
         // Parse the JSON response
@@ -501,6 +516,7 @@
 
           } catch (error) {
               // Handle network/API errors [[6]]
+              alert(" ARC creation failed, please check if the name is unique"+error.message || error);
               throw new Error(`Project creation failed: ${error.message}`);
           }
       };
@@ -716,7 +732,7 @@
           onAuth: () => ({ username: datahubtoken }),
         });
         console.log(pushResult)  ;
-        updateInfo("PLANTDataHUB has been updated.  <br>", "100")
+        updateInfo("PLANTDataHUB has been updated.  <br>", "100");
         //
         } catch (error) {
           console.error(error);
@@ -731,7 +747,7 @@
           onAuth: () => ({ username: datahubtoken }),
         });
         console.log(pushResult)  ;
-        showError( datahubURL +"ARC has been updated")
+        showError( datahubURL +"ARC has been updated on master branch");
           //showError( "push to git failed. The error is "+ error)
         }
     }
@@ -1084,9 +1100,9 @@
             await git.add({ fs, dir: dir, filepath: `assays/${assayId}/protocols/eLabFTW_protocol.md` });
             await fs.promises.writeFile(`${dir}/assays/${assayId}/dataset/readme.md`, "# Data files");
             await git.add({ fs, dir: dir, filepath: `assays/${assayId}/dataset/readme.md` });
-
-            await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir);
             finalizeExperimentDisplay(ratio);
+            await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir);
+            
         }
 
         // Process uploads and perform URL replacements
@@ -1487,17 +1503,18 @@
       const url1 =  urlRoute[0].split("?")[1];
       console.log("submission url is "+ url1);
       try {
-        if (url1){        
+        if (url1){     
+          console.log("submission url is "+ url1);   
         const submitData = url1.split("&");
         let submitJSON = {};
         submitData.forEach(e=>
         { submitJSON[e.split("=")[0]] = e.split("=")[1]}
       );
-      if (submitData.length <4 ){
-        parseInt(submitJSON.elabid.toString())<1000 ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://elabftw.hhu.de/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.localStorage.elabURL );
-      }else{
+      // if (submitData.length =3 ){
+      //   parseInt(submitJSON.elabid.toString())<1000 ? updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, "https://elabftw.hhu.de/api/v2/" ) : updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, window.localStorage.elabURL );
+      // }else{
         updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
-      }
+      // }
       } else {
       }
       try {
