@@ -24,13 +24,35 @@ function buildTree(parentElement, path) {
             const addButton = document.createElement('button');
             addButton.className = 'add-btn';
             addButton.textContent = '+';
-            addButton.title = 'Add new file in this folder';
+            addButton.title = 'Add new folder in this folder';
             addButton.onclick = (e) => {
                 e.stopPropagation();
                 createFile(fullPath);
             };
             content.appendChild(addButton);
             
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-btn';
+            deleteButton.textContent = '-';
+            deleteButton.title = 'delete this folder';
+            deleteButton.onclick = (e) => {
+                e.stopPropagation();
+                deletePath(fullPath);
+            };
+            content.appendChild(deleteButton);
+
+            const selectButton = document.createElement('button');
+            selectButton.className = 'select-btn';
+            selectButton.textContent = '✔';
+            selectButton.title = 'select this folder';
+            selectButton.onclick = (e) => {
+                e.stopPropagation();
+                selectPath(fullPath);
+            };
+            content.appendChild(selectButton);
+
+
+
             node.onclick = (e) => {
                 e.stopPropagation();
                 if (childrenContainer.style.display === 'none') {
@@ -83,5 +105,68 @@ function createFile(parentPath = '.') {
         } catch (e) {
             alert('Error: ' + e.message);
         }
+    }
+}
+
+function deletePath(targetPath) {
+    try {
+        // Validate path existence [[1]][[5]]
+        if (!FS.existsSync(targetPath)) {
+            alert(`Error: Path "${targetPath}" does not exist.`);
+            return;
+        }
+
+        // Verify it's a directory [[5]][[8]]
+        const stats = FS.statSync(targetPath);
+        if (!stats.isDirectory()) {
+            alert(`Error: "${targetPath}" is not a directory.`);
+            return;
+        }
+
+        // Check if directory is empty [[8]]
+        const contents = FS.readdirSync(targetPath);
+        if (contents.length > 0) {
+            alert(`Deletion failed: Folder "${targetPath}" is not empty.`);
+            return;
+        }
+
+        // Attempt deletion [[4]][[9]]
+        FS.rmdirSync(targetPath);
+        alert(`Successfully deleted empty folder: ${targetPath}`);
+        refreshTree(memfsPathDirname(targetPath)); // Refresh parent directory [[8]]
+
+    } catch (error) {
+        // Handle specific permission errors [[2]][[7]]
+        if (error.code === 'EPERM' || error.code === 'EACCES') {
+            alert(`Permission denied: Unable to delete "${targetPath}"`);
+        } else {
+            alert(`Deletion failed: ${error.message}`);
+        }
+    }
+}
+
+function selectPath(targetPath) {
+    try {
+        // Check existence [[1]][[5]]
+        if (!FS.existsSync(targetPath)) {
+            alert(`Error: Path "${targetPath}" does not exist.`);
+            return;
+        }
+
+        // Verify it's a directory [[5]][[8]]
+        const stats = FS.statSync(targetPath);
+        if (!stats.isDirectory()) {
+            alert(`Error: "${targetPath}" is not a directory.`);
+            return;
+        }
+
+        // Log and display path [[2]][[4]]
+        console.log('Selected folder path:', targetPath);
+        document.getElementById('arcInfo').innerHTML= targetPath;
+        //alert(`Full path logged to console:\n${targetPath}`);
+        
+    } catch (error) {
+        // Handle unexpected errors [[9]]
+        alert(`Selection failed: ${error.message}`);
     }
 }

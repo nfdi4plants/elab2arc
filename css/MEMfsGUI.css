@@ -70,13 +70,36 @@
 }
 
 .add-btn {
-    margin-left: auto;
+    margin-left: 12px;
     padding: 6px 12px;
-    background: #4CAF50;
+    background: #1fc2a7;
     color: white;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 0.5em;
+    visibility: hidden;
+}
+
+
+.delete-btn {
+    margin-left: 2px;
+    padding: 6px 14px;
+    background: #c21f3a;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.5em;
+    visibility: hidden;
+}
+
+.select-btn {
+    margin-left: 2px;
+    padding: 6px 12px;
+    background: #4fb3d9;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.5em;
     visibility: hidden;
 }
 
@@ -85,7 +108,15 @@
     background: #f0f0f0;
 }
 
-.node-content:hover .add-btn {
+.node-content:hover .add-btn  {
+    cursor: pointer;
+    visibility: visible;
+}
+.node-content:hover .delete-btn  {
+    cursor: pointer;
+    visibility: visible;
+}
+.node-content:hover .select-btn  {
     cursor: pointer;
     visibility: visible;
 }

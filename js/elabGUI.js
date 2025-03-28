@@ -14,6 +14,7 @@ async function loadExperiment() {
     
     try {
         const data1 = await fetchElabExperimentData(elabid, elabtoken, instance);
+        window.elabJSON = data1;
         const data = data1.metadata;
         const assayId  = data.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
         let protocol = data.body;
@@ -33,10 +34,10 @@ async function loadExperiment() {
             <li><strong>Created:</strong> ${data.created_at}</li>
             <li><strong>Modified:</strong> ${data.modified_at}</li>
             <li><strong>Author:</strong> ${data.fullname}</li>
-            <li><strong>Datahub URL:</strong> 
-                <a href="" target="_blank">
-                    
-                </a>
+            <li><strong>ElabFTW URL:</strong> ${data.sharelink}
+                <a href="${data.sharelink}" target="_blank">
+                    View in ElabFTW
+                </a><button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" > Convert to ARC</button>
             </li>
         `;
         
@@ -70,6 +71,7 @@ async function loadExperiment() {
         
         // Related items
         const relatedItems = document.getElementById('relatedItems');
+        relatedItems.innerHTML= "";
         data.items_links.forEach(item => {
             relatedItems.innerHTML += `
                 <div>
@@ -80,6 +82,7 @@ async function loadExperiment() {
             `;
         });
         const relatedExps = document.getElementById('relatedExps');
+        relatedExps.innerHTML= "";
         data.experiments_links.forEach(item => {
             relatedExps.innerHTML += `
                 <div>
