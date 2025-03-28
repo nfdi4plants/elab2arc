@@ -710,10 +710,10 @@
       
     }
 
-    async function commitPush( datahubtoken, datahubURL, fullname, email, dir ){
+    async function commitPush( datahubtoken, datahubURL, fullname, email, dir, gitRoot ){
       let sha = await git.commit({
           fs,
-          dir: dir,
+          dir: gitRoot,
           author: {
             name: fullname,
             email: email,
@@ -725,7 +725,7 @@
           let pushResult = await git.push({
           fs,
           http,
-          dir: dir,
+          dir: gitRoot,
           remote: 'origin',
           force: true,
           ref: 'main',
@@ -795,7 +795,11 @@
       const instance = document.getElementById("elabURLInput").value;
       const users = await fetchElabJSON(elabtoken, "users",  instance); 
       const params = await getParameters(1, elabtoken, datahubtoken,instance);
-      await processExperiment(0, 1,params, window.elabJSON, users, gitlabURL, arcName );
+      const elabid = document.getElementById("elabexperimentid").value;
+      elabidList = elabid.split(",");
+      
+      await processExperiment(0, elabidList[0] ,params, window.elabJSON, users, gitlabURL, arcName );
+      refreshTree(arcName);
     }
     // async function updateAll2(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
     //   try {   
@@ -976,19 +980,21 @@
     // }
 
         // Main function orchestrating the process
-        async function updateAll(elabid, elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/") {
+        async function updateAll(elabidText, elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/") {
             try {
                 // Initialize UI elements and parameters
                 initializeUI();
-                const params = await getParameters(elabid, elabtoken, datahubtoken, instance);
+                const params = await getParameters(elabidText, elabtoken, datahubtoken, instance);
 
                 // Process each experiment ID
                 for (const [expIndex, expId] of Object.entries(params.elabidList)) {
                     if (expId) {
-                        const res = await fetchElabJSON(params.elabtoken, `experiments/${elabid}`, params.instance);
+                        const res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
                         const users = await fetchElabJSON(params.elabtoken, "users", params.instance);
                         const extraFields = res.metadata_decoded.extra_fields;
                         const datahubURL = gitUrlCheck(extraFields.datahub_url.value);
+                        const dir = `arc${expId}`;
+                        await datahubClone(datahubURL, dir, params.datahubtoken);
                         await processExperiment(expIndex, expId, params, res, users, datahubURL);
                     }
                 }
@@ -1005,30 +1011,28 @@
         }
 
         // Retrieve and validate parameters
-        async function getParameters(elabid, elabtoken, datahubtoken, instance ) {
-            elabid = elabid || document.getElementById("elabexperimentid").value;
+        async function getParameters(elabidText, elabtoken, datahubtoken, instance ) {
+            elabid = elabidText || document.getElementById("elabexperimentid").value;
             elabtoken = elabtoken || document.getElementById("elabToken").value;
             datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
 
             setelabURL(instance);
             instance = unescape(instance);
-            setCookies(elabid, elabtoken, datahubtoken);
+            setCookies(elabidText, elabtoken, datahubtoken);
+            elabidText = decodeURIComponent(elabidText);
+            document.getElementById("elabexperimentid").value = elabidText;
+            
+            const elabidList = elabidText.split(",");
 
-            elabid = decodeURIComponent(elabid);
-            const elabidList = elabid.split(",");
+            
             return { elabidList, elabtoken, datahubtoken, instance };
         }
 
         async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir) {
           document.getElementById("statusModalBtn").click();
             const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
-            updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);
-
-            
+            updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);  
             window.elabJSON = res;
-
-            
-
 
             const assayId = formatAssayId(res.title);
             user = users.find(e => e.fullname === res.fullname);
@@ -1046,7 +1050,12 @@
             updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
 
             const dir = arcDir ||`arc${elabid}`;
-            await datahubClone(datahubURL, dir, params.datahubtoken);
+
+            const list = dir.split("/");
+            const gitRoot = list[0]+"/";
+            const gitSubfolder = dir.replace(list[0], "");
+            console.log(gitRoot +"   git subfoler: "+ gitSubfolder);
+
             let ls;
             try {
               ls = fs.readdirSync(dir+"/assays")
@@ -1079,14 +1088,17 @@
             // Process uploads and update URLs
             [statusHTML, markdown] = await processUploadsAndReplaceUrls(
                 res.uploads,
-                dir,
+                dir, 
+                gitRoot, 
+                gitSubfolder,
                 assayId,
                 datahubURL,
                 params,
                 ratio,
                 statusHTML,
                 markdown,
-                protocolHTML
+                protocolHTML,
+                elabid
             );
 
             // Finalize HTML and write files
@@ -1097,30 +1109,33 @@
             // Write markdown files
 
             await fs.promises.writeFile(`${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`, markdown);
-            await git.add({ fs, dir: dir, filepath: `assays/${assayId}/protocols/eLabFTW_protocol.md` });
+            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}assays/${assayId}/protocols/eLabFTW_protocol.md` });
             await fs.promises.writeFile(`${dir}/assays/${assayId}/dataset/readme.md`, "# Data files");
-            await git.add({ fs, dir: dir, filepath: `assays/${assayId}/dataset/readme.md` });
+            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}assays/${assayId}/dataset/readme.md` });
             finalizeExperimentDisplay(ratio);
-            await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir);
+            await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir,gitRoot);
             
         }
 
         // Process uploads and perform URL replacements
         async function processUploadsAndReplaceUrls(
             uploads,
-            dir,
+            dir, 
+            gitRoot, 
+            gitSubfolder,
             assayId,
             datahubURL,
             params,
             ratio,
             statusHTML,
             markdown,
-            protocolHTML
+            protocolHTML,
+            elabid,
         ) {
             for (const [index, upload] of Object.entries(uploads)) {
                 const blob = await fetchElabFiles(
                     params.elabtoken,
-                    `experiments/${params.elabidList[0]}/uploads/${upload.id}?format=´binary´`,
+                    `experiments/${window.elabJSON.id}/uploads/${upload.id}?format=´binary´`, //TODO, will be refined
                     params.instance
                 );
 
@@ -1143,7 +1158,7 @@
 
                 // Write file and update Git
                 await fs.promises.writeFile(`${dir}/${path}`, new Uint8Array(await blob.arrayBuffer()));
-                await git.add({ fs, dir: dir, filepath: path });
+                await git.add({ fs, dir: gitRoot, filepath: gitSubfolder+ path });
 
                 // Update status HTML with file info
                 if (blob.type.includes("image")) {
@@ -1519,7 +1534,7 @@
       }
       try {
           const cookie = document.cookie;
-          document.getElementById("elabexperimentid").value = decodeURIComponent(extractCookie("elabid"));
+          document.getElementById("elabexperimentid").value = decodeURIComponent(decodeURIComponent(extractCookie("elabid")));
           document.getElementById("elabToken").value = extractCookie("elabtoken");
           document.getElementById("datahubToken").value = extractCookie("datahubtoken");
         } catch (error) {
