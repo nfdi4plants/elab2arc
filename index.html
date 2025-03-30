@@ -68,12 +68,12 @@
         elab2ARC (1-click)&nbsp;
         </button>
         
-        <button type="button" onclick="location.href=location.origin+'/#ftw'" class="btn btn-nav "
+        <button type="button" onclick="location.href=location.origin+'/elab2arc/#ftw'" class="btn btn-nav "
           id="ftwBtn">
         ElabFTW&nbsp;
         </button>
         
-        <button type="button" onclick="location.href=location.origin+'/#arc'" class="btn btn-nav "
+        <button type="button" onclick="location.href=location.origin+'/elab2arc/#arc'" class="btn btn-nav "
           id="arcBtn">
         ARCs&nbsp;
         </button>
@@ -214,8 +214,8 @@
             <div id="fileTree"></div>
         </div>
         <div class="text-center m-3" >
-          <span class="" id="elabFTWInfo"> Please select your ElabFTW  </span> <span class=" text-success" id=""> ====>>>  </span>
-          <span class="" id="gitlabInfo"> GitLabe  </span> 
+          <span class="" id="elabFTWInfo"> Main ElabFTW Protocol Used  </span> <span class=" text-success" id=""> ====>>>  </span>
+          <span class="" id="gitlabInfo"> GitLab URL </span> 
           <span class="" id="arcInfo"> Please select your ARC </span> <button type="button" class="btn btn-primary" onclick="singleConvert()">Start Convert</button>
           <button type="button" class="btn btn-secondary" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
             Check Status
@@ -422,7 +422,7 @@
       else{
         return;
       }
-      loadExperiment();
+      loadExperiment(elabURL);
       document.getElementById("ftwBtn").click();
 
     }
@@ -789,7 +789,15 @@
     const singleConvert = async ()=>{
       const gitlabusername = document.getElementById("usernameInput").value;
       const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
+      // if (gitlabURL.includes("Please select your")){
+      //   alert("No ElabFTW is selected, please go to ElabFTW tab to select.");
+      //   return;
+      // };
       const arcName = document.getElementById("arcInfo").innerHTML;
+      if (arcName.includes("Please select your ARC")){
+        alert("please select your ARC.");
+        return;
+      };
       const elabtoken = document.getElementById("elabToken").value;
       const datahubtoken = document.getElementById("datahubToken").value;
       const instance = document.getElementById("elabURLInput").value;
@@ -797,8 +805,8 @@
       const params = await getParameters(1, elabtoken, datahubtoken,instance);
       const elabid = document.getElementById("elabexperimentid").value;
       elabidList = elabid.split(",");
-      
-      await processExperiment(0, elabidList[0] ,params, window.elabJSON, users, gitlabURL, arcName );
+      window.elabJSON = window.elabJSON.metadata;
+      await processExperiment(0, elabidList[0], params, window.elabJSON, users, gitlabURL, arcName );
       refreshTree(arcName);
     }
     // async function updateAll2(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
@@ -1048,7 +1056,7 @@
             let markdown = turndownService.turndown(protocol);
 
             updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
-
+            
             const dir = arcDir ||`arc${elabid}`;
 
             const list = dir.split("/");

@@ -8,7 +8,7 @@ function getCookie(name) {
 const instance = window.localStorage.getItem('elabURL');
 
 // Fetch and display data
-async function loadExperiment() {
+async function loadExperiment(instance) {
     const elabid = getCookie('elabid').split(',')[0];
     const elabtoken = getCookie('elabtoken');
     
@@ -37,7 +37,7 @@ async function loadExperiment() {
             <li><strong>ElabFTW URL:</strong> ${data.sharelink}
                 <a href="${data.sharelink}" target="_blank">
                     View in ElabFTW
-                </a><button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" > Convert to ARC</button>
+                </a><button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" > Select for Conversion</button>
             </li>
         `;
         
