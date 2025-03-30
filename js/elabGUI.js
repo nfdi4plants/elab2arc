@@ -13,9 +13,9 @@ async function loadExperiment(instance) {
     const elabtoken = getCookie('elabtoken');
     
     try {
-        const data1 = await fetchElabExperimentData(elabid, elabtoken, instance);
-        window.elabJSON = data1;
-        const data = data1.metadata;
+        const data = await fetchElabExperimentData(elabid, elabtoken, instance);
+        window.elabJSON = data;
+       
         const assayId  = data.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
         let protocol = data.body;
           const elabWWW= instance.replace("api/v2/", "");
