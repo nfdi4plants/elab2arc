@@ -443,9 +443,9 @@
         // Check for bad responses (status codes between 400 and 599)
         if (response.status == 401){
           loading.hide();
-          throw new Error(" Unauthorized, the DataHUB token is wrong or expired. Or a project token has been used for step by step conversion. Please use a personal token with correct rights ");
+          throw new Error(" Unauthorized, the DataHUB token is wrong or expired. Or a project-token has been used for step by step conversion. Please use a personal-token with correct rights ");
         }else if(response.status >= 400 && response.status < 500){
-          throw new Error(" ");
+          throw new Error(" Unauthorized, the DataHUB token is wrong or expired. Or a project-token has been used for step by step conversion. Please use a personal-token with correct rights  ");
         }else if (response.status >= 500 && response.status < 600) {
           throw new Error("Bad response from server, please check the availability of the server. ");
         }
