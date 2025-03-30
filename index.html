@@ -410,8 +410,9 @@
       loading.show();
       const datahubToken = document.getElementById("datahubToken").value;
       const elabToken = document.getElementById("elabToken").value;
-      const elabURL = document.getElementById("elabURLInput").value;
+      const instance = window.localStorage.getItem('elabURL');
       const elabid = document.getElementById("elabexperimentid").value;
+
       setCookies( elabid, elabToken, datahubToken);
       const id = await fetchUser(datahubToken);
       if (id){
@@ -422,7 +423,7 @@
       else{
         return;
       }
-      loadExperiment(elabURL);
+      loadExperiment(instance);
       document.getElementById("ftwBtn").click();
 
     }
@@ -805,7 +806,6 @@
       const params = await getParameters(1, elabtoken, datahubtoken,instance);
       const elabid = document.getElementById("elabexperimentid").value;
       elabidList = elabid.split(",");
-      window.elabJSON = window.elabJSON.metadata;
       await processExperiment(0, elabidList[0], params, window.elabJSON, users, gitlabURL, arcName );
       refreshTree(arcName);
     }
@@ -1241,14 +1241,7 @@
           const users = await fetchElabJSON(elabtoken, "users", instance);
           const user = users.find(u => u.fullname === res.fullname);
           
-          return {
-            metadata: res,
-            user,
-            assayId: res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_"),
-            protocolMarkdown: turndownService.turndown(
-              res.body.replace(/\w+\.php\?mode=view/g, `${instance.replace("/api/v2", "")}/$&`)
-            )
-          };
+          return res;
         }
 
  
