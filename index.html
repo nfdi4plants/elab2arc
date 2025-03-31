@@ -68,12 +68,12 @@
         elab2ARC (1-click)&nbsp;
         </button>
         
-        <button type="button" onclick="location.href=location.origin+'/elab2arc/#ftw'" class="btn btn-nav "
+        <button type="button" onclick="window.history.pushState('', '', '/elab2arc/#ftw'); showTab('ftwTab')" class="btn btn-nav "
           id="ftwBtn">
         ElabFTW&nbsp;
         </button>
         
-        <button type="button" onclick="location.href=location.origin+'/elab2arc/#arc'" class="btn btn-nav "
+        <button type="button" onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="btn btn-nav "
           id="arcBtn">
         ARCs&nbsp;
         </button>
@@ -407,6 +407,7 @@
     }
 
     const startStepByStep= async ()=>{
+      document.getElementById("ftwBtn").click();
       loading.show();
       const datahubToken = document.getElementById("datahubToken").value;
       const elabToken = document.getElementById("elabToken").value;
@@ -423,8 +424,8 @@
       else{
         return;
       }
-      loadExperiment(instance);
-      document.getElementById("ftwBtn").click();
+      setTimeout(e=>{loadExperiment(instance);}, 500) 
+      
 
     }
 
@@ -1550,66 +1551,40 @@
       const para = urlRoute.slice(-1)[0];
       switch (para) {
         case "elab":
-          document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "elabTab") { e.classList.remove("d-none") }
-            else { e.classList.add("d-none") }
-          }
-
-          )
+          showTab("elabTab");
           break;
         case "arc":
-          document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "arcTab") { e.classList.remove("d-none") }
-            else { e.classList.add("d-none") }
-          }
-
-          )
+          showTab("arcTab");
           break;
         case "ftw":
-          document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "ftwTab") { e.classList.remove("d-none") }
-            else { e.classList.add("d-none") }
-          }
+          showTab("ftwTab");
 
-          )
           break;
           case "https://xrzhou.com/elab2arc/":
-          document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "elabTab") { e.classList.remove("d-none") }
-            else { e.classList.add("d-none") }
-          }
-
-          )
-          break;
-          case "http://127.0.0.1:8000/":
-          window.location.href = "http://127.0.0.1:8000/elab2arc/"
-          document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "elabTab") { e.classList.remove("d-none") }
-            else { e.classList.add("d-none") }
-          }
-
-          )
+          showTab("elabTab");
+        
           break;
           case "":
-          document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == "elabTab") { e.classList.remove("d-none") }
-            else { e.classList.add("d-none") }
-          }
-
-          )
+          showTab("elabTab");
           break;
           
         default:
 
       }
-      
-      
-
     }
+      
+      
 
-   
+    
+  
 
+    function showTab(name){
+      document.querySelectorAll('div[name="tab"]').forEach((e) => {
+            if (e.id == name) { e.classList.remove("d-none") }
+            else { e.classList.add("d-none") }
+    })
 
+  }
 
 
     async function cloneARC(http_url_to_repo, name) {
