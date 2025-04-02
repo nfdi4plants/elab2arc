@@ -26,7 +26,13 @@ async function loadExperiment(instance) {
         // Populate content
         document.getElementById('expTitle').textContent = data.title;
         
-        
+        const headLine = document.getElementById("elabHeadLine");
+        headLine.innerHTML= `
+        <li><strong>ElabFTW URL:</strong> ${data.sharelink}
+                <a href="${data.sharelink}" target="_blank">
+                    View in ElabFTW
+                </a>
+            </li><button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" > Select for Conversion</button>`
         // Metadata
         const metadataList = document.getElementById('metadataList');
         metadataList.innerHTML = `
@@ -34,15 +40,13 @@ async function loadExperiment(instance) {
             <li><strong>Created:</strong> ${data.created_at}</li>
             <li><strong>Modified:</strong> ${data.modified_at}</li>
             <li><strong>Author:</strong> ${data.fullname}</li>
-            <li><strong>ElabFTW URL:</strong> ${data.sharelink}
-                <a href="${data.sharelink}" target="_blank">
-                    View in ElabFTW
-                </a><button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" > Select for Conversion</button>
-            </li>
+            
         `;
         
         // Uploads
         const gallery = document.getElementById('uploadGallery');
+        const uploadGallery = document.getElementById('uploadGallery');
+        uploadGallery.innerHTML = "";
         const uploads = data.uploads;
         for (const [index, ele] of Object.entries(uploads)){
             const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´",instance);
@@ -57,10 +61,25 @@ async function loadExperiment(instance) {
             
             
             //const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
-            const markdownPath = "assays/"+encodeURIComponent(assayId)+"/dataset/"+index+"_"+realname;
+            //const markdownPath = "assays/"+encodeURIComponent(assayId)+"/dataset/"+index+"_"+realname;
 
-            //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
+            //filedict[longname] = instance.slice(0,-4)+`/-/raw/main/`+path;
+            
+            if (blobs.type.includes("image")) {
+                uploadGallery.innerHTML += `
+                    Image:<img src="${objectURL}"></td>
 
+                `;
+            } else {
+                uploadGallery.innerHTML += `
+                  
+                    File:${realname}</td>
+  
+                `;
+            }
+           
+
+            
             //protocol = protocol.replaceAll( "app/download.php?f="+longname , objectURL );
             protocol = protocol.replace( /app\/download\.php(.*)f=/g, "" );
             protocol = protocol.replaceAll( longname , objectURL );
@@ -75,7 +94,7 @@ async function loadExperiment(instance) {
         data.items_links.forEach(item => {
             relatedItems.innerHTML += `
                 <div>
-                    <span class="badge bg-info ">Items</span><span class="badge bg-secondary ">${item.category_title}</span> <a href="${instance.replace("api/v2/", "")}/${item.page}?mode=view&id=${item.entityid}" target="_blank">
+                    <span class="badge bg-info ">Resources</span><span class="badge bg-secondary ">${item.category_title}</span> <a href="${instance.replace("api/v2/", "")}/${item.page}?mode=view&id=${item.entityid}" target="_blank">
                         ${item.title}
                     </a> &nbsp;&nbsp;  <button class="btn btn-primary btn-sm" id="item${item.entityid}Target" data-type="items" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" > Convert to ARC</button>
                 </div>
@@ -92,6 +111,8 @@ async function loadExperiment(instance) {
                 </div>
             `;
         });
+
+       
         document.getElementById('expContent').innerHTML = protocol;
     } catch (error) {
         console.error('Error loading experiment:', error);

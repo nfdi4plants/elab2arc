@@ -3,7 +3,10 @@
     text-align: center;
   }
 
-
+ .convert-container{
+  border-style: outset;
+    border-radius: 5px;
+ }
 
   .uploadarea {
 
