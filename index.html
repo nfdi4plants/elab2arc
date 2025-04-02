@@ -15,13 +15,13 @@
   </style>  
   <link href="./css/bootstrap.min.css" rel="stylesheet">
   <script src="./js/bootstrap.bundle.min.js"></script>
-  <link href="./css/custom2607.css" rel="stylesheet" />
+  <link href="./css/custom0104.css" rel="stylesheet" />
   <link href="./css/bs5-intro-tour.css" rel="stylesheet" />
   <link href="./css/MEMfsGUI.css" rel="stylesheet" />
   <link href="./css/elabGUI.css" rel="stylesheet" />
   <script src="./js/bs5-intro-tour.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/MEMfsGUI.js" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/elabGUI.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elabGUI-0104.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/git.js"></script>
   <script src="./js/main-25-01-21.js" type="text/javascript"></script>
   <script src="./js/turndown.js" type="text/javascript"></script>
@@ -184,11 +184,12 @@
     
     <div name="tab" class=" col-12 d-none" id="arcTab">
       <div class="input-group mb-3">
+        <span class="input-group-text">Name Space:</span>
         <input type="text" class="form-control" id="usernameInput" placeholder="Username" aria-label="Username">
-        <span class="input-group-text">/</span>
+        <span class="input-group-text">/ ARC Name</span>
         <input type="text" class="form-control" id="projectnameInput"  placeholder="Project Name" aria-label="Projectname">
-        <span class="input-group-text">Description:</span>
-        <input type="text" class="form-control" id="descriptionInput"  placeholder="Project Name" aria-label="Projectname">
+        <span class="input-group-text d-none">Description:</span>
+        <input type="text" class="form-control d-none" id="descriptionInput" value="An ARC created by elab2arc tool" placeholder="Project Name" aria-label="Projectname">
         <button class="btn btn-primary" onclick="createNewArc()"> Create a new ARC </button>
       </div>
       
@@ -213,12 +214,15 @@
           <div id="fs-container">
             <div id="fileTree"></div>
         </div>
-        <div class="text-center m-3" >
-          <span class="" id="elabFTWInfo"> Main ElabFTW Protocol Used  </span> <span class=" text-success" id=""> ====>>>  </span>
-          <span class="" id="gitlabInfo"> GitLab URL </span> 
-          <span class="" id="arcInfo"> Please select your ARC </span> <button type="button" class="btn btn-primary" onclick="singleConvert()">Start Convert</button>
-          <button type="button" class="btn btn-secondary" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
-            Check Status
+        <div class="text-center p-3 mt-3 convert-container" >
+          <span class="lead" id="elabFTWInfo"> Main ElabFTW Protocol Used  </span> <span class=" text-success" id=""> ====>>>  </span>
+          <span class="lead" id="gitlabInfo"> GitLab URL </span> 
+          <span class="lead" id="arcInfo"> Please select your ARC </span>
+          &nbsp; &nbsp; &nbsp; &nbsp;
+          <button type="button" class="btn btn-primary" onclick="singleConvert()"> <span class="lead">  Start Convert</span></button>
+          &nbsp; &nbsp; &nbsp; &nbsp;
+          <button type="button" class="btn btn-secondary "  id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
+            <span class="lead"> Check Status</span>
           </button>
           </div>
        
@@ -257,11 +261,13 @@
         </div>
         <div class="sidebar ">
             <div class="section metadata" id="expMetadata">
+              <h3>Conversion</h3>
+              <ul id="elabHeadLine"></ul>
                 <h3>Metadata</h3>
                 <ul id="metadataList"></ul>
             </div>
             <div class="section related" id="expRelatedItems">
-                <h3>Related</h3>
+                <h3>Linked Resources and Experiments</h3>
                 <div id="relatedItems"></div>
                 <div id="relatedExps"></div>
             </div>
@@ -562,8 +568,8 @@
                 <td><a href="${project.web_url}" target="_blank">View Project</a></td>
                 <td>
                   <div class="btn-group" role="group" aria-label="Basic example">
-                    <button type="button" onclick=" cloneARC('${project.http_url_to_repo}', '${project.name}')" class="btn btn-primary ">
-                      Convert to this ARC
+                    <button type="button" onclick=" cloneARC('${project.http_url_to_repo}', '${project.name}')" class="btn btn-success ">
+                     Use This Already Existed ARC
                     </button>
                     <button type="button" onclick="cloneARC('${ project.http_url_to_repo}', '${project.name}')" class="btn btn-secondary d-none">
                       Clone Only
@@ -1055,8 +1061,12 @@
 
             // Convert to markdown
             let markdown = turndownService.turndown(protocol);
-
-            updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
+            if (arcDir){
+              updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
+            }else{
+              updateInfo(`Step by step conversion is used and the ARC selected is "${datahubURL}"`, ratio * 20);
+            }
+            
             
             const dir = arcDir ||`arc${elabid}`;
 
