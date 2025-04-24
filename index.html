@@ -1062,17 +1062,18 @@
             // Convert to markdown
             let markdown = turndownService.turndown(protocol);
             if (arcDir){
-              updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
-            }else{
               updateInfo(`Step by step conversion is used and the ARC selected is "${datahubURL}"`, ratio * 20);
+            }else{
+              updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
             }
             
             
-            const dir = arcDir ||`arc${elabid}`;
+            let dir = arcDir ||`arc${elabid}`;
 
             const list = dir.split("/");
             const gitRoot = list[0]+"/";
             const gitSubfolder = dir.replace(list[0], "");
+            gitSubfolder==""? {}: gitSubfolder+="/";
             console.log(gitRoot +"   git subfoler: "+ gitSubfolder);
 
             let ls;
@@ -1081,7 +1082,7 @@
             } catch (error) {
               ls = fs.readdirSync(dir)
             }
-            
+           
             //updateInfo("Assays are "+ ls.toString().replaceAll(",", "<br>") +". Updating assay <b>" + assayId+ "</b>", "30" );
             await createAssay(assayId, dir);
             // Initialize status HTML with protocol section
@@ -1128,9 +1129,9 @@
             // Write markdown files
 
             await fs.promises.writeFile(`${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`, markdown);
-            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}assays/${assayId}/protocols/eLabFTW_protocol.md` });
+            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/protocols/eLabFTW_protocol.md` });
             await fs.promises.writeFile(`${dir}/assays/${assayId}/dataset/readme.md`, "# Data files");
-            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}assays/${assayId}/dataset/readme.md` });
+            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/dataset/readme.md` });
             finalizeExperimentDisplay(ratio);
             await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir,gitRoot);
             
@@ -1177,7 +1178,7 @@
 
                 // Write file and update Git
                 await fs.promises.writeFile(`${dir}/${path}`, new Uint8Array(await blob.arrayBuffer()));
-                await git.add({ fs, dir: gitRoot, filepath: gitSubfolder+ path });
+                await git.add({ fs, dir: gitRoot, filepath: gitSubfolder.replace("/", "")+ path });
 
                 // Update status HTML with file info
                 if (blob.type.includes("image")) {
