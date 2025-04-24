@@ -1072,7 +1072,7 @@
 
             const list = dir.split("/");
             const gitRoot = list[0]+"/";
-            const gitSubfolder = dir.replace(list[0], "");
+            let gitSubfolder = dir.replace(list[0], "");
             gitSubfolder==""? {}: gitSubfolder+="/";
             console.log(gitRoot +"   git subfoler: "+ gitSubfolder);
 
