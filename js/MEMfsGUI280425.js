@@ -108,35 +108,79 @@ function createFile(parentPath = '.') {
     }
 }
 
+// function deletePath(targetPath) {
+//     try {
+//         // Validate path existence [[1]][[5]]
+//         if (!FS.existsSync(targetPath)) {
+//             alert(`Error: Path "${targetPath}" does not exist.`);
+//             return;
+//         }
+
+//         // Verify it's a directory [[5]][[8]]
+//         const stats = FS.statSync(targetPath);
+//         if (!stats.isDirectory()) {
+//             alert(`Error: "${targetPath}" is not a directory.`);
+//             return;
+//         }
+
+//         // Check if directory is empty [[8]]
+//         const contents = FS.readdirSync(targetPath);
+//         if (contents.length > 0) {
+//             alert(`Deletion failed: Folder "${targetPath}" is not empty.`);
+//             return;
+//         }
+
+//         // Attempt deletion [[4]][[9]]
+//         FS.rmdirSync(targetPath);
+//         alert(`Successfully deleted empty folder: ${targetPath}`);
+//         refreshTree(memfsPathDirname(targetPath)); // Refresh parent directory [[8]]
+
+//     } catch (error) {
+//         // Handle specific permission errors [[2]][[7]]
+//         if (error.code === 'EPERM' || error.code === 'EACCES') {
+//             alert(`Permission denied: Unable to delete "${targetPath}"`);
+//         } else {
+//             alert(`Deletion failed: ${error.message}`);
+//         }
+//     }
+// }
+
 function deletePath(targetPath) {
     try {
-        // Validate path existence [[1]][[5]]
+        // Validate path existence
         if (!FS.existsSync(targetPath)) {
             alert(`Error: Path "${targetPath}" does not exist.`);
             return;
         }
 
-        // Verify it's a directory [[5]][[8]]
         const stats = FS.statSync(targetPath);
+        if (stats.isFile()) {
+            // Delete the file directly
+            FS.unlinkSync(targetPath);
+            console.log(`Successfully deleted file: ${targetPath}`);
+            refreshTree(memfsPathDirname(targetPath));
+            return;
+        }
+
         if (!stats.isDirectory()) {
             alert(`Error: "${targetPath}" is not a directory.`);
             return;
         }
 
-        // Check if directory is empty [[8]]
+        // Delete all contents of the directory
         const contents = FS.readdirSync(targetPath);
-        if (contents.length > 0) {
-            alert(`Deletion failed: Folder "${targetPath}" is not empty.`);
-            return;
+        for (const entry of contents) {
+            const entryPath = memfsPathJoin(targetPath, entry);
+            deletePath(entryPath); // Recursively delete each entry
         }
 
-        // Attempt deletion [[4]][[9]]
+        // Delete the now-empty directory
         FS.rmdirSync(targetPath);
-        alert(`Successfully deleted empty folder: ${targetPath}`);
-        refreshTree(memfsPathDirname(targetPath)); // Refresh parent directory [[8]]
+        console.log(`Successfully deleted folder and its contents: ${targetPath}`);
+        refreshTree(memfsPathDirname(targetPath));
 
     } catch (error) {
-        // Handle specific permission errors [[2]][[7]]
+        // Handle specific permission errors
         if (error.code === 'EPERM' || error.code === 'EACCES') {
             alert(`Permission denied: Unable to delete "${targetPath}"`);
         } else {
@@ -144,6 +188,48 @@ function deletePath(targetPath) {
         }
     }
 }
+
+
+function deleteFiles(targetPath) {
+    try {
+        // Validate path existence
+        if (!FS.existsSync(targetPath)) {
+            alert(`Error: Path "${targetPath}" does not exist.`);
+            return;
+        }
+
+        const stats = FS.statSync(targetPath);
+        if (stats.isFile()) {
+            // Delete the file directly
+            FS.unlinkSync(targetPath);
+            console.log(`Successfully deleted file: ${targetPath}`);
+            refreshTree(memfsPathDirname(targetPath));
+            return;
+        }
+
+        if (!stats.isDirectory()) {
+            alert(`Error: "${targetPath}" is not a directory.`);
+            return;
+        }
+
+        // Delete all contents of the directory
+        const contents = FS.readdirSync(targetPath);
+        for (const entry of contents) {
+            const entryPath = memfsPathJoin(targetPath, entry);
+            deletePath(entryPath); // Recursively delete each entry
+        }
+
+    } catch (error) {
+        // Handle specific permission errors
+        if (error.code === 'EPERM' || error.code === 'EACCES') {
+            alert(`Permission denied: Unable to delete "${targetPath}"`);
+        } else {
+            alert(`Deletion failed: ${error.message}`);
+        }
+    }
+}
+
+
 
 function selectPath(targetPath) {
     try {
