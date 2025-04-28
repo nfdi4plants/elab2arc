@@ -20,7 +20,7 @@
   <link href="./css/MEMfsGUI.css" rel="stylesheet" />
   <link href="./css/elabGUI.css" rel="stylesheet" />
   <script src="./js/bs5-intro-tour.js" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/MEMfsGUI.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/MEMfsGUI280425.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/elabGUI-0104.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/git.js"></script>
   <script src="./js/main-25-01-21.js" type="text/javascript"></script>
@@ -768,7 +768,7 @@
         fs.mkdirSync(dir+"/assays/"+assayId+"/protocols",{ recursive: true } )
       };
       try {
-        
+        deleteFiles(`${dir}/assays/${assayId}/dataset/`);
         fs.statSync(dir+"/assays/"+assayId+"/dataset");
       } catch (error) {
         console.error(error);
@@ -1130,6 +1130,7 @@
 
             await fs.promises.writeFile(`${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`, markdown);
             await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/protocols/eLabFTW_protocol.md` });
+            
             await fs.promises.writeFile(`${dir}/assays/${assayId}/dataset/readme.md`, "# Data files");
             await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/dataset/readme.md` });
             finalizeExperimentDisplay(ratio);
