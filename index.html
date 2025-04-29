@@ -768,7 +768,7 @@
         fs.mkdirSync(dir+"/assays/"+assayId+"/protocols",{ recursive: true } )
       };
       try {
-        deleteFiles(`${dir}/assays/${assayId}/dataset/`);
+        await deleteFiles(`${dir}/assays/${assayId}/dataset/`);
         fs.statSync(dir+"/assays/"+assayId+"/dataset");
       } catch (error) {
         console.error(error);
@@ -1134,6 +1134,7 @@
             await fs.promises.writeFile(`${dir}/assays/${assayId}/dataset/readme.md`, "# Data files");
             await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/dataset/readme.md` });
             finalizeExperimentDisplay(ratio);
+            
             await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir,gitRoot);
             
         }
