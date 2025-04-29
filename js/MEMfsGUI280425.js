@@ -190,7 +190,7 @@ function deletePath(targetPath) {
 }
 
 
-function deleteFiles(targetPath) {
+async function deleteFiles(targetPath) {
     try {
         // Validate path existence
         if (!FS.existsSync(targetPath)) {
@@ -198,25 +198,22 @@ function deleteFiles(targetPath) {
             return;
         }
 
-        const stats = FS.statSync(targetPath);
-        if (stats.isFile()) {
-            // Delete the file directly
-            FS.unlinkSync(targetPath);
-            console.log(`Successfully deleted file: ${targetPath}`);
-            refreshTree(memfsPathDirname(targetPath));
-            return;
-        }
-
-        if (!stats.isDirectory()) {
-            alert(`Error: "${targetPath}" is not a directory.`);
-            return;
-        }
-
         // Delete all contents of the directory
         const contents = FS.readdirSync(targetPath);
         for (const entry of contents) {
             const entryPath = memfsPathJoin(targetPath, entry);
-            deletePath(entryPath); // Recursively delete each entry
+                    const stats = FS.statSync(entryPath);
+            if (stats.isFile()) {
+                // Delete the file directly
+                FS.unlinkSync(entryPath);
+                console.log(`Successfully deleted file: ${entryPath}`);
+                
+                const gitroot = entryPath.split("/").slice(0)[0];
+                const filename = entryPath.replace(gitroot+"/", "");
+                await git.remove({ fs, dir: gitroot, filepath: filename })
+                refreshTree(memfsPathDirname(targetPath));
+            }
+
         }
 
     } catch (error) {
