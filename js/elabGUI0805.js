@@ -9,7 +9,7 @@ const instance = window.localStorage.getItem('elabURL');
 
 // Fetch and display data
 async function loadExperiment(instance) {
-    const elabid = getCookie('elabid').split(',')[0];
+    const elabid = decodeURIComponent(decodeURIComponent(getCookie('elabid'))).split(',')[0];
     const elabtoken = getCookie('elabtoken');
     
     try {
@@ -34,12 +34,12 @@ async function loadExperiment(instance) {
                 </a>
             </li>
             <div class="form-check-inline">
-                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${data.id}" data-elabid="${data.id}">
+                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${data.id}" data-elabid="${data.id}" data-elabtitle="${data.title}">
                     <label class="form-check-label" for="multiCheck${data.id}">
                     
                     </label>
                     </div>
-            <button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" > Select for Conversion</button>`
+            <button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" name="singleConvert" > Select for Conversion</button>`
         // Metadata
         const metadataList = document.getElementById('metadataList');
         metadataList.innerHTML = `
@@ -102,7 +102,7 @@ async function loadExperiment(instance) {
             relatedItems.innerHTML += `
                 <li>
                 <div class="form-check-inline">
-                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}">
+                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
                     <label class="form-check-label" for="multiCheck${item.entityid}">
 
                     </label>
@@ -111,7 +111,7 @@ async function loadExperiment(instance) {
                         ${item.title}
                     </a> &nbsp;&nbsp; 
                     
-                    <button class="btn btn-primary btn-sm" id="item${item.entityid}Target" data-type="items" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" > Convert to ARC</button>
+                    <button class="btn btn-primary btn-sm" name="singleConvert" id="item${item.entityid}Target" data-type="items" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" data-elabtitle="${item.title}"> Convert to ARC</button>
                 </li>
             `;
         });
@@ -121,7 +121,7 @@ async function loadExperiment(instance) {
             relatedExps.innerHTML += `
                 <li>
                     <div class="form-check-inline">
-                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}">
+                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
                     <label class="form-check-label" for="multiCheck${item.entityid}">
                     
                     </label>
@@ -130,7 +130,7 @@ async function loadExperiment(instance) {
                         ${item.title}
                     </a>  &nbsp;&nbsp; 
                     
-                    <button class="btn btn-primary btn-sm"  id="experiment${item.entityid}Target" data-type="experiments" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" > Convert to ARC</button>
+                    <button class="btn btn-primary btn-sm"  name="singleConvert" id="experiment${item.entityid}Target" data-type="experiments" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" > Convert to ARC</button>
                 </li>
             `;
         });
