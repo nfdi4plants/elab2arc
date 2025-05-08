@@ -239,22 +239,10 @@ padding:0;
 }
 
 
-.btn-nav {
-    color:  white;
-    background-color:  rgb(45, 62, 80);
-    border-color: rgb(45, 62, 80);
-	height: 3.25rem;
-	border-radius: 0 ;
-	font-size: 0.75rem; 
-	padding-top: 0.3rem; 
-	padding-right: 0px; 
-	padding-left: 1rem; 
-	padding-bottom: 0.3rem;
-	
-}
 
-.btn-nav:hover {
-    color:  black;
+
+.nav-linkc:hover {
+    color:  rgb(255, 254, 254);
     background-color:  rgba(255, 255, 255, 0.6);
     border-color: rgb(45, 62, 80);
 	height: 3.25rem;
@@ -344,31 +332,30 @@ padding:0;
 
 
 
-.nav-pills .nav-link.active, .nav-pills .show>.nav-link {
-	color:#000000;
-    background-color: rgba(255,255,255,0.6);
+.nav-linkc.active .nav-items.active .show>.nav-linkc {
+	color:#e92424 !important;
+  background-color: rgb(200, 124, 124) !important;
+  border-radius: 5px 5px 0px 0px;
 	padding: 0.5vh 0.8vw !important;
+  border-width:0  !important;
 }
-.nav-pills .nav-link {
-	    color: #FEFEFE;
-margin:auto;
-font-size: 0.75rem; 
-padding-top: 0.3rem; 
-padding-bottom: 0.3rem;
-}
+
 [type=button]:not(:disabled), [type=reset]:not(:disabled), [type=submit]:not(:disabled), button:not(:disabled) {
     cursor: pointer;
 }
-.nav-link {
-	display:inline;
-    text-decoration: none;
-    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out;
-	padding: 0.5vh 0.8vw !important;
+.nav-linkc {
+  color:  white;
+  background-color:  rgb(45, 62, 80);
+  border-color: rgb(45, 62, 80);
+height: 3.25rem;
+border-width: 0 ;
+font-size: 0.75rem; 
+
 }
 
-.nav-link:hover{
+.nav-linkc:hover{
     color:  white;
-	cursor: ;	
+	cursor: pointer;	
 }
 .nav-item {
 	display:inline;
@@ -423,7 +410,7 @@ p{
 }
 
 .border-highlight{
-    background: ; 
+    background: #fff; 
 
 	box-shadow:  inset 0 0 3px 1px #c21f3a;
 }
