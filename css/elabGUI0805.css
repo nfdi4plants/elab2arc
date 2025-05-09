@@ -1,32 +1,23 @@
-.elab-container {
-    display: grid;
-    grid-template-columns: 3fr 1fr;
-    gap: 20px;
-}
-.main-content {
-    grid-column: 1 / 2;
-}
-.sidebar {
-    grid-column: 2 / 3;
-}
+/* Section Base Styles */
 .section {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: #f5f5f5;
-    border-radius: 8px;
-}
-.metadata { background: #e8f4ff; }
-.conversion { background: #edc8e2; }
-.uploads { background: #fff3e0; }
-.related { background: #f0f8ff; }
-h1 { color: #2c3e50; }
-img {
-    max-width: 100%;
-    height: auto;
-    margin: 10px 0;
-}
-.gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
-}
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    word-wrap: break-word;      /* Legacy name for overflowed words */
+
+  }
+  
+  /* Section Background Colors */
+  .conversion { background-color: #edc8e2; }
+  .metadata   { background-color: #e8f4ff; }
+  .related    { background-color: #f0f8ff; }
+  .uploads    { background-color: #fff3e0; }
+  
+  /* Optional: Consistent heading color */
+  .section h3 {
+    color: #2c3e50;
+  }
+
+  .section img {
+    max-width: 100%; /* Ensures images never overflow their container */
+    height: auto;    /* Maintains aspect ratio */
+  }
