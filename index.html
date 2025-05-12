@@ -74,7 +74,15 @@
         id="elabBtn">
         Tokens&nbsp;
         </button>
-        <a id="ghlinklong" class="ms-auto p-2" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img src="images/github-mark-white.png" alt="HTML tutorial" style="width:2rem;height:2rem;"></a>
+
+        <span class="ms-auto">
+        <a id="kblink" class=" p-2"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"></a>
+
+
+
+
+        <a id="ghlink" class=" p-2" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img src="images/github-mark-white.png" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"></a>
+        </span> 
       </div>
     
   </div>
@@ -940,7 +948,15 @@
           // Process each experiment ID
           for (const [expIndex, expId] of Object.entries(params.elabidList)) {
               if (expId) {
-                  const res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
+                  let res 
+                  
+                  res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
+                  if (res.code>400){
+                    res = await fetchElabJSON(params.elabtoken, `items/${expId}`, params.instance);
+                  }else{
+
+                  }
+
                   const users = await fetchElabJSON(params.elabtoken, "users", params.instance);
                   let extraFields =gitlabURL || res.metadata_decoded.extra_fields;
                   const datahubURL =  gitlabURL || gitUrlCheck(extraFields.datahub_url.value);
