@@ -8,9 +8,8 @@ function getCookie(name) {
 const instance = window.localStorage.getItem('elabURL');
 
 // Fetch and display data
-async function loadExperiment(instance) {
-    const elabid = decodeURIComponent(decodeURIComponent(getCookie('elabid'))).split(',')[0];
-    const elabtoken = getCookie('elabtoken');
+async function loadExperiment(instance, elabid, elabtoken) {
+    
     
     try {
         const data = await fetchElabExperimentData(elabid, elabtoken, instance);

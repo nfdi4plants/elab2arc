@@ -38,43 +38,43 @@
 <body>
   <div class="navbar  navbar-expand-lg navbar-dark" style="background: rgb(45, 62, 80); height: 3.25rem; margin: 0 0 0 0px; padding: 0 0 0 0; ">
     
-    <div class=" container-fluid "
+    <div class=" container-fluid d-flex justify-content-start"
     
-      style="margin: 0 0 0 0; ; padding: 0 0 0 0; height: 3.25rem;  ">
+      style=" height: 3.25rem;  ">
       <a class="" href="https://nfdi4plants.org/" style="">
         <img src="images/logo.png" alt="Logo" width="32" height="32"
-          style=" margin: 8px 36px 8px 12px; left: 0px; padding-top: 4px;" />
+          style=" margin: 8px 20px 8px 12px; left: 0px; padding-top: 4px;" />
       </a>
 
       
        
-        <button type="button" name="navBtn"  onclick="location.href=location.href.split('#')[0]+'#elab'" class="btn d-none  nav-linkc"
+        <button type="button" name="navBtn"  onclick="location.href=location.href.split('#')[0]+'#elab'" class="btn d-none  nav-linkc px-3"
         id="submitNavBtn">
         Fetch eLabFTW &nbsp;
         </button>
      
     
-        <button type="button" name="navBtn" aria-current="homeTab" onclick="window.history.pushState('', '', '/elab2arc/#home'); showTab('homeTab')" class="nav-linkc "
+        <button type="button" name="navBtn" aria-current="homeTab" onclick="window.history.pushState('', '', '/elab2arc/#home'); showTab('homeTab')" class="nav-linkc px-3"
         id="homeBtn">
       Home&nbsp;
       </button>
    
         
-        <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#ftw'); showTab('ftwTab')" class="nav-linkc "
+        <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#ftw'); showTab('ftwTab')" class="nav-linkc px-3"
           id="ftwBtn">
         ElabFTW&nbsp;
         </button>
         
-        <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="nav-linkc "
+        <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="nav-linkc px-3"
           id="arcBtn">
         ARCs&nbsp;
         </button>
 
-        <button type="button" name="navBtn" onclick="location.href=location.href.split('#')[0]+'#elab'" class="nav-linkc"
+        <button type="button" name="navBtn" onclick="location.href=location.href.split('#')[0]+'#elab'" class="nav-linkc px-3"
         id="elabBtn">
         Tokens&nbsp;
         </button>
-        <a id="ghlinklong" class="d-flex flex-row-reverse" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img src="images/github-mark-white.png" alt="HTML tutorial" style="width:2rem;height:2rem;"></a>
+        <a id="ghlinklong" class="ms-auto p-2" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img src="images/github-mark-white.png" alt="HTML tutorial" style="width:2rem;height:2rem;"></a>
       </div>
     
   </div>
@@ -518,7 +518,8 @@
       else{
         return;
       }
-      setTimeout(e=>{loadExperiment(instance);}, 500) 
+     
+     await loadExperiment(instance, elabid, elabToken)
       
 
     }
