@@ -104,7 +104,7 @@
          Tool for converting eLabFTW experiment data into ARC (Annotated Research Context) format
 
       </h4>
-      <div class="col-3 my-3">
+      <div class="col-lg-3 my-3">
       <label for="elabexperimentid" class="form-label">
         <button class="btn text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
           eLabFTW Experiment ID &#128712;</button>
@@ -527,7 +527,7 @@
         return;
       }
      
-     await loadExperiment(instance, elabid, elabToken)
+     await loadExperiment(instance, elabid, elabToken);
       
 
     }
@@ -1415,12 +1415,21 @@
         }
 
         async function fetchElabExperimentData(elabid, elabtoken, instance) {
+          let res;
           
-          const res = await fetchElabJSON(elabtoken, `experiments/${elabid}`, instance);
-          const users = await fetchElabJSON(elabtoken, "users", instance);
+            res = await fetchElabJSON(elabtoken, `experiments/${elabid}`, instance);
+          if (res.code > 400){
+            console.error(res);
+            res = await fetchElabJSON(elabtoken, `items/${elabid}`, instance);
+            const users = await fetchElabJSON(elabtoken, "users", instance);
           const user = users.find(u => u.fullname === res.fullname);
-          
           return res;
+          }else{
+            const users = await fetchElabJSON(elabtoken, "users", instance);
+          const user = users.find(u => u.fullname === res.fullname);
+          return res;
+          }
+          
         }
 
  
