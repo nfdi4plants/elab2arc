@@ -38,7 +38,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
                     
                     </label>
                     </div>
-            <button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" name="singleConvert" > Select for Conversion</button>`
+            <button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" name="singleConvert" >Conversion</button>`
         // Metadata
         const metadataList = document.getElementById('metadataList');
         metadataList.innerHTML = `
@@ -110,7 +110,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
                         ${item.title}
                     </a> &nbsp;&nbsp; 
                     
-                    <button class="btn btn-primary btn-sm" name="singleConvert" id="item${item.entityid}Target" data-type="items" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" data-elabtitle="${item.title}"> Convert to ARC</button>
+                    <button class="btn btn-primary btn-sm" name="singleConvert" id="item${item.entityid}Target" data-type="items" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" data-elabtitle="${item.title}">Convert</button>
                 </li>
             `;
         });
@@ -129,13 +129,14 @@ async function loadExperiment(instance, elabid, elabtoken) {
                         ${item.title}
                     </a>  &nbsp;&nbsp; 
                     
-                    <button class="btn btn-primary btn-sm"  name="singleConvert" id="experiment${item.entityid}Target" data-type="experiments" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" > Convert to ARC</button>
+                    <button class="btn btn-primary btn-sm"  name="singleConvert" id="experiment${item.entityid}Target" data-type="experiments" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" >Convert</button>
                 </li>
             `;
         });
 
        
         document.getElementById('expContent').innerHTML = protocol;
+        
     } catch (error) {
         console.error('Error loading experiment:', error);
         document.getElementById('expContent').innerHTML = '<p>Error loading content</p>';

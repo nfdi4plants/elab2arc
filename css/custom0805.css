@@ -153,7 +153,7 @@
     }
 
 :root{
-  scrollbar-color:  #1FC2A7  #d1d1d1 !important;
+  scrollbar-color:  #4fb3d9  #d1d1d1 !important;
 }
 .tab-content > li {
     float:none;
@@ -203,39 +203,39 @@ padding:0;
 }
 
 .clip:hover {
-    color: #1FC2A7;
+    color: #4fb3d9;
     
-    border-color: #1FC2A7
+    border-color: #4fb3d9
 }
 .clip {
     color: #4FB3D9;
    
-    border-color: #1FC2A7
+    border-color: #4fb3d9
 }
 
 
 .bg-primary {
     color: #FEFEFE;
-    background-color: #1FC2A7;
-    border-color: #B4CE82
+    background-color: #4fb3d9;
+  
 }
 
 .btn-primary {
     color: #FEFEFE;
-    background-color: #1FC2A7;
-    border-color: #B4CE82
+    background-color: #4fb3d9;
+   
 }
 
 .btn-primary:hover {
     color: #FEFEFE;
     background-color: #B4CE82;
-    border-color: #1FC2A7
+    
 }
 
 .btn-tutorial {
     color:  #4FB3D9;
     background-color:  #4FB3D9;
-    border-color: #B4CE82
+    
 }
 
 
@@ -397,8 +397,8 @@ p{
 }
 .form-check-input:checked {
 	
-    background-color: #1FC2A7;
-    border-color: #1FC2A7;
+    background-color: #4fb3d9;
+    border-color: #4fb3d9;
 }
 
 .overlay{
