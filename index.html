@@ -62,21 +62,22 @@
         
         <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#ftw'); showTab('ftwTab')" class="nav-linkc px-3"
           id="ftwBtn">
-        ElabFTW&nbsp;
+        ElabFTW&nbsp;<span id="elabFTWCheck">&#127760;</span>
         </button>
         
         <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="nav-linkc px-3"
           id="arcBtn">
-        ARCs&nbsp;
+        ARCs&nbsp;<span  id="arcCheck">&#127760;</span>
         </button>
 
         <button type="button" name="navBtn" onclick="location.href=location.href.split('#')[0]+'#elab'" class="nav-linkc px-3"
         id="elabBtn">
         Tokens&nbsp;
         </button>
+       
 
         <span class="ms-auto">
-        <a id="kblink" class=" p-2"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"></a>
+        <a id="kblink" class=" p-2"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"></a>
 
 
 
@@ -146,13 +147,14 @@
 
       
         <div class="row justify-content-center align-items-end">
-        <div class="my-3 col-lg-3 me-4">
+        <div class="my-3 col-lg-5 me-4">
           <label for="elabURLInput1" class="form-label">
            
             <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
               ElabFTW Instance&nbsp;&#128712;</button>
               
           </label> 
+          <br>
         <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
           eLabFTW Instance: HHU
         </button>
@@ -176,7 +178,7 @@
         <div class="my-3 col-lg-2">
           <label for="datahubToken" class="form-label">
             <button class="btn text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#datahubTokenCanvas" aria-controls="datahubTokenCanvas">
-              DataHub Access Token&nbsp;&#128712;</button>
+              DataHub Token&nbsp;&#128712;</button>
             
           </label>
           <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" required>
@@ -193,9 +195,9 @@
     <div name="tab" class="row justify-content-center" id="arcTab">
       
       
-      <div class="" style="height: 50vh; overflow-y: scroll">
+      <div class="rounded" >
 
-        <table class="table table-striped table-hover" style="table-layout:auto ; width:100%; ">
+        <table class="table table-striped table-hover " style="table-layout:auto ; width:100%; ">
           <thead>
             <tr>
               <th scope="col">Number</th>
@@ -205,22 +207,15 @@
             </tr>
           </thead>
           <tbody id="userProjectsTable">
+           <tr> <th></th> <td> No ARC available. Use <a href="#home">home tab</a> to start a conversion</td></tr>
           </tbody>
         </table>
       </div>
-      <div class="input-group mb-3">
-        <span class="input-group-text">Name Space:</span>
-        <input type="text" class="form-control" id="usernameInput" placeholder="Username" aria-label="Username">
-        <span class="input-group-text">/ ARC Name</span>
-        <input type="text" class="form-control" id="projectnameInput"  placeholder="Project Name" aria-label="Projectname">
-        <span class="input-group-text d-none">Description:</span>
-        <input type="text" class="form-control d-none" id="descriptionInput" value="An ARC created by elab2arc tool" placeholder="Project Name" aria-label="Projectname">
-        <button class="btn btn-primary" onclick="createNewArc()"> Create a new ARC </button>
-      </div>
+      
       <div class="row my-3">
         <div class="col-12">
 
-        <div class="row text-center p-3 mt-3 convert-container" >
+        <div class="row text-center p-3 mt-3 convert-container rounded" >
           <div class="lead col-3" id="elabFTWInfo"> Main ElabFTW Protocol Used  </div> 
             <div class=" text-success col-1" id=""> ====>>>  </div>
           <div class=" col-3" >
@@ -229,8 +224,8 @@
         </div> 
           &nbsp; &nbsp; &nbsp; &nbsp;
           <div class="lead col-4" >
-          <button type="button" name="singleConvert" class="btn btn-primary" onclick="singleConvert()"> <span class="lead">  Start Single-convert</span></button>
-          <button type="button" name="multiConvert" class="btn btn-primary d-none" onclick="multiConvert()"> <span class="lead">  Start Multi-convert</span></button>
+          <button type="button"  class="btn btn-primary" onclick="multiConvert()"> <span class="lead">  Start Conversion</span></button>
+          
           &nbsp; &nbsp; &nbsp; &nbsp;
           <button type="button" class="btn btn-secondary "  id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
             <span class="lead"> Check Status</span>
@@ -269,11 +264,13 @@
           <div class="col-md-9">
       
             <section class="section title bg-light rounded p-3 mb-4">
-              <h1 id="expTitle" class="text-primary-emphasis">Loading...</h1>
+              <h1 id="expTitle" class="text-primary-emphasis"> Empty ElabFTW</h1>
+              
             </section>
       
             <section class="section content bg-light rounded p-3 mb-4" id="expContent">
               <!-- HTML content will be injected here -->
+               <h5>No ElabFTW available. Use <a href="#home">home tab</a> to start a conversion</h5>
             </section>
       
           </div>
@@ -519,7 +516,7 @@
       setCookies( elabid, elabToken, datahubToken);
       const id = await fetchUser(datahubToken);
       if (id){
-      document.getElementById("usernameInput").value = id.username;
+      //document.getElementById("usernameInput").value = id.username;
       await fetchUserProjects(id.username, datahubToken) 
       loading.hide();
     }
@@ -528,9 +525,76 @@
       }
      
      await loadExperiment(instance, elabid, elabToken);
-      
+     
+     
+     const checkbox = document.getElementById("multiElabSwitch");
+        multiElabSelect(checkbox); 
 
     }
+
+    // Function to check connection to ElabFTW API
+async function checkElabFTWConnection() {
+  const url = 'https://corsproxy.cplantbox.com/https://elab.dataplan.top';
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      // Include headers if authentication is required
+      // headers: { 'Authorization': 'Bearer YOUR_TOKEN' }
+    });
+
+    console.log('ElabFTW API Status Code:', response.status);
+
+    if (response.ok) {
+      document.getElementById("elabFTWCheck").innerHTML = "&#127760;";
+      console.log('✅ Successfully connected to ElabFTW API');
+      return true;
+    } else {
+      document.getElementById("elabFTWCheck").innerHTML = "&#10060;";
+      console.error('❌ ElabFTW API returned an error:', response.statusText);
+      return false;
+    }
+  } catch (error) {
+    document.getElementById("elabFTWCheck").innerHTML = "&#128680;";
+    console.error('🚨 Failed to connect to ElabFTW API:', error.message);
+    return false;
+  }
+}
+
+  // Function to check connection to GitLab API
+  async function checkGitLabConnection() {
+    const url = 'https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects';
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        // Authentication may be required depending on endpoint
+        // headers: { 'PRIVATE-TOKEN': 'YOUR_PRIVATE_TOKEN' }
+      });
+
+      console.log('GitLab API Status Code:', response.status);
+
+      if (response.status === 404) {
+        console.warn('⚠️ GitLab API endpoint not found (404)');
+        return false;
+      }
+
+      if (response.ok) {
+        document.getElementById("arcCheck").innerHTML = "&#127760;";
+        console.log('✅ Successfully connected to GitLab API');
+        return true;
+      } else {
+        document.getElementById("arcCheck").innerHTML = "&#10060;";
+        console.error('❌ GitLab API returned an error:', response.statusText);
+        return false;
+      }
+    } catch (error) {
+      document.getElementById("arcCheck").innerHTML = "&#128680;";
+      console.error('🚨 Failed to connect to GitLab API:', error.message);
+      return false;
+    }
+  }
+
 
     const fetchUser = async (accessToken ) => {
       try {
@@ -677,6 +741,20 @@
             `;
           }
         });
+        
+        tableHTML += `
+              <tr>
+                <th scope="row">New ARC</th>
+                <td><input type="text" class="form-control" id="projectnameInput"  placeholder="Project Name" aria-label="Projectname"></td>
+                <td> </td>
+                <td>
+                  <div class="" role="group" aria-label="Basic example">
+                   <input type="text" class="form-control d-none" id="descriptionInput" value="An ARC created by elab2arc tool" placeholder="Project Name" aria-label="Projectname">
+        <button class="btn btn-primary" onclick="createNewArc()"> Create a new ARC </button>
+                  </div>
+                </td>
+              </tr>
+            `
 
         // Insert the generated table HTML into the DOM
         document.getElementById("userProjectsTable").innerHTML = tableHTML;
@@ -904,26 +982,62 @@
 
     }
 
-    const singleConvert = async ()=>{
-      const gitlabusername = document.getElementById("usernameInput").value;
-      const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
-      // if (gitlabURL.includes("Please select your")){
-      //   alert("No ElabFTW is selected, please go to ElabFTW tab to select.");
-      //   return;
-      // };
-      const arcName = document.getElementById("arcInfo").innerHTML;
-      if (arcName.includes("Please select your ARC")){
-        alert("please select your ARC.");
-        return;
-      };
-      const params = await getParameters();
-      const users = await fetchElabJSON(params.elabtoken, "users",  params.instance); 
-      
-      //const elabid = document.getElementById("elabexperimentid").value;
-      
-      await processExperiment(0, params.elabidList[0], params, window.elabJSON, users, gitlabURL, arcName );
-      refreshTree(arcName);
+
+
+/**
+ * Process eLabFTW experiments or items by handling possible prefix mismatches and authorization issues.
+ * @param {Object} params - Configuration parameters including elabtoken, elabidList, instance
+ * @param {Object} users - User data from eLabFTW (optional: if not provided, it will be fetched)
+ * @param {string} gitlabURL - Optional GitLab URL override
+ * @param {string} arcName - Not used in this snippet but kept for compatibility
+ */
+async function processElabEntries(params, users, gitlabURL, arcName) {
+  try {
+    for (const [expIndex, expId] of Object.entries(params.elabidList)) {
+      if (!expId) continue;
+
+      let res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
+
+      // Handle incorrect prefix: try 'items' if 'experiments' fails
+      if (res.code >= 400) {
+        res = await fetchElabJSON(params.elabtoken, `items/${expId}`, params.instance);
+      }
+
+      // Authorization error
+      if (res.code === 403) {
+        alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
+        continue;
+      }
+
+      // If users not passed, fetch them
+      if (!users) {
+        users = await fetchElabJSON(params.elabtoken, "users", params.instance);
+        if (users.code >= 400) {
+          console.error("Failed to fetch users:", users);
+          alert("Failed to fetch user data from eLabFTW.");
+          continue;
+        }
+      }
+
+      // Determine URLs
+      const extraFields = gitlabURL || res.metadata_decoded?.extra_fields;
+      const datahubURL = gitlabURL || gitUrlCheck(extraFields?.datahub_url?.value);
+      if (!datahubURL) {
+        console.warn(`No valid datahub_url found for experiment ${expId}`);
+        continue;
+      }
+
+      const gitName = datahubURL.slice(0, -4); // Remove .git suffix
+      const dir = gitName.split("/").slice(-1)[0]; // Get repo name
+
+      // Process the experiment
+      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
     }
+  } catch (error) {
+    console.error("Error processing eLab entries:", error);
+    alert("An unexpected error occurred while processing eLabFTW entries.");
+  }
+}
 
 
     
@@ -946,27 +1060,7 @@
       const users = await fetchElabJSON(params.elabtoken, "users",  params.instance); 
 
           // Process each experiment ID
-          for (const [expIndex, expId] of Object.entries(params.elabidList)) {
-              if (expId) {
-                  let res 
-                  
-                  res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
-                  if (res.code>400){
-                    res = await fetchElabJSON(params.elabtoken, `items/${expId}`, params.instance);
-                  }else{
-
-                  }
-
-                  const users = await fetchElabJSON(params.elabtoken, "users", params.instance);
-                  let extraFields =gitlabURL || res.metadata_decoded.extra_fields;
-                  const datahubURL =  gitlabURL || gitUrlCheck(extraFields.datahub_url.value);
-                  const gitName = datahubURL.slice(0, -4);
-
-                  const dir =  gitName.split("/").slice(-1)[0];
-                  
-                  await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
-              }
-          }
+        await processElabEntries(params, users, gitlabURL, arcName);
       refreshTree(arcName);
     }
     // async function updateAll2(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
@@ -1155,30 +1249,36 @@
                 const params = await getParameters(elabidText, elabtoken, datahubtoken, instance);
 
                 // Process each experiment ID
-                for (const [expIndex, expId] of Object.entries(params.elabidList)) {
-                    if (expId) {
-                        const res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
-                        const users = await fetchElabJSON(params.elabtoken, "users", params.instance);
-                        let extraFields = gitURL || res.metadata_decoded.extra_fields;
-                        const datahubURL =  gitURL || gitUrlCheck(extraFields.datahub_url.value);
-                        const gitName = datahubURL.slice(0, -4);
+                //const gitlabusername = document.getElementById("usernameInput").value;
+                const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
+                // if (gitlabURL.includes("Please select your")){
+                //   alert("No ElabFTW is selected, please go to ElabFTW tab to select.");
+                //   return;
+                // };
+                const arcName = document.getElementById("arcInfo").innerHTML;
+                if (arcName.includes("Please select your ARC")){
+                  alert("please select your ARC.");
+                  return;
+                };
+              
+                // const elabtoken = document.getElementById("elabToken").value;
+                // const datahubtoken = document.getElementById("datahubToken").value;
+                // const instance = document.getElementById("elabURLInput").value;
+                const users = await fetchElabJSON(params.elabtoken, "users",  params.instance); 
 
-                        const dir =  gitName.split("/").slice(-1)[0];
-                        await datahubClone(datahubURL, dir, params.datahubtoken);
-                        await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
-                    }
-                }
-            } catch (error) {
-              console.error(error);
-                handleError(error);
-            }
-        }
+                // Process each experiment ID
+              await processElabEntries(params, users, gitlabURL, arcName);
+                  } catch (error) {
+                    console.error(error);
+                      handleError(error);
+                  }
+          }
 
-        // Initialize UI elements
-        function initializeUI() {
-            filesChanged.innerHTML = "";
-            statusInfo = "";
-        }
+              // Initialize UI elements
+              function initializeUI() {
+                  filesChanged.innerHTML = "";
+                  statusInfo = "";
+              }
 
         // Retrieve and validate parameters
         async function getParameters(elabidText, elabtoken, datahubtoken, instance ) {
@@ -1450,7 +1550,13 @@
       softRoute(); 
       const instance = window.localStorage.getItem("elabURL");
       document.getElementById("elabURLInput1").value = instance;
-      document.getElementById("elabURLInput1").innerHTML= "instance: "+instance;;
+      document.getElementById("elabURLInput1").innerHTML= "instance: "+instance;
+      
+      checkElabFTWConnection();
+      checkGitLabConnection();
+     
+
+
     }
     );
 
@@ -1775,20 +1881,14 @@
   function multiElabSelect(sw){
     if (sw.checked){
       document.getElementById("multiElabBtn").classList.remove("d-none");
-      document.getElementsByName("multiConvert").forEach((e) => {
-             e.classList.remove("d-none");});
-      document.getElementsByName("singleConvert").forEach((e) => {
-        e.classList.add("d-none");});
+     
 
       document.querySelectorAll('input[name="multiElabCheckbox"]').forEach((e) => {
              e.classList.remove("d-none"); 
     });
     }else{
       document.getElementById("multiElabBtn").classList.add("d-none");
-      document.getElementsByName("singleConvert").forEach((e) => {
-        e.classList.remove("d-none");});
-      document.getElementsByName("multiConvert").forEach((e) => {
-        e.classList.add("d-none");});
+      
       document.querySelectorAll('input[name="multiElabCheckbox"]').forEach((e) => {
              e.classList.add("d-none"); 
     });

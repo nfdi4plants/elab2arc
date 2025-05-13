@@ -3,7 +3,7 @@
     margin-bottom: 1.5rem;
     padding: 1rem;
     word-wrap: break-word;      /* Legacy name for overflowed words */
-
+    border:2px solid;
   }
   
   /* Section Background Colors */
