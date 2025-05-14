@@ -93,9 +93,9 @@
 
   span.missingKey {
     font-weight: bold;
-    border: 4px #b005ad;
-    border-style: dotted;
-    box-shadow: 0 8px 6px -6px #c50070;
+    #border: 4px #b005ad;
+    #border-style: dotted;
+    #box-shadow: 0 8px 6px -6px #c50070;
   }
 
   span.collapsed::before {
@@ -333,11 +333,7 @@ padding:0;
 
 
 .nav-linkc.active .nav-items.active .show>.nav-linkc {
-	color:#e92424 !important;
-  background-color: rgb(200, 124, 124) !important;
-  border-radius: 5px 5px 0px 0px;
-	padding: 0.5vh 0.8vw !important;
-  border-width:0  !important;
+
 }
 
 [type=button]:not(:disabled), [type=reset]:not(:disabled), [type=submit]:not(:disabled), button:not(:disabled) {
