@@ -332,10 +332,6 @@ padding:0;
 
 
 
-.nav-linkc.active .nav-items.active .show>.nav-linkc {
-
-}
-
 [type=button]:not(:disabled), [type=reset]:not(:disabled), [type=submit]:not(:disabled), button:not(:disabled) {
     cursor: pointer;
 }
