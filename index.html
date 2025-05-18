@@ -134,7 +134,7 @@
         <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
           eLabFTW Experiment ID &#128712;</button>
       </label>
-      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabExperimentid" aria-describedby="elabexpHelp" onchange="elabListSync()"></textarea>
+      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabExperimentid" aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
       <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
       </div>
 
@@ -142,7 +142,7 @@
         <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
           eLabFTW Resource ID &#128712;</button>
       </label>
-      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabResourceid" aria-describedby="elabresourceHelp" onchange="elabListSync()"></textarea>
+      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabResourceid" aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
       <div id="elabresourceHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
       </div>
 
@@ -537,11 +537,12 @@
     function elabListSync(elablist){
       const text1 = document.getElementById("elabExperimentid").value;
       const text2 = document.getElementById("elabResourceid").value;
+
       if (elablist){
         document.getElementById("elabExperimentid").value = ElabidToText(elablist.elabExperimentid);
         document.getElementById("elabResourceid").value = ElabidToText(elablist.elabResourceid);
 
-        localStorage.setItem('elabid', elablist);
+        localStorage.setItem('elabid', JSON.stringify(elablist));
       }else{
 
          elabExperimentid = textToElabid(text1);
@@ -560,7 +561,10 @@
     function elabCheckSync(){
           let newExp =[], newRes=[];
           let elablist = elabListSync();
-          
+            const expChecks = document.querySelectorAll('[data-type="Experiment"]');
+            expChecks.forEach(e=> {e.checked=false});
+            const resChecks = document.querySelectorAll('[data-type="Resource"]');
+            resChecks.forEach(e=> {e.checked=false});
               elablist.elabExperimentid.forEach(e=>{
           try {
         document.getElementById("checkExp"+e).checked = true;
@@ -580,9 +584,13 @@
       })
       elablist.elabExperimentid = newExp;
       elablist.elabResourceid = newRes;
-      
+
     elabListSync(elablist)
     }
+
+    
+
+
 
 
     // Convert comma-separated text to unique ID array
@@ -609,8 +617,8 @@
       const datahubToken = document.getElementById("datahubToken").value;
       const elabToken = document.getElementById("elabToken").value;
       const instance = window.localStorage.getItem('elabURL');
-      const elabid = elabListSync();
-
+      const elablist = elabListSync();
+      const elabid = elablist.elabExperimentid;
       setCookies( elabToken, datahubToken, instance);
       const id = await fetchUser(datahubToken);
       if (id){
@@ -865,6 +873,19 @@ async function checkElabFTWConnection() {
       }
     };
 
+
+    function addidToText(ele){
+      const type = ele.dataset.type;
+      let newList= [];
+      const elements = document.querySelectorAll('[data-type="'+type+'"]');
+      let list = elabListSync();
+      elements.forEach(e=>{
+        e.checked == true? newList.push(e.dataset.id):{};
+      })
+      list["elab"+type+"id"] = newList;
+      elabListSync(list);
+    }
+
     const fillElabTable = async () => {
       try {
         // Define the API endpoint for fetching user-related projects
@@ -884,7 +905,7 @@ async function checkElabFTWConnection() {
                 <td>${exp.date}</td>
                 <td>${exp.fullname}</td>
                 <td><div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" data-id="${exp.id}" data-type="Experiment" id="checkExp${exp.id}" value="option1">
+                    <input class="form-check-input" type="checkbox" data-id="${exp.id}" data-type="Experiment" id="checkExp${exp.id}" onclick="addidToText(this)" value="option1">
                     <label class="form-check-label" for="checkExp${exp.id}"></label>
                   </div></td>
               </tr>
@@ -901,7 +922,7 @@ async function checkElabFTWConnection() {
                 <td>${exp.date}</td>
                 <td>${exp.fullname}</td>
                 <td><div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" data-id="${exp.id}" data-type="Resource" id="checkRes${exp.id}" value="option1">
+                    <input class="form-check-input" type="checkbox" data-id="${exp.id}" data-type="Resource" id="checkRes${exp.id}" onclick="addidToText(this)" value="option1">
                     <label class="form-check-label" for="checkRes${exp.id}"></label>
                   </div></td>
               </tr>
@@ -1151,15 +1172,46 @@ async function checkElabFTWConnection() {
  */
 async function processElabEntries(params, users, gitlabURL, arcName) {
   try {
-    for (const [expIndex, expId] of Object.entries(params.elabidList)) {
+    for (const [expIndex, expId] of Object.entries(params.elabidList.elabExperimentid)) {
       if (!expId) continue;
 
       let res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
 
-      // Handle incorrect prefix: try 'items' if 'experiments' fails
-      if (res.code >= 400) {
-        res = await fetchElabJSON(params.elabtoken, `items/${expId}`, params.instance);
+      // Authorization error
+      if (res.code === 403) {
+        alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
+        continue;
       }
+
+      // If users not passed, fetch them
+      if (!users) {
+        users = await fetchElabJSON(params.elabtoken, "users", params.instance);
+        if (users.code >= 400) {
+          console.error("Failed to fetch users:", users);
+          alert("Failed to fetch user data from eLabFTW.");
+          continue;
+        }
+      }
+
+      // Determine URLs
+      const extraFields = gitlabURL || res.metadata_decoded?.extra_fields;
+      const datahubURL = gitlabURL || gitUrlCheck(extraFields?.datahub_url?.value);
+      if (!datahubURL) {
+        console.warn(`No valid datahub_url found for experiment ${expId}`);
+        continue;
+      }
+
+      const gitName = datahubURL.slice(0, -4); // Remove .git suffix
+      const dir = gitName.split("/").slice(-1)[0]; // Get repo name
+
+      // Process the experiment
+      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
+    }
+
+    for (const [expIndex, expId] of Object.entries(params.elabidList.elabResourceid)) {
+      if (!expId) continue;
+
+      let res = await fetchElabJSON(params.elabtoken, `items/${expId}`, params.instance);
 
       // Authorization error
       if (res.code === 403) {
@@ -1664,18 +1716,14 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
           let res;
           
             res = await fetchElabJSON(elabtoken, `experiments/${elabid}`, instance);
+
           if (res.code > 400){
             console.error(res);
-            res = await fetchElabJSON(elabtoken, `items/${elabid}`, instance);
-            const users = await fetchElabJSON(elabtoken, "users", instance);
-          const user = users.find(u => u.fullname === res.fullname);
-          return res;
-          }else{
-            const users = await fetchElabJSON(elabtoken, "users", instance);
-          const user = users.find(u => u.fullname === res.fullname);
-          return res;
+            
           }
-          
+          const users = await fetchElabJSON(elabtoken, "users", instance);
+          const user = users.find(u => u.fullname === res.fullname);
+          return res;
         }
 
  
