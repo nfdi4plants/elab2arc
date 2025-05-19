@@ -8,11 +8,11 @@ function getCookie(name) {
 const instance = window.localStorage.getItem('elabURL');
 
 // Fetch and display data
-async function loadExperiment(instance, elabid, elabtoken) {
+async function loadExperiment(instance, elabid, elabtoken, type) {
     
     
     try {
-        const data = await fetchElabExperimentData(elabid, elabtoken, instance);
+        const data = await fetchElabExperimentData(elabid, elabtoken, instance, type);
         window.elabJSON = data;
        
         const assayId  = data.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
@@ -33,7 +33,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
                 </a>
             </li>
             <div class="form-check-inline">
-                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${data.id}" data-elabid="${data.id}" data-elabtitle="${data.title}">
+                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${data.id}" data-id="${data.id}" data-type1="${type}" data-elabtitle="${data.title}" onclick="linkCheck(this)">
                     <label class="form-check-label" for="multiCheck${data.id}">
                     
                     </label>
@@ -100,7 +100,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
             relatedItems.innerHTML += `
                 <li>
                 <div class="form-check-inline">
-                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
+                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-id="${item.entityid}" data-type1="Resource" onclick="linkCheck(this)" data-elabtitle="${item.title}">
                     <label class="form-check-label" for="multiCheck${item.entityid}">
 
                     </label>
@@ -119,7 +119,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
             relatedExps.innerHTML += `
                 <li>
                     <div class="form-check-inline">
-                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
+                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-id="${item.entityid}" data-type1="Experiment" onclick="linkCheck(this)"  data-elabtitle="${item.title}">
                     <label class="form-check-label" for="multiCheck${item.entityid}">
                     
                     </label>

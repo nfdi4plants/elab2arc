@@ -58,7 +58,9 @@
       </button>
    
         
-        <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#ftw'); showTab('ftwTab')" class="nav-linkc px-3"
+        <button type="button" name="navBtn" data-bs-toggle="offcanvas"
+                            data-bs-target="#elabPreviewCanvas"
+                            aria-controls="elabPreviewCanvas" class="nav-linkc px-3"
           id="ftwBtn">
         ElabFTW&nbsp;<span id="elabFTWCheck">&#127760;</span>
         </button>
@@ -75,12 +77,12 @@
        
 
         <span class="ms-auto">
-        <a id="kblink" class=" p-2"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"></a>
+        <a id="kblink" class="p-2  nav-linkc"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> HELP</a>
 
 
 
 
-        <a id="ghlink" class=" p-2" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img src="images/github-mark-white.png" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"></a>
+        <a id="ghlink" class=" p-2 nav-linkc" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img src="images/github-mark-white.png" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"> Github</a>
         </span> 
       </div>
     
@@ -149,7 +151,7 @@
       <label for="elabsubmit" class="form-label my-3 d-none">Submit Options</label>
           <button class="btn btn-primary my-3 w-100 d-none"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
           <br>
-          <button  class="btn btn-primary my-3 w-100" type="button" onclick="startStepByStep()" ><span> Submission</span></button>
+          <button  class="btn btn-primary my-3 w-100" type="button" onclick="showTab('arcTab')" ><span> Submission</span></button>
           <br>
           <button class="btn btn-secondary my-3 w-100" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
             Check Status
@@ -176,7 +178,7 @@
               
           </label> 
           <br>
-        <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button" onchange="initCookies()" data-bs-toggle="dropdown" aria-expanded="false">
           eLabFTW Instance: HHU
         </button>
         <ul class="dropdown-menu">
@@ -193,7 +195,7 @@
             <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
               eLabFTW API Key&nbsp;&#128712;</button>
           </label>
-          <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken" required>
+          <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken" onchange="initCookies()" required>
         </div>
 
         <div class="my-3 col-lg-2">
@@ -202,7 +204,7 @@
               DataHub Token&nbsp;&#128712;</button>
             
           </label>
-          <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" required>
+          <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" onchange="initCookies()" required>
         </div>
 
 
@@ -240,7 +242,12 @@
         <div class="col-12">
 
         <div class="border row text-center p-3 mt-3 convert-container rounded" >
-          <div class="lead col-3" id="elabFTWInfo"> Main ElabFTW Protocol Used  </div> 
+          <div class="lead col-3" id="elabFTWInfo"> ElabFTW IDs  
+            <div id="elabExpInfo"></div>
+            <div id="elabResInfo"></div>
+            
+          </div> 
+
             <div class=" text-success col-1" id=""> ====>>>  </div>
           <div class=" col-3" >
             <span class=" lead" id="gitlabInfo"> GitLab URL </span>
@@ -281,68 +288,7 @@
     </div>
     <div name="tab" class="row justify-content-center align-items-center m-auto" id="ftwTab">
    
-      <div class="container-fluid mt-3">
-        <div class="row g-4">
-      
-          <!-- Main Content -->
-          <div class="col-md-9">
-      
-            <section class="section title bg-light rounded p-3 mb-4">
-              <h1 id="expTitle" class="text-primary-emphasis"> Empty ElabFTW</h1>
-              
-            </section>
-      
-            <section class="section content bg-light rounded p-3 mb-4" id="expContent">
-              <!-- HTML content will be injected here -->
-               <h5>No ElabFTW available. Use <a href="#home">home tab</a> to start a conversion</h5>
-            </section>
-      
-          </div>
-      
-          <!-- Sidebar -->
-          <div class="col-md-3 sidebar">
-      
-            <!-- Multi-select Switch -->
-            <div class="form-check form-switch mb-3  d-none">
-              <input class="form-check-input" type="checkbox" role="switch" onclick="multiElabSelect(this)" id="multiElabSwitch">
-              <label class="form-check-label" for="multiElabSwitch">Select Multiple ElabFTW Experiments</label>
-            </div>
-      
-            <!-- Start Conversion Button -->
-            <button class="btn btn-primary my-3" onclick="startMultiElabConvert()" id="multiElabBtn">
-              Start Multiple Conversion
-            </button>
-      
-            <!-- Conversion Section -->
-            <section class="section conversion rounded p-3 mb-4">
-              <h3>Conversion</h3>
-              <ul id="elabHeadLine"></ul>
-            </section>
-      
-            <!-- Metadata Section -->
-            <section class="section metadata rounded p-3 mb-4">
-              <h3>Metadata</h3>
-              <ul id="metadataList"></ul>
-            </section>
-      
-            <!-- Related Items Section -->
-            <section class="section related rounded p-3 mb-4">
-              <h3>Linked Resources and Experiments</h3>
-              <ul id="relatedItems"></ul>
-              <ul id="relatedExps"></ul>
-            </section>
-      
-            <!-- Uploads / Gallery Section -->
-            <section class="section uploads rounded p-3 mb-4">
-              <h3>Attachments</h3>
-              <div class="gallery row g-2" id="uploadGallery">
-                <!-- Gallery items will be injected as .col-sm-6 or .col-md-4 dynamically -->
-              </div>
-            </section>
-      
-          </div>
-        </div>
-      </div>
+
     </div>
     
     
@@ -516,10 +462,32 @@
   <script type="text/javascript">
     var fs = FS.fs;
     var elabJSON;
-    var statusInfo;
-    const version = "2024-12-09";
+    var statusInfo="";
+    const version = "2025-05-19";
     var blobb = [];
-    
+    const typeConfig = {
+      Experiment: {
+        displayName: 'Experiment',
+        short: 'Exp',
+        endpoint: 'experiments',
+        hasPreview: true,
+      },
+      Resource: {
+        displayName: 'Resource',
+        short: 'Res',
+        endpoint: 'items',
+        hasPreview: true,
+      },
+      // Add more types here as needed
+      /*
+      Template: {
+        displayName: 'Template',
+        short: 'Temp',
+        endpoint: 'templates',
+        hasPreview: true
+      }
+      */
+    };
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged =document.getElementById("filesChanged");
     
@@ -534,26 +502,56 @@
     }
 
 
-    function elabListSync(elablist){
-      const text1 = document.getElementById("elabExperimentid").value;
-      const text2 = document.getElementById("elabResourceid").value;
+/**
+ * Syncs experiment and resource IDs between input fields and localStorage.
+ * If a new list is provided, updates DOM and localStorage.
+ * If not, reads from DOM and updates internal state.
+ *
+ * @param {Object} [newList] - Optional object containing elabExperimentid / elabResourceid arrays
+ * @returns {Object} - Updated or existing elablist object
+ */
+function elabListSync(newList) {
+  const expInput = document.getElementById("elabExperimentid");
+  const resInput = document.getElementById("elabResourceid");
+  const expInfo = document.getElementById("elabExpInfo");
+  const resInfo = document.getElementById("elabResInfo");
 
-      if (elablist){
-        document.getElementById("elabExperimentid").value = ElabidToText(elablist.elabExperimentid);
-        document.getElementById("elabResourceid").value = ElabidToText(elablist.elabResourceid);
 
-        localStorage.setItem('elabid', JSON.stringify(elablist));
-      }else{
 
-         elabExperimentid = textToElabid(text1);
-         elabResourceid = textToElabid(text2);
-         
-         elablist = {elabExperimentid, elabResourceid}
-         localStorage.setItem('elabid', JSON.stringify(elablist));
-        
-      }
-      return elablist ;
-    }
+  let elablist;
+
+  if (newList) {
+    // Use provided list and update inputs
+    const expIDs = ElabidToText(newList.elabExperimentid);
+    const resIDs = ElabidToText(newList.elabResourceid);
+
+    expInput.value = expIDs;
+    resInput.value = resIDs;
+    
+    // Save to localStorage
+    localStorage.setItem('elabid', JSON.stringify(newList));
+
+    elablist = newList;
+
+  } else {
+    // Read from inputs and convert to arrays
+    const expIDs = textToElabid(expInput.value);
+    const resIDs = textToElabid(resInput.value);
+
+    elablist = {
+      elabExperimentid: expIDs,
+      elabResourceid: resIDs
+    };
+
+    // Update localStorage with latest values
+    localStorage.setItem('elabid', JSON.stringify(elablist));
+  }
+
+  expInfo.innerHTML = "Experiment IDs: "+ expInput.value;
+    resInfo.innerHTML = "Resource IDs: " + resInput.value;
+
+  return elablist;
+}
 
 
    
@@ -609,39 +607,58 @@
     const ElabidToText = (arr) => {
       return arr.filter(Boolean).join(',');
     };
-        
-
-    const startStepByStep= async ()=>{
-      document.getElementById("ftwBtn").click();
+    
+    const elabPreview = async (element) => {
       loading.show();
-      const datahubToken = document.getElementById("datahubToken").value;
-      const elabToken = document.getElementById("elabToken").value;
-      const instance = window.localStorage.getItem('instance');
-      const elablist = elabListSync();
-      const elabid = elablist.elabExperimentid;
-      setCookies( elabToken, datahubToken, instance);
-      const id = await fetchUser(datahubToken);
-      if (id){
-      //document.getElementById("usernameInput").value = id.username;
-      await fetchUserProjects(id.username, datahubToken) 
-      loading.hide();
-    }
-      else{
-        return;
-      }
-     
-     await loadExperiment(instance, elabid, elabToken);
-     
-     
-     const checkbox = document.getElementById("multiElabSwitch");
-       // multiElabSelect(checkbox); 
 
-    }
+      // Get all required parameters using getParameters
+      const { elabtoken, datahubtoken, instance, elabidList } = await getParameters();
+
+      // Extract ID from dataset
+      const elabid = element.dataset.id;
+
+      // Set cookies with current values
+      setCookies(elabtoken, datahubtoken, instance);
+      
+
+      // Load experiment/resource preview
+      await loadExperiment(instance, elabid, elabtoken, element.dataset.type);
+
+      loading.hide();
+    };
+    
+
+    // const startStepByStep= async ()=>{
+    //   document.getElementById("ftwBtn").click();
+    //   loading.show();
+    //   const datahubToken = document.getElementById("datahubToken").value;
+    //   const elabToken = document.getElementById("elabToken").value;
+    //   const instance = window.localStorage.getItem('instance');
+    //   const elablist = elabListSync();
+    //   const elabid = elablist.elabExperimentid;
+    //   setCookies( elabToken, datahubToken, instance);
+    //   const id = await fetchUser(datahubToken);
+    //   if (id){
+    //   //document.getElementById("usernameInput").value = id.username;
+    //   await fetchUserProjects(id.username, datahubToken) 
+    //   loading.hide();
+    // }
+    //   else{
+    //     return;
+    //   }
+     
+    //  await loadExperiment(instance, elabid, elabToken);
+     
+     
+    //  //const checkbox = document.getElementById("multiElabSwitch");
+    //    // multiElabSelect(checkbox); 
+
+    // }
 
     // Function to check connection to ElabFTW API
 async function checkElabFTWConnection() {
   const elabid= JSON.parse(localStorage.getItem("elabid"))
-  const params = await getParameters( );
+  const params = await getParameters(elabid.elabExperimentid, elabid.elabResourceid );
       // const elabtoken = document.getElementById("elabToken").value;
       // const datahubtoken = document.getElementById("datahubToken").value;
       // const instance = document.getElementById("elabURLInput").value;
@@ -690,6 +707,17 @@ async function checkElabFTWConnection() {
 
       if (response.ok) {
         document.getElementById("arcCheck").innerHTML = "&#127760;";
+        const { elabtoken, datahubtoken, instance, elabidList } = await getParameters();
+      // Fetch user info
+      const id = await fetchUser(datahubtoken);
+
+      if (id) {
+        // Optionally load user projects
+        await fetchUserProjects(id.username, datahubtoken);
+      } else {
+        
+        return;
+      }
         console.log('✅ Successfully connected to GitLab API');
         return true;
       } else {
@@ -745,7 +773,7 @@ async function checkElabFTWConnection() {
     const   createNewArc  = async ()=>{
       const projectDescription = document.getElementById("descriptionInput").value;
       const projectName = document.getElementById("projectnameInput").value;
-      const username = document.getElementById("usernameInput").value;
+      const username = window.userId.username;
       
           const accessToken = document.getElementById("datahubToken").value;
           await  createGitLabRepo(projectName, projectDescription, accessToken);
@@ -838,11 +866,12 @@ async function checkElabFTWConnection() {
                 <td><a href="${project.web_url}" target="_blank">View Project</a></td>
                 <td>
                   <div class="" role="group" aria-label="Basic example">
-                    <button type="button" onclick="deleteAll(); cloneARC('${project.http_url_to_repo}', '${project.name}');" class="btn btn-success ">
-                     Use This ARC
+                    <button type="button" onclick="deleteAll(); cloneARC('${project.http_url_to_repo}', '${project.name}');refreshTree('./${project.name}')" class="btn btn-success ">
+                     Convert to assay
                     </button>
-                    <button type="button" onclick="deleteAll(); cloneARC('${ project.http_url_to_repo}', '${project.name}')" class="btn btn-secondary d-none">
-                      Clone Only
+                    <button type="button" onclick="deleteAll(); cloneARC('${ project.http_url_to_repo}', '${project.name}'); fileExplorer.show();
+      refreshTree('./${project.name}');" class="btn btn-secondary ">
+                     Convert to other folders  
                     </button>
                   </div>
                 </td>
@@ -885,53 +914,97 @@ async function checkElabFTWConnection() {
       list["elab"+type+"id"] = newList;
       elabListSync(list);
     }
-
+    function linkCheck(checkbox) {
+            if (checkbox.checked) {
+              const check= document.getElementById("check"+typeConfig[checkbox.dataset.type1].short+checkbox.dataset.id);
+         check.checked =true; 
+         check.onchange();  
+        } else{
+            const check= document.getElementById("check"+typeConfig[checkbox.dataset.type1].short+checkbox.dataset.id);
+            check.checked =false;
+            check.onchange(); 
+        }
+      }
     const fillElabTable = async () => {
       try {
         // Define the API endpoint for fetching user-related projects
         const params = await getParameters();
-        const experimentJSON = await  fetchElabJSON(params.elabtoken, "experiments?order=id&sort=asc", params.instance);
-        const resourcesJSON = await  fetchElabJSON(params.elabtoken, "items?order=id&sort=asc", params.instance);
-        // Build the HTML table dynamically
-        let tableHTML = '';
+        async function fetchAndBuildTable(params, typeConfig) {
+        // Helper function to fetch data based on type
+        async function fetchData(typeKey) {
+              const config = typeConfig[typeKey];
+              if (!config || !config.endpoint) {
+                console.warn(`No endpoint defined for type: ${typeKey}`);
+                return [];
+              }
+              return fetchElabJSON(params.elabtoken, `${config.endpoint}?order=id&sort=asc`, params.instance);
+            }
 
-        experimentJSON.forEach((exp) => {
-          if (exp.id) { // Ensure the project has a valid name
-            tableHTML += `
-              <tr>
-                <th scope="row">Experiments</th>
-                <td>${exp.id}</td>
-                <td>${exp.title}</td>
-                <td>${exp.date}</td>
-                <td>${exp.fullname}</td>
-                <td><div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" data-id="${exp.id}" data-type="Experiment" id="checkExp${exp.id}" onclick="addidToText(this)" value="option1">
-                    <label class="form-check-label" for="checkExp${exp.id}"></label>
-                  </div></td>
-              </tr>
-            `;
-          }
-        });
-        resourcesJSON.forEach((exp) => {
-          if (exp.id) { // Ensure the project has a valid name
-            tableHTML += `
-              <tr>
-                <th scope="row">Resources</th>
-                <td>${exp.id}</td>
-                <td>${exp.title}</td>
-                <td>${exp.date}</td>
-                <td>${exp.fullname}</td>
-                <td><div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" data-id="${exp.id}" data-type="Resource" id="checkRes${exp.id}" onclick="addidToText(this)" value="option1">
-                    <label class="form-check-label" for="checkRes${exp.id}"></label>
-                  </div></td>
-              </tr>
-            `;
-          }
-        });
+            // Fetch all configured types in parallel
+            const promises = Object.keys(typeConfig).map(key => fetchData(key));
+            const results = await Promise.all(promises);
+
+            let tableHTML = '';
+
+            // Process each entry for each type
+            Object.keys(typeConfig).forEach((typeKey, index) => {
+              const config = typeConfig[typeKey];
+              const data = results[index];
+
+              data.forEach((entry) => {
+                if (!entry.id) return; // Skip invalid entries
+
+                const checkboxId = `check${config.short}${entry.id}`;
+                const previewBtn = config.hasPreview
+                  ? `<button class="btn btn-sm btn-success" type="button"
+                            data-bs-toggle="offcanvas"
+                            data-bs-target="#elabPreviewCanvas"
+                            aria-controls="elabPreviewCanvas"
+                            data-id="${entry.id}"
+                            data-type="${typeKey}"
+                            id="preview${config.short}${entry.id}"
+                            onclick="elabPreview(this)"
+                            >
+                      Preview
+                    </button>`
+                  : '';
+
+                const extraDiv = config.hasPreview
+                  ? `<div id="linked${typeKey}${entry.id}"></div>`
+                  : '';
+
+                tableHTML += `
+                  <tr>
+                    <th scope="row">${config.displayName}</th>
+                    <td>${entry.id}</td>
+                    <td>${entry.title} ${previewBtn}</td>
+                    <td>${entry.date}</td>
+                    <td>${entry.fullname}</td>
+                    <td>
+                      <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox"
+                              data-id="${entry.id}"
+                              data-type="${typeKey}"
+                              id="${checkboxId}"
+                              onchange="addidToText(this)"
+                              value="option1">
+                        <label class="form-check-label" for="${checkboxId}"></label>
+                        ${extraDiv}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              });
+            });
+              // document.getElementById('your-table-body').innerHTML = tableHTML;
+
+        return tableHTML;
+        };
 
         // Insert the generated table HTML into the DOM
+        tableHTML = await fetchAndBuildTable(params, typeConfig);
         document.getElementById("elabTable").innerHTML = tableHTML;
+
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
         alert(error.message || error);
@@ -1129,6 +1202,17 @@ async function checkElabFTWConnection() {
       
     }
 
+
+    function initCookies(){
+      const maxAge = 60*60*24*31;
+          elabtoken= document.getElementById("elabToken").value;
+          datahubtoken= document.getElementById("datahubToken").value;
+          document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+          document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+          window.localStorage.setItem("instance", instance);
+          location.reload();
+          
+    }
 
 
     function setCookies(elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
@@ -1489,17 +1573,69 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
                   statusInfo = "";
               }
 
-        // Retrieve and validate parameters
-        async function getParameters(elabidText, elabResourceidText, elabtoken, datahubtoken, instance ) {
-            elabtoken ?  document.getElementById("elabToken").value=elabtoken: elabtoken=document.getElementById("elabToken").value;
-            
-            datahubtoken ?  document.getElementById("datahubToken").value=datahubtoken: datahubtoken= document.getElementById("datahubToken").value;
-            instance ? document.getElementById("elabURLInput1").value = instance : instance=document.getElementById("elabURLInput1").value;
-            setCookies(elabtoken, datahubtoken, instance);
-            elabidText ? document.getElementById("elabExperimentid").value = elabidText : elabidText=document.getElementById("elabExperimentid").value;
-            elabResourceidText ? document.getElementById("elabResourceid").value = elabResourceidText : elabResourceidText=document.getElementById("elabExperimentid").value;
-            const elabidList = elabListSync();
-            return { elabidList, elabtoken, datahubtoken, instance };
+
+
+        /**
+         * Gets or sets parameter values from/to DOM inputs.
+         * If values are provided, they update the DOM.
+         * Otherwise, values are read from the DOM.
+         *
+         * @param {string} [elabidText] - Optional experiment ID to set or read
+         * @param {string} [elabResourceidText] - Optional resource ID to set or read
+         * @param {string} [elabtoken] - Optional eLab token to set or read
+         * @param {string} [datahubtoken] - Optional DataHub token to set or read
+         * @param {string} [instance] - Optional eLab instance URL to set or read
+         * @returns {Object} - Object containing: elabidList, elabtoken, datahubtoken, instance
+         */
+        async function getParameters(elabidText, elabResourceidText, elabtoken, datahubtoken, instance) {
+          // Set or get eLab API token
+          if (elabtoken) {
+            document.getElementById("elabToken").value = elabtoken;
+          } else {
+            elabtoken = document.getElementById("elabToken").value;
+          }
+
+          // Set or get DataHub token
+          if (datahubtoken) {
+            document.getElementById("datahubToken").value = datahubtoken;
+          } else {
+            datahubtoken = document.getElementById("datahubToken").value;
+          }
+
+          // Set or get instance URL
+          if (instance) {
+            document.getElementById("elabURLInput1").value = instance;
+          } else {
+            instance = document.getElementById("elabURLInput1").value;
+          }
+
+          // Persist values in cookies
+          setCookies(elabtoken, datahubtoken, instance);
+
+          // Set or get experiment ID
+          if (elabidText) {
+            document.getElementById("elabExperimentid").value = elabidText;
+          } else {
+            elabidText = document.getElementById("elabExperimentid").value;
+          }
+
+          // Set or get resource ID
+          if (elabResourceidText) {
+            document.getElementById("elabResourceid").value = elabResourceidText;
+          } else {
+            // Fixed: Previously used wrong element ("elabExperimentid")
+            elabResourceidText = document.getElementById("elabResourceid").value;
+          }
+
+          // Sync and retrieve list of IDs
+          const elabidList = elabListSync();
+
+          return {
+            elabidList,
+            elabtoken,
+            datahubtoken,
+            instance
+          };
         }
 
         async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir) {
@@ -1712,10 +1848,10 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
             updateInfo("ARC update failed", 0);
         }
 
-        async function fetchElabExperimentData(elabid, elabtoken, instance) {
+        async function fetchElabExperimentData(elabid, elabtoken, instance, type) {
           let res;
-          
-            res = await fetchElabJSON(elabtoken, `experiments/${elabid}`, instance);
+            ;
+            res = await fetchElabJSON(elabtoken, `${typeConfig[type].endpoint}/${elabid}`, instance);
 
           if (res.code > 400){
             console.error(res);
@@ -2096,19 +2232,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
 
   }    
 
-  const startMultiElabConvert = async ()=>{
-
-    document.getElementById("elabExperimentid").value = "";
-    document.getElementById("elabFTWInfo").innerHTML  = "";
-    document.querySelectorAll("input[name='multiElabCheckbox']:checked").forEach(e=>{
-    document.getElementById("elabExperimentid").value += e.dataset.elabid+", "
-    document.getElementById("elabFTWInfo").innerHTML += e.dataset.elabtitle + "<br>";
-    });
-    showTab("arcTab");
-
-  }  
   
-
     function showTab(name){
       document.querySelectorAll('div[name="tab"]').forEach((e) => {
             if (e.id == name) { e.classList.remove("d-none");  }
@@ -2118,7 +2242,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
             if (e.id == name.replace("Tab", "Btn")) { e.setAttribute("style", "background-color:white; color:black; border-radius: 5px 5px 0px 0px;");  }
             else { e.setAttribute("style","") }
     })
-
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
 
@@ -2132,12 +2256,11 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
         refreshTree();
       } catch (error) {
         
-        throw showError(error),
+        //throw showError(error),
         console.error(error);
       }
       loading.hide();
-      fileExplorer.show()
-      refreshTree(".");
+      
 
     }
 
@@ -2238,6 +2361,69 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       </div>
     </div>
   </div>
+
+  <div class="offcanvas offcanvas-start w-75" tabindex="-1" id="elabPreviewCanvas" aria-labelledby="elabPreviewCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="elabPreviewCanvasLabel">eLabFTW Preview</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+           <div class="container-fluid mt-3">
+        <div class="row g-4">
+      
+          <!-- Main Content -->
+          <div class="col-md-9">
+      
+            <section class="section title bg-light rounded p-3 mb-4">
+              <h1 id="expTitle" class="text-primary-emphasis"> Empty ElabFTW</h1>
+              
+            </section>
+      
+            <section class="section content bg-light rounded p-3 mb-4" id="expContent">
+              <!-- HTML content will be injected here -->
+               <h5>No ElabFTW available. Use <a href="#home"  data-bs-dismiss="offcanvas" aria-label="Close">home tab</a> to start a conversion</h5>
+            </section>
+      
+          </div>
+      
+          <!-- Sidebar -->
+          <div class="col-md-3 sidebar">
+      
+            <!-- Conversion Section -->
+            <section class="section conversion rounded p-3 mb-4">
+              <h3>Conversion</h3>
+              <ul id="elabHeadLine"></ul>
+            </section>
+      
+            <!-- Metadata Section -->
+            <section class="section metadata rounded p-3 mb-4">
+              <h3>Metadata</h3>
+              <ul id="metadataList"></ul>
+            </section>
+      
+            <!-- Related Items Section -->
+            <section class="section related rounded p-3 mb-4">
+              <h3>Linked Resources and Experiments</h3>
+              <ul id="relatedItems"></ul>
+              <ul id="relatedExps"></ul>
+            </section>
+      
+            <!-- Uploads / Gallery Section -->
+            <section class="section uploads rounded p-3 mb-4">
+              <h3>Attachments</h3>
+              <div class="gallery row g-2" id="uploadGallery">
+                <!-- Gallery items will be injected as .col-sm-6 or .col-md-4 dynamically -->
+              </div>
+            </section>
+      
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+
 
 
   <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="experimentIdCanvas" aria-labelledby="experimentIdCanvasLabel">
