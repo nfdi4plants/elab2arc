@@ -33,12 +33,11 @@ async function loadExperiment(instance, elabid, elabtoken) {
                 </a>
             </li>
             <div class="form-check-inline">
-                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${data.id}" data-elabid="${data.id}" data-elabtitle="${data.title}">
+                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${data.id}" data-elabid="${data.id}" data-elabtitle="${data.title}">
                     <label class="form-check-label" for="multiCheck${data.id}">
                     
                     </label>
-                    </div>
-            <button class="btn btn-primary btn-sm"  id="elabFTWTarget" data-type="experiments" data-elabid="${elabid}" onclick="getFTW(this.id, 'experiments', ${elabid})" name="singleConvert" >Conversion</button>`
+                    </div>`
         // Metadata
         const metadataList = document.getElementById('metadataList');
         metadataList.innerHTML = `
@@ -101,7 +100,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
             relatedItems.innerHTML += `
                 <li>
                 <div class="form-check-inline">
-                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
+                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
                     <label class="form-check-label" for="multiCheck${item.entityid}">
 
                     </label>
@@ -110,7 +109,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
                         ${item.title}
                     </a> &nbsp;&nbsp; 
                     
-                    <button class="btn btn-primary btn-sm" name="singleConvert" id="item${item.entityid}Target" data-type="items" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" data-elabtitle="${item.title}">Convert</button>
+                    
                 </li>
             `;
         });
@@ -120,7 +119,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
             relatedExps.innerHTML += `
                 <li>
                     <div class="form-check-inline">
-                    <input class="form-check-input d-none" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
+                    <input class="form-check-input" type="checkbox" value="" name="multiElabCheckbox" id="multiCheck${item.entityid}" data-elabid="${item.entityid}" data-elabtitle="${item.title}">
                     <label class="form-check-label" for="multiCheck${item.entityid}">
                     
                     </label>
@@ -129,7 +128,7 @@ async function loadExperiment(instance, elabid, elabtoken) {
                         ${item.title}
                     </a>  &nbsp;&nbsp; 
                     
-                    <button class="btn btn-primary btn-sm"  name="singleConvert" id="experiment${item.entityid}Target" data-type="experiments" data-elabid="${item.entityid}" onclick="getFTW(this.id, this.dataset.type, this.dataset.elabid)" >Convert</button>
+                    
                 </li>
             `;
         });
@@ -143,21 +142,3 @@ async function loadExperiment(instance, elabid, elabtoken) {
     }
 }
 
-const getFTW = async (id, type, elabid) => {
-    try {
-        const elabtoken = getCookie('elabtoken');
-    const instance = window.localStorage.getItem('elabURL');
-    window.elabJSON = await fetchElabJSON(elabtoken, type+"/"+elabid, instance);
-    document.getElementById("arcBtn").click();    
-    document.getElementById("elabFTWInfo").innerHTML = window.elabJSON.title;   
-
-    } catch (error) {
-        console.error('Error loading experiment:', error);
-        alert('Access of related item failed, please check your credentials and access right of the item or experiment and try again');
-    
-    
-    }
-    
-    
-
-}
