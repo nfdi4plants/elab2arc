@@ -303,13 +303,13 @@
           <div class="col-md-3 sidebar">
       
             <!-- Multi-select Switch -->
-            <div class="form-check form-switch mb-3">
+            <div class="form-check form-switch mb-3  d-none">
               <input class="form-check-input" type="checkbox" role="switch" onclick="multiElabSelect(this)" id="multiElabSwitch">
               <label class="form-check-label" for="multiElabSwitch">Select Multiple ElabFTW Experiments</label>
             </div>
       
             <!-- Start Conversion Button -->
-            <button class="btn btn-primary my-3 d-none" onclick="startMultiElabConvert()" id="multiElabBtn">
+            <button class="btn btn-primary my-3" onclick="startMultiElabConvert()" id="multiElabBtn">
               Start Multiple Conversion
             </button>
       
@@ -616,7 +616,7 @@
       loading.show();
       const datahubToken = document.getElementById("datahubToken").value;
       const elabToken = document.getElementById("elabToken").value;
-      const instance = window.localStorage.getItem('elabURL');
+      const instance = window.localStorage.getItem('instance');
       const elablist = elabListSync();
       const elabid = elablist.elabExperimentid;
       setCookies( elabToken, datahubToken, instance);
@@ -634,14 +634,14 @@
      
      
      const checkbox = document.getElementById("multiElabSwitch");
-        multiElabSelect(checkbox); 
+       // multiElabSelect(checkbox); 
 
     }
 
     // Function to check connection to ElabFTW API
 async function checkElabFTWConnection() {
   const elabid= JSON.parse(localStorage.getItem("elabid"))
-  const params = await getParameters(elabid.elabExperimentid.toString(), elabid.elabResourceid.toString() );
+  const params = await getParameters( );
       // const elabtoken = document.getElementById("elabToken").value;
       // const datahubtoken = document.getElementById("datahubToken").value;
       // const instance = document.getElementById("elabURLInput").value;
@@ -1742,7 +1742,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
       softRoute(); 
-      const instance = window.localStorage.getItem("elabURL");
+      const instance = window.localStorage.getItem("instance");
       document.getElementById("elabURLInput1").value = instance;
       document.getElementById("elabURLInput1").innerHTML= "instance: "+instance;
       
