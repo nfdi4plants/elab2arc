@@ -341,7 +341,8 @@ padding:0;
   border-color: rgb(45, 62, 80);
 height: 3.25rem;
 border-width: 0 ;
-font-size: 0.75rem; 
+font-size: 0.75rem;
+text-decoration: none !important; 
 
 }
 
