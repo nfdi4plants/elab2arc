@@ -149,7 +149,7 @@
               <th scope="col">Type</th>
               <th scope="col">ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
               <th scope="col">Name</th>
-              <th scope="col">Preview&nbsp;&nbsp;&nbsp;</th>
+              <th scope="col">Preview&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
               <th scope="col">Creation Date</th>
               <th scope="col">Author</th>
               <th scope="col">Selection</th>
@@ -479,7 +479,7 @@
     var statusInfo="";
     const version = "2025-05-19";
     var blobb = [];
-    const typeConfig = {
+    var typeConfig = {
       Experiment: {
         displayName: 'Experiment',
         short: 'Exp',
@@ -530,8 +530,6 @@ function elabListSync(newList) {
   const expInfo = document.getElementById("elabExpInfo");
   const resInfo = document.getElementById("elabResInfo");
 
-
-
   let elablist;
 
   if (newList) {
@@ -570,33 +568,45 @@ function elabListSync(newList) {
 
    
 
-    function elabCheckSync(){
+    const elabCheckSync = async () => {
           let newExp =[], newRes=[];
           let elablist = elabListSync();
             const expChecks = document.querySelectorAll('[data-type="Experiment"]');
             expChecks.forEach(e=> {e.checked=false});
             const resChecks = document.querySelectorAll('[data-type="Resource"]');
             resChecks.forEach(e=> {e.checked=false});
-              elablist.elabExperimentid.forEach(e=>{
+          for (let e of  elablist.elabExperimentid) {
           try {
         document.getElementById("checkExp"+e).checked = true;
         newExp.push(e);
          } catch (error) {
-        alert("there is an error: "+ error+". Experiment "+e+" can not be accessed and has been removed from the list.  ")
+          try {
+            await fillElabTable("?q="+e+"&order=id&sort=des&scope=3&limit=10&", "elabTable", "append", {"Experiment":window.typeConfig.Experiment}, e);
+            document.getElementById("checkExp"+e).checked = true;
+            newExp.push(e);
+          } catch (error) {
+            alert("there is an error: "+ error+". Experiment No. "+e+" can not be accessed and has been removed from the list.  ")
+          }
       }
-      })
-      elablist.elabResourceid.forEach(
-        e=>{
+      }
+      for (let e of  elablist.elabResourceid){
            try {
         document.getElementById("checkRes"+e).checked = true;
        newRes.push(e);
       }catch (error) {
-       alert("there is an error: "+ error+". Resource "+e+"  can not be accessed and has been removed from the list.  ")
+          try {
+           await fillElabTable("?q="+e+"&order=id&sort=des&scope=3&limit=10&", "elabTable", "append", {"Resource":window.typeConfig.Resource}, e);
+            document.getElementById("checkRes"+e).checked = true;
+            newRes.push(e);
+          } catch (error) {
+            alert("there is an error: "+ error+". Resource No. "+e+" can not be accessed and has been removed from the list.  ")
+          }
       }
-      })
+      }
       elablist.elabExperimentid = newExp;
       elablist.elabResourceid = newRes;
-
+      elablist.elabExperimentid.forEach(e=>{document.getElementById("checkExp"+e).checked = true;})
+      elablist.elabResourceid.forEach(e=>{document.getElementById("checkRes"+e).checked = true;})
     elabListSync(elablist)
     }
 
@@ -686,7 +696,7 @@ async function checkElabFTWConnection() {
     if (response.statuscode==200) {
       document.getElementById("elabFTWCheck").innerHTML = "&#127760;";
       await fillElabTable();
-      elabCheckSync();
+      await elabCheckSync();
       console.log('✅ Successfully connected to ElabFTW API');
       return true;
     } else {
@@ -931,18 +941,31 @@ async function checkElabFTWConnection() {
       list["elab"+type+"id"] = newList;
       elabListSync(list);
     }
-    function linkCheck(checkbox) {
-            if (checkbox.checked) {
-              const check= document.getElementById("check"+typeConfig[checkbox.dataset.type1].short+checkbox.dataset.id);
-         check.checked =true; 
+    const linkCheck = async (checkbox) =>  {
+      const str = checkbox.dataset.type1;
+      const e = checkbox.dataset.id;
+      let typeConfig = [];
+      typeConfig[str] = window.typeConfig[str];
+      let check= document.getElementById("check"+typeConfig[str].short+e);
+            if (checkbox.checked) {      
+        try {
+          check.checked =true; 
          check.onchange();  
+        } catch (error) {
+          await fillElabTable("?q="+e+"&order=id&sort=des&scope=3&limit=10&", "elabTable", "append",  typeConfig, e);
+          check= document.getElementById("check"+typeConfig[str].short+e);
+          elabCheckSync();
+          check.checked =true; 
+          check.onchange();
+          
+        } 
         } else{
-            const check= document.getElementById("check"+typeConfig[checkbox.dataset.type1].short+checkbox.dataset.id);
+            
             check.checked =false;
             check.onchange(); 
         }
       }
-    const fillElabTable = async () => {
+    const fillElabTable = async ( query= "?order=id&sort=des&scope=1&limit=99", tableid="elabTable", action="update", typeConfig=window.typeConfig, targetId) => {
       try {
         // Define the API endpoint for fetching user-related projects
         const params = await getParameters();
@@ -954,7 +977,7 @@ async function checkElabFTWConnection() {
                 console.warn(`No endpoint defined for type: ${typeKey}`);
                 return [];
               }
-              return fetchElabJSON(params.elabtoken, `${config.endpoint}?order=id&sort=des&scope=3&limit=999999`, params.instance);
+              return fetchElabJSON(params.elabtoken, `${config.endpoint}${query}`, params.instance);
             }
 
             // Fetch all configured types in parallel
@@ -969,8 +992,8 @@ async function checkElabFTWConnection() {
               const data = results[index];
 
               data.forEach((entry) => {
-                if (!entry.id) return; // Skip invalid entries
-
+                if ( !entry.id ) return; // Skip invalid entries
+                if ( !(targetId==undefined || entry.id == targetId) ) return; // Skip invalid entries
                 const checkboxId = `check${config.short}${entry.id}`;
                 const previewBtn = config.hasPreview
                   ? `<button class="btn btn-sm btn-success" type="button"
@@ -1021,7 +1044,17 @@ async function checkElabFTWConnection() {
 
         // Insert the generated table HTML into the DOM
         tableHTML = await fetchAndBuildTable(params, typeConfig);
-        document.getElementById("elabTable").innerHTML = tableHTML;
+        switch (action) {
+          case "update":
+            document.getElementById(tableid).innerHTML = tableHTML;
+            break;
+          case "append":
+            document.getElementById(tableid).innerHTML += tableHTML;
+            break;
+          default:
+            break;
+        }
+        
 
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
