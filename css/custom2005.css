@@ -25,6 +25,10 @@
 
   }
 
+  .lead{
+    overflow-wrap: break-all;
+    word-break: break-all;
+  }
   td {
     overflow-wrap: break-all;
     word-break: break-all;

@@ -77,7 +77,7 @@ function createFile(parentPath = '.') {
             fs.mkdirSync(fullPath);
             refreshTree(fullPath); // Refresh and expand new path [[8]]
         } catch (e) {
-            alert('Error: ' + e.message);
+            console.log('Error: ' + e.message);
         }
     }
 }
@@ -365,7 +365,7 @@ function createFile(parentPath) {
             refreshTree(fullPath);
             refreshMainArea();
         } catch (e) {
-            alert('Error: ' + e.message);
+            console.error('Error: ' + e.message);
         }
     }
 }
@@ -374,7 +374,7 @@ function createFile(parentPath) {
 function deletePath(targetPath) {
     try {
         if (!fs.existsSync(targetPath)) {
-            alert(`Error: Path "${targetPath}" does not exist.`);
+            console.error(`Error: Path "${targetPath}" does not exist.`);
             return;
         }
 
@@ -396,7 +396,7 @@ function deletePath(targetPath) {
         if (error.code === 'ENOENT') {
             console.error(`Deletion failed: ${error.message}`);
         }else{
-            alert(`Deletion failed: ${error.message}`);
+            console.error(`Deletion failed: ${error.message}`);
         }
 
         
