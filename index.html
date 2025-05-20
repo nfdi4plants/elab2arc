@@ -720,7 +720,7 @@ async function checkElabFTWConnection() {
       }
 
       if (response.ok) {
-        document.getElementById("arcCheck").innerHTML = "&#127760;";
+        
         const { elabtoken, datahubtoken, instance, elabidList } = await getParameters();
       // Fetch user info
       const id = await fetchUser(datahubtoken);
@@ -728,20 +728,23 @@ async function checkElabFTWConnection() {
       if (id) {
         // Optionally load user projects
         await fetchUserProjects(id.username, datahubtoken);
+        document.getElementById("arcCheck").innerHTML = "&#127760;";
+        console.log('✅ Successfully connected to DataHUB API');
+        return true;
+
       } else {
-        
+        console.error('🚨 DataHUB API can be accessed but the user information could not be fetched. Please check your credentials. Error :', error.message);
         return;
       }
-        console.log('✅ Successfully connected to GitLab API');
-        return true;
+        
       } else {
         document.getElementById("arcCheck").innerHTML = "&#10060;";
-        console.error('❌ GitLab API returned an error:', response.statusText);
+        console.error('❌ DataHUB API returned an error:', response.statusText);
         return false;
       }
     } catch (error) {
       document.getElementById("arcCheck").innerHTML = "&#128680;";
-      console.error('🚨 Failed to connect to GitLab API:', error.message);
+      console.error('🚨 Failed to connect to DataHUB API:', error.message);
       return false;
     }
   }
