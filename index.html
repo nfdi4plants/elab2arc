@@ -1223,7 +1223,8 @@ async function checkElabFTWConnection() {
 
     function initCookies(){
       const maxAge = 60*60*24*31;
-          elabtoken= document.getElementById("elabToken").value;
+          const instance = document.getElementById("elabURLInput1").value;
+            elabtoken= document.getElementById("elabToken").value;
           datahubtoken= document.getElementById("datahubToken").value;
           document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
           document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
