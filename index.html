@@ -62,7 +62,7 @@
                             data-bs-target="#elabPreviewCanvas"
                             aria-controls="elabPreviewCanvas" class="nav-linkc px-3"
           id="ftwBtn">
-        ElabFTW&nbsp;<span id="elabFTWCheck">&#127760;</span>
+        elabFTW&nbsp;<span id="elabFTWCheck">&#127760;</span>
         </button>
         
         <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="nav-linkc px-3"
@@ -77,7 +77,7 @@
        
 
         <span class="ms-auto">
-        <a id="kblink" class="p-2  nav-linkc"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> HELP</a>
+        <a id="kblink" class="p-2  nav-linkc"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> Help</a>
 
 
 
@@ -156,7 +156,7 @@
             </tr>
           </thead>
           <tbody id="elabTable">
-           <tr> <th></th> <td> No ElabFTW experiments/resources available. Use <a href="#token">Token tab</a> to add an ElabFTW API key</td><td></td>
+           <tr> <th></th> <td> No eLabFTW experiments/resources available. Use <a href="#token">Token tab</a> to add an eLabFTW API key</td><td></td>
           <td></td>
           <td></td></tr>
           
@@ -181,7 +181,7 @@
           <label for="elabURLInput1" class="form-label">
            
             <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
-              ElabFTW Instance&nbsp;&#128712;</button>
+              eLabFTW Instance&nbsp;&#128712;</button>
               
           </label> 
           <br>
@@ -256,7 +256,7 @@
         <div class="col-12">
 
         <div class="border row text-center p-3 mt-3 convert-container rounded" >
-          <div class="lead col-3" id="elabFTWInfo"> ElabFTW IDs  
+          <div class="lead col-3" id="elabFTWInfo"> eLabFTW IDs  
             <div id="elabExpInfo"></div>
             <div id="elabResInfo"></div>
             
@@ -681,7 +681,7 @@ function elabListSync(newList) {
 
     // }
 
-    // Function to check connection to ElabFTW API
+    // Function to check connection to eLabFTW API
 async function checkElabFTWConnection() {
   const elabid= JSON.parse(localStorage.getItem("elabid"))
   const params = await getParameters(elabid.elabExperimentid, elabid.elabResourceid );
@@ -699,16 +699,16 @@ async function checkElabFTWConnection() {
       document.getElementById("elabFTWCheck").innerHTML = "&#127760;";
       await fillElabTable();
       await elabCheckSync();
-      console.log('✅ Successfully connected to ElabFTW API');
+      console.log('✅ Successfully connected to eLabFTW API');
       return true;
     } else {
       document.getElementById("elabFTWCheck").innerHTML = "&#10060;";
-      console.error('❌ ElabFTW API returned an error:', response.statuscode);
+      console.error('❌ eLabFTW API returned an error:', response.statuscode);
       return false;
     }
   } catch (error) {
     document.getElementById("elabFTWCheck").innerHTML = "&#128680;";
-    console.error('🚨 Failed to connect to ElabFTW API:', error.message);
+    console.error('🚨 Failed to connect to eLabFTW API:', error.message);
     return false;
   }
 }
@@ -1353,11 +1353,16 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       }
 
       const gitName = datahubURL.slice(0, -4); // Remove .git suffix
-      const dir = gitName.split("/").slice(-1)[0]; // Get repo name
-
+      //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
+      const dir = arcName;
       // Process the experiment
       await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
     }
+
+
+
+
+
 
     for (const [expIndex, expId] of Object.entries(params.elabidList.elabResourceid)) {
       if (!expId) continue;
@@ -1389,8 +1394,8 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       }
 
       const gitName = datahubURL.slice(0, -4); // Remove .git suffix
-      const dir = gitName.split("/").slice(-1)[0]; // Get repo name
-
+      //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
+      const dir = arcName;
       // Process the experiment
       await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
     }
@@ -1404,7 +1409,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       //const gitlabusername = document.getElementById("usernameInput").value;
       const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
       // if (gitlabURL.includes("Please select your")){
-      //   alert("No ElabFTW is selected, please go to ElabFTW tab to select.");
+      //   alert("No eLabFTW is selected, please go to eLabFTW tab to select.");
       //   return;
       // };
       const arcName = document.getElementById("arcInfo").innerHTML;
@@ -1612,7 +1617,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
                 //const gitlabusername = document.getElementById("usernameInput").value;
                 const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
                 // if (gitlabURL.includes("Please select your")){
-                //   alert("No ElabFTW is selected, please go to ElabFTW tab to select.");
+                //   alert("No eLabFTW is selected, please go to eLabFTW tab to select.");
                 //   return;
                 // };
                 const arcName = document.getElementById("arcInfo").innerHTML;
@@ -2437,13 +2442,13 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
           <div class="col-md-9">
       
             <section class="section title bg-light rounded p-3 mb-4">
-              <h1 id="expTitle" class="text-primary-emphasis"> Empty ElabFTW Preview</h1>
+              <h1 id="expTitle" class="text-primary-emphasis"> Empty eLabFTW Preview</h1>
               
             </section>
       
             <section class="section content bg-light rounded p-3 mb-4" id="expContent">
               <!-- HTML content will be injected here -->
-               <h5>No ElabFTW available. Use <a href="#home"  data-bs-dismiss="offcanvas" aria-label="Close">home tab</a> to start a conversion</h5>
+               <h5>No eLabFTW available. Use <a href="#home"  data-bs-dismiss="offcanvas" aria-label="Close">home tab</a> to start a conversion</h5>
             </section>
       
           </div>
@@ -2498,7 +2503,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       <div>
         (use comma "," to seperate multiple IDs)
         <br>
-        ELabFTW experiment ID can be found in the address bar or in the experiment description. 
+        eLabFTW experiment ID can be found in the address bar or in the experiment description. 
         <br>
         <img src="https://nfdi4plants.github.io/elab2arc/images/experimentId.png" class="rounded mx-auto d-block w-100" alt="...">
         A detailed user guide can be found <a target="_blank" href="https://github.com/nfdi4plants/elab2arc/blob/main/docs/User%20guide_%20elab2ARC%20tool.md"> here </a>
