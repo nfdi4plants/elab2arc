@@ -185,7 +185,7 @@
               
           </label> 
           <br>
-        <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button" onchange="initCookies()" data-bs-toggle="dropdown" aria-expanded="false">
+        <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button"  data-bs-toggle="dropdown" aria-expanded="false">
           eLabFTW Instance: HHU
         </button>
         <ul class="dropdown-menu">
@@ -202,7 +202,7 @@
             <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
               eLabFTW API Key&nbsp;&#128712;</button>
           </label>
-          <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken" onchange="initCookies()" required>
+          <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken"  required>
         </div>
 
          <div class="my-3 col-lg-2">
@@ -211,10 +211,10 @@
               DataHub Token&nbsp;&#128712;</button>
             
           </label>
-          <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken" onchange="initCookies()" required>
+          <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken"  required>
         </div>
         <div class="my-3 col-lg-1">
-            <button class="btn btn-primary" onclick="initCookies()" type="button"> Save 
+            <button class="btn btn-primary" onclick="initCookies();" type="button"> Save 
 
             </button> 
           </div>
@@ -1272,11 +1272,12 @@ async function checkElabFTWConnection() {
     function initCookies(){
       const maxAge = 60*60*24*31;
           const instance = document.getElementById("elabURLInput1").value;
-            elabtoken= document.getElementById("elabToken").value;
+          elabtoken= document.getElementById("elabToken").value;
           datahubtoken= document.getElementById("datahubToken").value;
           document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
           document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
           window.localStorage.setItem("instance", instance);
+          location.href=location.href.split('#')[0]+'#home'
           location.reload();
           
     }
