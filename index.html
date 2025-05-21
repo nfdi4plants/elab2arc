@@ -172,7 +172,7 @@
     
   </div>
     <div name="tab" class="row justify-content-center" id="elabTab">
-      <h1 class="center"> Please select your eLabFTW instace and enter your tokens </h1>
+      <h1 class="center"> Please select your eLabFTW instance and enter your tokens </h1>
 
 
       
@@ -484,12 +484,14 @@
         displayName: 'Experiment',
         short: 'Exp',
         endpoint: 'experiments',
+        idendpoint:'experiments/',
         hasPreview: true,
       },
       Resource: {
         displayName: 'Resource',
         short: 'Res',
         endpoint: 'items',
+        idendpoint:'items/',
         hasPreview: true,
       },
       // Add more types here as needed
@@ -581,7 +583,7 @@ function elabListSync(newList) {
         newExp.push(e);
          } catch (error) {
           try {
-            await fillElabTable("?q="+e+"&order=id&sort=des&scope=3&limit=10&", "elabTable", "append", {"Experiment":window.typeConfig.Experiment}, e);
+            await fillElabTable("?q="+e+"&order=id&sort=des&limit=999&", "elabTable", "append", {"Experiment":window.typeConfig.Experiment}, e);
             document.getElementById("checkExp"+e).checked = true;
             newExp.push(e);
           } catch (error) {
@@ -595,7 +597,7 @@ function elabListSync(newList) {
        newRes.push(e);
       }catch (error) {
           try {
-           await fillElabTable("?q="+e+"&order=id&sort=des&scope=3&limit=10&", "elabTable", "append", {"Resource":window.typeConfig.Resource}, e);
+           await fillElabTable("?q="+e+"&order=id&sort=des&limit=999&", "elabTable", "append", {"Resource":window.typeConfig.Resource}, e);
             document.getElementById("checkRes"+e).checked = true;
             newRes.push(e);
           } catch (error) {
@@ -952,7 +954,7 @@ async function checkElabFTWConnection() {
           check.checked =true; 
          check.onchange();  
         } catch (error) {
-          await fillElabTable("?q="+e+"&order=id&sort=des&scope=3&limit=10&", "elabTable", "append",  typeConfig, e);
+          await fillElabTable("?q="+e+"&order=id&sort=des&limit=999&", "elabTable", "append",  typeConfig, e);
           check= document.getElementById("check"+typeConfig[str].short+e);
           elabCheckSync();
           check.checked =true; 
@@ -965,7 +967,7 @@ async function checkElabFTWConnection() {
             check.onchange(); 
         }
       }
-    const fillElabTable = async ( query= "?order=id&sort=des&scope=1&limit=99", tableid="elabTable", action="update", typeConfig=window.typeConfig, targetId) => {
+    const fillElabTable = async ( query= "?order=id&sort=des&scope=1&limit=999", tableid="elabTable", action="update", typeConfig=window.typeConfig, targetId) => {
       try {
         // Define the API endpoint for fetching user-related projects
         const params = await getParameters();
@@ -973,27 +975,40 @@ async function checkElabFTWConnection() {
         // Helper function to fetch data based on type
         async function fetchData(typeKey) {
               const config = typeConfig[typeKey];
-              if (!config || !config.endpoint) {
+              if (!config || !config.idendpoint) {
                 console.warn(`No endpoint defined for type: ${typeKey}`);
                 return [];
               }
-              return fetchElabJSON(params.elabtoken, `${config.endpoint}${query}`, params.instance);
+              if (targetId==undefined){
+                return fetchElabJSON(params.elabtoken, `${config.endpoint}/${query}`, params.instance);
+              }else{
+                return fetchElabJSON(params.elabtoken, `${config.idendpoint}${targetId}`, params.instance);
+              }
+              
             }
 
             // Fetch all configured types in parallel
             const promises = Object.keys(typeConfig).map(key => fetchData(key));
             const results = await Promise.all(promises);
-
+            console.log("here is result")
+            console.log(results)
             let tableHTML = '';
 
             // Process each entry for each type
             Object.keys(typeConfig).forEach((typeKey, index) => {
               const config = typeConfig[typeKey];
-              const data = results[index];
-
+              let data;
+              if (targetId==undefined){
+                data= results[index];
+              }else{
+                data=results;
+              }
+               
+              console.log("here is data")
+              console.log(data)
               data.forEach((entry) => {
                 if ( !entry.id ) return; // Skip invalid entries
-                if ( !(targetId==undefined || entry.id == targetId) ) return; // Skip invalid entries
+                //if ( !(targetId==undefined || entry.id == targetId) ) return; // Skip invalid entries
                 const checkboxId = `check${config.short}${entry.id}`;
                 const previewBtn = config.hasPreview
                   ? `<button class="btn btn-sm btn-success" type="button"
