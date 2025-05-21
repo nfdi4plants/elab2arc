@@ -329,20 +329,20 @@
     <button type="button" class="btn btn-primary d-none" id="loadingModalBtn" data-bs-toggle="modal"
     data-bs-target="#loadingModal">
     Launch loading modal
-  </button>
-  <div class="modal" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-    aria-labelledby="#loadingModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="loadingModalLabel">Processing</h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="d-flex justify-content-center">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
+    </button>
+    <div class="modal" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+      aria-labelledby="#loadingModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="loadingModalLabel">Processing</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="d-flex justify-content-center">
+              <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
 
 
           </div>
@@ -388,9 +388,6 @@
                 <div id="main-area"></div>
             </div>
             
-            
-       
-
 
         </div>
        
@@ -2506,13 +2503,35 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
         <br>
         eLabFTW experiment ID can be found in the address bar or in the experiment description. 
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/experimentId.png" class="rounded mx-auto d-block w-100" alt="...">
+        <img src="https://nfdi4plants.github.io/elab2arc/images/experimentId.png" class="rounded mx-auto d-block w-100" alt="An image of eLabFTW Experiment Id">
+        eLabFTW resources ID can be found in the address bar or in the resource description. 
+        <br>
+        <img src="https://nfdi4plants.github.io/elab2arc/images/resourceId.png" class="rounded mx-auto d-block w-100" alt="An image of eLabFTW Experiment Id">
         A detailed user guide can be found <a target="_blank" href="https://github.com/nfdi4plants/elab2arc/blob/main/docs/User%20guide_%20elab2ARC%20tool.md"> here </a>
       </div>
       
     </div>
   </div>
   
+
+ 
+  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="instanceCanvas" aria-labelledby="instanceCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="instanceCanvasLabel">Select eLabFTW Instance</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div>
+        Select between the test instance and the Heinrich Heine University Düsseldorf (HHU) instance, or add your own eLabFTW instance
+        <br>
+        Copy the URL of a eLabFTW instance and paste the URL to the input field and add "api/v2/" after the URL. 
+        <br>
+        <img src="https://nfdi4plants.github.io/elab2arc/images/instance.png" class="rounded mx-auto d-block w-100" alt="instance image">
+        A detailed user guide can be found <a target="_blank" href="https://github.com/nfdi4plants/elab2arc/blob/main/docs/User%20guide_%20elab2ARC%20tool.md"> here </a>
+      </div>
+      
+    </div>
+  </div> 
 
   <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="elabTokenCanvas" aria-labelledby="elabTokenCanvasLabel">
     <div class="offcanvas-header">
@@ -2523,7 +2542,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       <div>
         eLabFTW API keys can be generated from settings -> API keys  
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/elabToken.png" class="rounded mx-auto d-block w-100" alt="...">
+        <img src="https://nfdi4plants.github.io/elab2arc/images/elabToken.png" class="rounded mx-auto d-block w-100" alt="an image of eLabFTW token">
         <br>
         The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as anyone with the token can access eLabFTW. 
         <br>
@@ -2535,14 +2554,14 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
 
   <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="datahubTokenCanvas" aria-labelledby="datahubTokenCanvasLabel">
     <div class="offcanvas-header">
-      <h5 class="offcanvas-title" id="datahubTokenCanvasLabel">eLabFTW API keys </h5>
+      <h5 class="offcanvas-title" id="datahubTokenCanvasLabel">DataHub Personal Access Token </h5>
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
       <div>
-        To generate a DataHub access token, go to Settings → Access Tokens → Create. Set the Role to "Maintainer" and select the Scopes: "read_repository" and "write_repository."
+        To generate a DataHub personnal access token, go to icon → preferences → Access tokens → check api, read_api, read_user, read_repository, write_repository → Create.  The Scopes are: "check api", "read_api", "read_user", "read_repository" and "write_repository."
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/datahubToken.png" class="rounded mx-auto d-block w-100" alt="...">
+        <img src="https://nfdi4plants.github.io/elab2arc/images/datahubToken.png" class="rounded mx-auto d-block w-100" alt="An image of DataHub Personal Access Token">
         <br>
         The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as anyone with the token can access and modify the DataHUB repo. 
         <br>
