@@ -806,10 +806,17 @@ async function checkElabFTWConnection() {
           const url = `https://git.nfdi4plants.org/${username}/${projectName}.git`;
           await  cloneARC(url, projectName );
           newARC = new arctrl.ARC();
-          await  arcWrite(projectName, newARC);
-          await git.add({ fs, dir: projectName, filepath: '.' });
-          await commitPush(accessToken,url,"elab2arcTool","", projectName);
           
+
+          await  arcWrite(projectName, newARC);
+          let inv = arctrl.ArcInvestigation.init(projectName);
+          let invXlsx = arctrl.XlsxController.Investigation.toFsWorkbook(inv);
+          Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
+          await git.add({ fs, dir: projectName, filepath: '.' });
+          const gitRoot = projectName+"/";
+          await commitPush(accessToken,url,"elab2arcTool","", projectName, gitRoot);
+            document.getElementById('gitlabInfo').innerHTML= `${url}`;
+            document.getElementById('arcInfo').innerHTML= `${projectName}`;
         }
 
 
@@ -892,12 +899,13 @@ async function checkElabFTWConnection() {
                 <td><a href="${project.web_url}" target="_blank">View Project</a></td>
                 <td>
                   <div class="" role="group" aria-label="Basic example">
-                    <button type="button" onclick="deleteAll(); cloneARC('${project.http_url_to_repo}', '${project.name}');refreshTree('./${project.name}')" class="btn btn-success ">
+                    <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
+        document.getElementById('arcInfo').innerHTML= '${project.name}';" class="btn btn-success ">
                      Convert to assay
                     </button>
-                    <button type="button" onclick="deleteAll(); cloneARC('${ project.http_url_to_repo}', '${project.name}'); fileExplorer.show();
-      refreshTree('./${project.name}');" class="btn btn-secondary ">
-                     Convert to other folders  
+                    <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
+        document.getElementById('arcInfo').innerHTML= '${project.name}';" class="btn btn-secondary ">
+                     Convert to study
                     </button>
                   </div>
                 </td>
@@ -1411,11 +1419,15 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       //   return;
       // };
       const arcName = document.getElementById("arcInfo").innerHTML;
+      deleteAll(); 
+      await cloneARC(gitlabURL, arcName);
+      refreshTree("./"+arcName)
       if (arcName.includes("Please select your ARC")){
 
         alert("please select your ARC.");
         return;
       };
+
       const params = await getParameters();
       // const elabtoken = document.getElementById("elabToken").value;
       // const datahubtoken = document.getElementById("datahubToken").value;
@@ -1426,183 +1438,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
         await processElabEntries(params, users, gitlabURL, arcName);
       refreshTree(arcName);
     }
-    // async function updateAll2(elabid, elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
-    //   try {   
-    //   filesChanged.innerHTML="";
-    //   statusInfo = "";
-    //   elabid = elabid || document.getElementById("elabExperimentid").value;
-      
-    //   elabtoken = elabtoken || document.getElementById("elabToken").value;
-    //   datahubtoken = datahubtoken || document.getElementById("datahubToken").value;
-    //   setelabURL(instance);
-    //   instance = unescape(instance);
-    //   setCookies( elabid, elabtoken, datahubtoken);
-      
-    //   elabid = decodeURIComponent(elabid);
-    //   elabidList = elabid.split(",");
-    //   totalExp = elabidList.length
-    //   for (const [expIndex, elabid] of Object.entries(elabidList) ){
-    //     if (elabid){
-    //       const ratio = (expIndex+1)/totalExp;
-    //       updateInfo("Fetching eLabFTW experiment <b> "+ elabid +"</b>, instance is "+instance, ratio* 10);
-    //       res = await fetchElabJSON(elabtoken, "experiments/"+elabid,  instance);
-    //       window.elabJSON = res;
-    //       const users = await fetchElabJSON(elabtoken, "users", instance);
-    //       const extra_fields = res.metadata_decoded.extra_fields;
-    //       const datahubURL = gitUrlCheck(extra_fields.datahub_url.value);;
-    //       // const assayId  = res.title.replaceAll(".", "-dot-").replaceAll("/", "-slash-");
-    //       const assayId  = res.title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
-    //       const fullname = res.fullname;
-    //       const user = users.find(e=> e.fullname == fullname)
-    //       const email = user.email;
-    //       let protocol = res.body;
-    //       const elabWWW= instance.replace("api/v2/", "");
-    //       protocol = protocol.replace(/\w+\.php\?mode=view/g, elabWWW+"/$&"  );
-          
-    //       console.log("protocol is" + protocol);
-    //       let markdown = turndownService.turndown(protocol);
-    //       updateInfo("DataHUB URL fetched from elabFTW's extra_field is \""+datahubURL, "\"" + ratio*20 );
-          
-      
-      
-    //       const dir = "arc"+elabid;
-    //       await datahubClone(datahubURL, dir, datahubtoken);
-    //       let ls;
-    //       try {
-    //         ls = fs.readdirSync(dir+"/assays")
-    //       } catch (error) {
-    //         ls = fs.readdirSync(dir)
-    //       }
-          
-    //       //updateInfo("Assays are "+ ls.toString().replaceAll(",", "<br>") +". Updating assay <b>" + assayId+ "</b>", "30" );
-    //       await createAssay(assayId, dir);
-    //       await fullAssay2(assayId, "new metadata table", res.lastname, res.firstname, email, res.team_name, "Generated by elab2ARC tool on "+Date() , dir);
-    //       updateInfo("isa.assay.xlsx has been updated at <b>"+assayId+"</b> ", ratio*35);
-    //       await git.add({ fs, dir: dir, filepath: "assays/"+assayId+"/isa.assay.xlsx"})
-    //       statusHTML =  
-    //       `
-    //       <table class="table table-striped table-hover">
-    //         <thead>
-    //           <tr>
-                
-    //             <th scope="col">eLabFTW Experiment `+elabid +`</th>
-    //             <th scope="col">ARC files updated</th>
-    //           </tr>   
-    //       </thead>
-    //         <tbody>
-    //           <tr>
-    //             <td id="protocolHTML">
-    //             `+ protocol +`
-    //             </td>
-    //             <td>
-    //               ARC file path is  `+ dir+`assays/`+encodeURIComponent(assayId)+`/protocols/eLabFTW_protocol.md
-    //               <br>
-    //               <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/assays/`+encodeURIComponent(assayId)+`/protocols/eLabFTW_protocol.md" target="_blank" >click to check the file</a>
-    //             </td>  
-    //           </tr>     
-    //       `
-
-    //       const uploads = res.uploads;
-    //       let fileList = [];
-    //       //let filedict = {};
-    //       for (const [index, ele] of Object.entries(uploads)){
-    //         const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´",instance);
-    //         blobb.push(blobs);
-    //         let objectURL = URL.createObjectURL(blobs)
-    //         objectURL= objectURL.replace( /&storage=./g , "" );        
-    //         let data = new Uint8Array(await blobs.arrayBuffer());
-    //         // const extension = blobs.type.split("/").slice(-1)[0];
-    //         const realname =  ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-    //         const longname= ele.long_name;
-    //         const longname2= encodeURIComponent(ele.long_name);
-            
-            
-    //         const path = "assays/"+assayId+"/dataset/"+index+"_"+realname;
-    //         const markdownPath = "assays/"+encodeURIComponent(assayId)+"/dataset/"+index+"_"+realname;
-
-    //         //filedict[longname] = datahubURL.slice(0,-4)+`/-/raw/main/`+path;
-
-    //         //statusHTML = statusHTML.replaceAll( "app/download.php?f="+longname , objectURL );
-    //         statusHTML = statusHTML.replace( /app\/download\.php(.*)f=/g, "" );
-    //         statusHTML = statusHTML.replaceAll( longname , objectURL );
-    //         statusHTML = statusHTML.replaceAll( longname2 , objectURL );
-    //         statusHTML = statusHTML.replaceAll( "&amp;storage=1" , "" );
-    //         statusHTML = statusHTML.replaceAll( "&amp;storage=2" , "" );
-    //         markdown = markdown.replace(/app\/download\.php(.*)f=/g, "")
-    //         markdown = markdown.replace(/&storage=./g, "")
-    //         markdown = markdown.replaceAll( longname , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
-    //         markdown = markdown.replaceAll( longname2 , datahubURL.slice(0,-4)+`/-/raw/`+mainOrMaster+`/`+markdownPath );
-    //         await fs.promises.writeFile(dir+"/"+path , data);
-    //         await git.add({ fs, dir: dir, filepath: path });
-            
-    //         updateInfo("Added file " + realname, ratio*(10+(index/uploads.length * 10)) );
-    //         if(blobs.type.includes("image") ){
-    //           statusHTML +=  
-    //         `
-    //           <tr>
-    //             <td>
-    //               <img  src="`+ objectURL +`">
-    //             </td>
-    //             <td>
-    //               Submitted
-    //               ARC file path is: `+path+`.
-    //               <br>
-    //               <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+encodeURIComponent(path)+`" target="_blank" >click to check the file</a>
-    //             </td>
-    //           </tr>
-
-    //         `
-    //           } else {
-    //             statusHTML +=  
-    //         `
-    //           <tr>
-    //             <td>
-    //               file name is `+realname+` 
-    //             </tb>
-    //             <td>
-    //               Submitted
-    //               ARC file path is: `+path+`.
-    //               <br>
-    //               <a href="`+datahubURL.slice(0,-4)+`/-/blob/`+mainOrMaster+`/`+encodeURIComponent(path)+`" target="_blank" >click to check the file</a>
-    //             </td>
-    //           </tr>
-
-    //         `
-    //           }
-    //         }
-            
-    //         await fs.promises.writeFile(dir+'/assays/'+assayId+'/protocols/eLabFTW_protocol.md' , markdown);
-            
-    //         await git.add({ fs, dir: dir, filepath: 'assays/'+assayId+'/protocols/eLabFTW_protocol.md' });
-    //         await fs.promises.writeFile(dir+'/assays/'+assayId+'/dataset/readme.md' , "# Data files");
-    //         await git.add({ fs, dir: dir, filepath: "assays/"+assayId+"/dataset/readme.md"})
-    //         updateInfo("Finished adding protocol files in ARC", ratio*70 );
-    //         updateInfo("All files have been added to ARC, starting to push ARC to", ratio*80 );
-            
-    //         await commitPush(datahubtoken, datahubURL, fullname, email, dir );
-    //         //updateInfo("ARC updated Successfully<br>" , "100" );
-    //         document.getElementById("filesAcc").click();
-    //         statusHTML += "</tbody> </table>";
-    //         statusHTML = statusHTML.replaceAll( "<img", "<img class='img-fluid'" );
-    //         filesChanged.innerHTML += statusHTML;
-    //       }
-    //     }
-    //   } catch (error) {
-    //     if (error.message.includes("401")){
-    //       showError( "Error: Unable to access PLANTdataHUB, error is "+ error+". Please verify that the DataHub Token matches the datahub_url in the extra_fields of eLabFTW. ");
-    //       console.error(error);
-    //     }else if(error.message.includes("Cannot read properties of undefined")){
-    //       showError("eLabFTW accessed successfully, but extra_fields is missing. Please check the experiment ID and extra_fields in eLabFTW, error is "+ error+".");
-    //     }else if(error.message.includes("403")){
-    //       showError("Error: Error: PLANTdataHUB can not be acccessed. Please verify that the datahub_url in the extra_fields of eLabFTW is correct. error is "+ error+". ");
-    //     }
-    //      else{
-    //       showError( "Error: eLabFTW to ARC conversion failed, error is "+ error);
-    //       console.error(error);
-    //     }
-    //     updateInfo("ARC updated failed" , "0" );
-    //   }      
-    // }
+   
 
         // Main function orchestrating the process
         async function updateAll(elabidText, elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/", gitURL, elabResourceidText) {
@@ -1801,7 +1637,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
             await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/dataset/readme.md` });
             finalizeExperimentDisplay(ratio);           
             await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir,gitRoot);
-            
+
         }
 
         // Process uploads and perform URL replacements
@@ -2317,8 +2153,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
     async function cloneARC(http_url_to_repo, name) {
       loading.show()
       try {
-        document.getElementById("gitlabInfo").innerHTML= http_url_to_repo;
-        document.getElementById("arcInfo").innerHTML= name;
+        
         const token = document.getElementById("datahubToken").value;
         await datahubClone(http_url_to_repo, name, token)
         refreshTree("./"+name);
