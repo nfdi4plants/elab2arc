@@ -474,7 +474,7 @@
     var fs = FS.fs;
     var elabJSON;
     var statusInfo="";
-    const version = "2025-05-19";
+    const version = "2025-06-03";
     var blobb = [];
     var typeConfig = {
       Experiment: {
@@ -797,6 +797,7 @@ async function checkElabFTWConnection() {
     };
 
     const   createNewArc  = async ()=>{
+      loading.show();
       const projectDescription = document.getElementById("descriptionInput").value;
       const projectName = document.getElementById("projectnameInput").value;
       const username = window.userId.username;
@@ -817,6 +818,7 @@ async function checkElabFTWConnection() {
           await commitPush(accessToken,url,"elab2arcTool","", projectName, gitRoot);
             document.getElementById('gitlabInfo').innerHTML= `${url}`;
             document.getElementById('arcInfo').innerHTML= `${projectName}`;
+          loading.hide()
         }
 
 
@@ -904,7 +906,7 @@ async function checkElabFTWConnection() {
                      Convert to assay
                     </button>
                     <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
-        document.getElementById('arcInfo').innerHTML= '${project.name}';" class="btn btn-secondary ">
+        document.getElementById('arcInfo').innerHTML= '${project.name}/studies';" class="btn btn-secondary ">
                      Convert to study
                     </button>
                   </div>
@@ -1256,22 +1258,7 @@ async function checkElabFTWConnection() {
         }
     }
     
-    async function createAssay(assayId, dir){
-      try {
-        fs.statSync(dir+"/assays/"+assayId+"/protocols");
-      } catch (error) {
-        console.error("protocol file is missing, create it"+error);
-        fs.mkdirSync(dir+"/assays/"+assayId+"/protocols",{ recursive: true } )
-      };
-      try {
-        await deletePath(`${dir}/assays/${assayId}/dataset/`);
-        fs.statSync(dir+"/assays/"+assayId+"/dataset");
-      } catch (error) {
-        console.error("protocol file is missing, create it"+error);
-        fs.mkdirSync(dir+"/assays/"+assayId+"/dataset",{ recursive: true } )
-      } 
-      
-    }
+
 
 
     function initCookies(){
@@ -1419,10 +1406,12 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       //   return;
       // };
       const arcName = document.getElementById("arcInfo").innerHTML;
+      const list = arcName.split("/");
+        const gitRoot = list[0]
       deleteAll(); 
-      await cloneARC(gitlabURL, arcName);
-      refreshTree("./"+arcName)
-      if (arcName.includes("Please select your ARC")){
+      await cloneARC(gitlabURL, gitRoot);
+      refreshTree("./"+gitRoot)
+      if (gitRoot.includes("Please select your ARC")){
 
         alert("please select your ARC.");
         return;
@@ -1436,7 +1425,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
 
           // Process each experiment ID
         await processElabEntries(params, users, gitlabURL, arcName);
-      refreshTree(arcName);
+      refreshTree(gitRoot);
     }
    
 
@@ -1543,176 +1532,437 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
             instance
           };
         }
+      const PATH_CONFIG = {
+          default: {
+            baseDir: 'assays',
+            baseDir2: "assays",
+            subDirs: {
+              protocols: 'protocols',
+              datasets: 'dataset'
+            },
+            slash:"/"
+          },
+          studies: {
+            baseDir: 'studies',
+            baseDir2: "",
+            subDirs: {
+              protocols: 'protocols',
+              resources: 'resources'
+            },
+            slash:""
+          }
+        };  
 
-        async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir) {
-         
-            const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
-            updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);  
-            const assayId = formatAssayId(res.title);
-            user = users.find(e => e.fullname === res.fullname);
-            const email = user.email;
+        async function createAssay(assayId, dir, gitSubfolder) {
+          const { baseDir, baseDir2, subDirs, slash} = getDirectoryStructure(gitSubfolder);
+          const baseAssayPath = memfsPathJoin(dir, baseDir2, assayId);
 
-            // Process protocol HTML
-            let protocol = res.body;
-            const elabWWW = params.instance.replace("api/v2/", "");
-            protocol = protocol.replace( /app\/download\.php(.*)f=/g, "" );
-            const protocolHTML = protocol;
+          // Ensure base assay directory exists
+          if (!fs.existsSync(baseAssayPath)) {
+            fs.mkdirSync(baseAssayPath, { recursive: true });
+          }
 
-            // Convert to markdown
-            let markdown = turndownService.turndown(protocol);
-            if (arcDir){
-              updateInfo(`Step by step conversion is used and the ARC selected is "${datahubURL}"`, ratio * 20);
-            }else{
-              updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
+          // Create subfolders
+          Object.values(subDirs).forEach(sub => {
+            const fullPath = memfsPathJoin(baseAssayPath, sub);
+            if (!fs.existsSync(fullPath)) {
+              fs.mkdirSync(fullPath, { recursive: true });
             }
-            
-            let dir = arcDir;
-            const gitName = datahubURL.slice(0, -4);
-            const gitShortName = gitName.split("/").slice(-1)[0];
-            const list = dir.split("/");
-            const gitRoot = list[0]+"/";
-            let gitSubfolder = dir.replace(list[0], "");
-            gitSubfolder==""? {}: gitSubfolder+="/";
-            console.log(gitRoot +"   git subfoler: "+ gitSubfolder);
+          });
 
-            let ls;
-            try {
-              ls = fs.readdirSync(dir+"/assays")
-            } catch (error) {
-              ls = fs.readdirSync(dir)
-            }
-           
-            //updateInfo("Assays are "+ ls.toString().replaceAll(",", "<br>") +". Updating assay <b>" + assayId+ "</b>", "30" );
-            await createAssay(assayId, dir);
-            await fullAssay2(assayId, "new metadata table", res.lastname, res.firstname, email, res.team_name, "Generated by elab2ARC tool on "+Date()+" datahub_url is: "+datahubURL , dir, datahubURL );
-            updateInfo("isa.assay.xlsx has been updated at <b>"+assayId+"</b> ", ratio*35);
-            await git.add({ fs, dir: dir, filepath: "assays/"+assayId+"/isa.assay.xlsx"});
-            // Initialize status HTML with protocol section
-            let statusHTML = `
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>eLabFTW Experiment ${elabid}</th>
-                            <th>ARC files updated</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td id="protocolHTML">${protocolHTML}</td>
-                            <td>
-                                ARC file path is ${dir}/assays/${encodeURIComponent(assayId)}/protocols/eLabFTW_protocol.md
-                                <br>
-                                <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/assays/${encodeURIComponent(assayId)}/protocols/eLabFTW_protocol.md" target="_blank">Click to check the file</a>
-                            </td>
-                        </tr>
-            `;
-
-            // Process uploads and update URLs
-            [statusHTML, markdown] = await processUploadsAndReplaceUrls(
-                res.uploads,
-                dir, 
-                gitRoot, 
-                gitSubfolder,
-                assayId,
-                datahubURL,
-                params,
-                ratio,
-                statusHTML,
-                markdown,
-                protocolHTML,
-                elabid,
-                res
-            );
-
-            // Finalize HTML and write files
-            statusHTML += "</tbody></table>";
-            statusHTML = statusHTML.replaceAll("<img", "<img class='img-fluid'");
-            filesChanged.innerHTML = statusHTML;
-            
-            // Write markdown files
-            await fs.promises.writeFile(`${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`, markdown);
-            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/protocols/eLabFTW_protocol.md` });
-            
-            await fs.promises.writeFile(`${dir}/assays/${assayId}/dataset/readme.md`, "# Data files");
-            await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/dataset/readme.md` });
-            finalizeExperimentDisplay(ratio);           
-            await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir,gitRoot);
-
+          // Delete and recreate dataset/resources folder if necessary
+          const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
+          if (fs.existsSync(datasetPath)) {
+            fs.rmSync(datasetPath, { recursive: true, force: true });
+          }
+          fs.mkdirSync(datasetPath, { recursive: true });
         }
 
-        // Process uploads and perform URL replacements
-        async function processUploadsAndReplaceUrls(
-            uploads,
-            dir, 
-            gitRoot, 
-            gitSubfolder,
+        function getDirectoryStructure(gitSubfolder = '') {
+            const normalized = gitSubfolder.trim().toLowerCase();
+            if (normalized === 'studies') {
+              return PATH_CONFIG.studies;
+            }
+            return PATH_CONFIG.default;
+          }
+
+      async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir) {
+        const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
+        updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);
+
+        const assayId = formatAssayId(res.title);
+        const user = users.find(e => e.fullname === res.fullname);
+        const email = user?.email || '';
+
+        // Process protocol HTML
+        let protocol = res.body;
+        const elabWWW = params.instance.replace("api/v2/", "");
+        protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
+        const protocolHTML = protocol;
+
+        // Convert to markdown
+        let markdown = turndownService.turndown(protocol);
+
+        // Determine git info
+        const gitName = datahubURL.slice(0, -4);
+        const gitShortName = gitName.split("/").slice(-1)[0];
+        const list = arcDir.split("/");
+        const gitRoot = list[0] + "/";
+        let gitSubfolder = arcDir.replace(list[0], "").replace(/^\//, "");
+
+        console.log("Git Root:", gitRoot, "| Git Subfolder:", gitSubfolder);
+
+        const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
+
+        const baseAssayPath = memfsPathJoin(arcDir, baseDir2, assayId);
+        const protocolPath = memfsPathJoin(baseAssayPath, subDirs.protocols);
+        const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
+
+        // Create required directories
+        await createAssay(assayId, arcDir, gitSubfolder);
+        if (gitSubfolder==""){
+          await fullAssay2(
             assayId,
-            datahubURL,
-            params,
-            ratio,
-            statusHTML,
-            markdown,
-            protocolHTML,
-            elabid,
-            res,
-        ) { 
-          const gitName = datahubURL.slice(0, -4);
-          const gitShortName = gitName.split("/").slice(-1)[0];
-            for (const [index, upload] of Object.entries(uploads)) {
-                const blob = await fetchElabFiles(
-                    params.elabtoken,
-                    `experiments/${res.id}/uploads/${upload.id}?format=´binary´`, //TODO, will be refined
-                    params.instance
-                );
+            "new metadata table",
+            res.lastname,
+            res.firstname,
+            email,
+            res.team_name,
+            `Generated by elab2ARC tool on ${Date()} datahub_url is: ${datahubURL}`,
+            arcDir,
+            datahubURL
+          );
 
-                const objectURL = URL.createObjectURL(blob).replace(/&storage=./g, "");
-                const realname = upload.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-                const longname = upload.long_name;
-                const longnameEncoded = encodeURIComponent(longname);
-                const path = `assays/${assayId}/dataset/${index}_${realname}`;
-                const markdownPath = `${dir.replace(gitShortName, "")}/assays/${encodeURIComponent(assayId)}/dataset/${index}_${realname}`;
-                
-                // Replace URLs in protocol HTML
-                statusHTML = statusHTML.replaceAll(longname, objectURL);
-                statusHTML = statusHTML.replaceAll(longnameEncoded, objectURL);
-                statusHTML = statusHTML.replace(/&amp;storage=[12]/g, "");
-
-                // Replace URLs in markdown
-                markdown = markdown.replace(new RegExp(longname, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
-                markdown = markdown.replace(new RegExp(longnameEncoded, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
-                markdown = markdown.replace(/&storage=./g, "");
-
-                // Write file and update Git
-                await fs.promises.writeFile(`${dir}/${path}`, new Uint8Array(await blob.arrayBuffer()));
-                await git.add({ fs, dir: gitRoot, filepath: gitSubfolder.replace("/", "")+ path });
-                const finalPath = `${dir}/${path}`
-                // Update status HTML with file info
-                if (blob.type.includes("image")) {
-                    statusHTML += `
-                        <tr>
-                            <td><img src="${objectURL}"></td>
-                            <td>Submitted ARC file path is: ${dir}/${path}.<br>
-                                <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/${encodeURIComponent(path)}" target="_blank">Click to check the file</a>
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    statusHTML += `
-                        <tr>
-                            <td>File name is ${realname}</td>
-                            <td>Submitted ARC file path is: ${path}.<br>
-                                <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/${encodeURIComponent(path)}" target="_blank">Click to check the file</a>
-                            </td>
-                        </tr>
-                    `;
-                }
-
-                updateInfo(`Added file ${realname}`, ratio * (10 + (index / uploads.length * 10)));
-            }
-
-            return [statusHTML, markdown];
+        updateInfo(`isa.assay.xlsx has been updated at <b>${assayId}</b>`, ratio * 35);
+        await git.add({ fs, dir: arcDir, filepath: `${baseDir}/${assayId}/isa.assay.xlsx` });
+        }else{
+          updateInfo(`no isa.assay.xlsx, because studies folder has been selected <b>${assayId}</b>`, ratio * 35);
         }
-        // Format assay ID
+        // Write isa.assay.xlsx
+        
+
+        // Status HTML
+        let statusHTML = `
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th>eLabFTW Experiment ${elabid}</th>
+                <th>ARC files updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="protocolHTML">${protocolHTML}</td>
+                <td>
+                  ARC file path is ${protocolPath}/eLabFTW_protocol.md
+                  <br>
+                  <a href="${gitName}/-/blob/${mainOrMaster}${arcDir.replace(gitShortName, "")}${slash}${baseDir2}/${encodeURIComponent(assayId)}/${subDirs.protocols}/eLabFTW_protocol.md" target="_blank">Click to check the file</a>
+                </td>
+              </tr>
+        `;
+
+        // Process uploads
+        [statusHTML, markdown] = await processUploadsAndReplaceUrls(
+          res.uploads,
+          arcDir,
+          gitRoot,
+          gitSubfolder,
+          assayId,
+          datahubURL,
+          params,
+          ratio,
+          statusHTML,
+          markdown,
+          protocolHTML,
+          elabid,
+          res
+        );
+
+        // Finalize HTML and write files
+        statusHTML += "</tbody></table>";
+        statusHTML = statusHTML.replaceAll("<img", "<img class='img-fluid'");
+        filesChanged.innerHTML = statusHTML;
+
+        // Write markdown files
+        const protocolMdPath = memfsPathJoin(protocolPath, 'eLabFTW_protocol.md');
+        await fs.promises.writeFile(protocolMdPath, markdown);
+        await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.protocols}/eLabFTW_protocol.md` });
+
+        const readmePath = memfsPathJoin(datasetPath, 'readme.md');
+        await fs.promises.writeFile(readmePath, "# Data files");
+        await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.datasets || subDirs.resources}/readme.md` });
+
+        finalizeExperimentDisplay(ratio);
+        await commitPush(params.datahubtoken, datahubURL, res.fullname, email, arcDir, gitRoot);
+      }    
+
+      async function processUploadsAndReplaceUrls(
+        uploads,
+        dir,
+        gitRoot,
+        gitSubfolder,
+        assayId,
+        datahubURL,
+        params,
+        ratio,
+        statusHTML,
+        markdown,
+        protocolHTML,
+        elabid,
+        res
+      ) {
+        const gitName = datahubURL.slice(0, -4);
+        const gitShortName = gitName.split("/").slice(-1)[0];
+
+        const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
+         console.log("2nd Git Root:", gitRoot, "| Git Subfolder:", gitSubfolder);
+        const datasetSubDir = subDirs.datasets || subDirs.resources;
+        const datasetPath = memfsPathJoin(baseDir, assayId, datasetSubDir);
+
+        for (const [index, upload] of Object.entries(uploads)) {
+          const blob = await fetchElabFiles(
+            params.elabtoken,
+            `experiments/${res.id}/uploads/${upload.id}?format=binary`,
+            params.instance
+          );
+
+          const realname = upload.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+          const longname = upload.long_name;
+          const longnameEncoded = encodeURIComponent(longname);
+          const filePath = memfsPathJoin(datasetPath, `${index}_${realname}`);
+          const markdownPath = `${gitRoot.replace(gitShortName, "")}/${filePath}`;
+
+          // Replace URLs in HTML and markdown
+          statusHTML = statusHTML.replaceAll(longname, URL.createObjectURL(blob));
+          statusHTML = statusHTML.replaceAll(longnameEncoded, URL.createObjectURL(blob));
+          statusHTML = statusHTML.replace(/&amp;storage=[12]/g, "");
+
+          markdown = markdown.replace(new RegExp(longname, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
+          markdown = markdown.replace(new RegExp(longnameEncoded, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
+          markdown = markdown.replace(/&storage=./g, "");
+
+          // Write file
+          const fullPath = memfsPathJoin(gitRoot, filePath);
+           console.log("filepath:", filePath, "| fullpath:", fullPath);
+          await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
+          await git.add({ fs, dir: gitRoot, filepath: `${filePath}` });
+         
+          // Update status HTML
+          if (blob.type.includes("image")) {
+            statusHTML += `
+              <tr>
+                <td><img src="${URL.createObjectURL(blob)}"></td>
+                <td>
+                  Submitted ARC file path is: ${filePath}.
+                  <br>
+                  <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/${encodeURIComponent(filePath)}" target="_blank">Click to check the file</a>
+                </td>
+              </tr>
+            `;
+          } else {
+            statusHTML += `
+              <tr>
+                <td>File name is ${realname}</td>
+                <td>
+                  Submitted ARC file path is: ${filePath}.
+                  <br>
+                  <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/${encodeURIComponent(filePath)}" target="_blank">Click to check the file</a>
+                </td>
+              </tr>
+            `;
+          }
+
+          updateInfo(`Added file ${realname}`, ratio * (10 + (index / uploads.length * 10)));
+        }
+
+        return [statusHTML, markdown];
+      }
+
+      // async function createAssay(assayId, dir){
+      //     try {
+      //       fs.statSync(dir+"/assays/"+assayId+"/protocols");
+      //     } catch (error) {
+      //       console.error("protocol file is missing, create it"+error);
+      //       fs.mkdirSync(dir+"/assays/"+assayId+"/protocols",{ recursive: true } )
+      //     };
+      //     try {
+      //       await deletePath(`${dir}/assays/${assayId}/dataset/`);
+      //       fs.statSync(dir+"/assays/"+assayId+"/dataset");
+      //     } catch (error) {
+      //       console.error("protocol file is missing, create it"+error);
+      //       fs.mkdirSync(dir+"/assays/"+assayId+"/dataset",{ recursive: true } )
+      //     } 
+          
+      //   }
+
+      //   async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir) {
+         
+      //       const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
+      //       updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);  
+      //       const assayId = formatAssayId(res.title);
+      //       user = users.find(e => e.fullname === res.fullname);
+      //       const email = user.email;
+      //       // Process protocol HTML
+      //       let protocol = res.body;
+      //       const elabWWW = params.instance.replace("api/v2/", "");
+      //       protocol = protocol.replace( /app\/download\.php(.*)f=/g, "" );
+      //       const protocolHTML = protocol;
+
+      //       // Convert to markdown
+      //       let markdown = turndownService.turndown(protocol);
+      //       if (arcDir){
+      //         updateInfo(`Step by step conversion is used and the ARC selected is "${datahubURL}"`, ratio * 20);
+      //       }else{
+      //         updateInfo(`DataHUB URL fetched from elabFTW's extra_field is "${datahubURL}"`, ratio * 20);
+      //       }
+            
+      //       let dir = arcDir;
+      //       const gitName = datahubURL.slice(0, -4);
+      //       const gitShortName = gitName.split("/").slice(-1)[0];
+      //       const list = dir.split("/");
+      //       const gitRoot = list[0]+"/";
+      //       let gitSubfolder = dir.replace(list[0], "");
+      //       gitSubfolder==""? {}: gitSubfolder+="/";
+      //       console.log(gitRoot +"   git subfoler: "+ gitSubfolder);
+
+      //       let ls;
+      //       try {
+      //         ls = fs.readdirSync(dir+"/assays")
+      //       } catch (error) {
+      //         ls = fs.readdirSync(dir)
+      //       }
+           
+      //       //updateInfo("Assays are "+ ls.toString().replaceAll(",", "<br>") +". Updating assay <b>" + assayId+ "</b>", "30" );
+      //       await createAssay(assayId, dir);
+      //       await fullAssay2(assayId, "new metadata table", res.lastname, res.firstname, email, res.team_name, "Generated by elab2ARC tool on "+Date()+" datahub_url is: "+datahubURL , dir, datahubURL );
+      //       updateInfo("isa.assay.xlsx has been updated at <b>"+assayId+"</b> ", ratio*35);
+      //       await git.add({ fs, dir: dir, filepath: "assays/"+assayId+"/isa.assay.xlsx"});
+      //       // Initialize status HTML with protocol section
+      //       let statusHTML = `
+      //           <table class="table table-striped table-hover">
+      //               <thead>
+      //                   <tr>
+      //                       <th>eLabFTW Experiment ${elabid}</th>
+      //                       <th>ARC files updated</th>
+      //                   </tr>
+      //               </thead>
+      //               <tbody>
+      //                   <tr>
+      //                       <td id="protocolHTML">${protocolHTML}</td>
+      //                       <td>
+      //                           ARC file path is ${dir}/assays/${encodeURIComponent(assayId)}/protocols/eLabFTW_protocol.md
+      //                           <br>
+      //                           <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/assays/${encodeURIComponent(assayId)}/protocols/eLabFTW_protocol.md" target="_blank">Click to check the file</a>
+      //                       </td>
+      //                   </tr>
+      //       `;
+
+      //       // Process uploads and update URLs
+      //       [statusHTML, markdown] = await processUploadsAndReplaceUrls(
+      //           res.uploads,
+      //           dir, 
+      //           gitRoot, 
+      //           gitSubfolder,
+      //           assayId,
+      //           datahubURL,
+      //           params,
+      //           ratio,
+      //           statusHTML,
+      //           markdown,
+      //           protocolHTML,
+      //           elabid,
+      //           res
+      //       );
+
+      //       // Finalize HTML and write files
+      //       statusHTML += "</tbody></table>";
+      //       statusHTML = statusHTML.replaceAll("<img", "<img class='img-fluid'");
+      //       filesChanged.innerHTML = statusHTML;
+            
+      //       // Write markdown files
+      //       await fs.promises.writeFile(`${dir}/assays/${assayId}/protocols/eLabFTW_protocol.md`, markdown);
+      //       await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/protocols/eLabFTW_protocol.md` });
+            
+      //       await fs.promises.writeFile(`${dir}/assays/${assayId}/dataset/readme.md`, "# Data files");
+      //       await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder.replace("/", "")}assays/${assayId}/dataset/readme.md` });
+      //       finalizeExperimentDisplay(ratio);           
+      //       await commitPush(params.datahubtoken, datahubURL, res.fullname, email, dir, gitRoot);
+
+      //   }
+
+      //   // Process uploads and perform URL replacements
+      //   async function processUploadsAndReplaceUrls(
+      //       uploads,
+      //       dir, 
+      //       gitRoot, 
+      //       gitSubfolder,
+      //       assayId,
+      //       datahubURL,
+      //       params,
+      //       ratio,
+      //       statusHTML,
+      //       markdown,
+      //       protocolHTML,
+      //       elabid,
+      //       res,
+      //   ) { 
+      //     const gitName = datahubURL.slice(0, -4);
+      //     const gitShortName = gitName.split("/").slice(-1)[0];
+      //       for (const [index, upload] of Object.entries(uploads)) {
+      //           const blob = await fetchElabFiles(
+      //               params.elabtoken,
+      //               `experiments/${res.id}/uploads/${upload.id}?format=´binary´`, //TODO, will be refined
+      //               params.instance
+      //           );
+
+      //           const objectURL = URL.createObjectURL(blob).replace(/&storage=./g, "");
+      //           const realname = upload.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+      //           const longname = upload.long_name;
+      //           const longnameEncoded = encodeURIComponent(longname);
+      //           const path = `assays/${assayId}/dataset/${index}_${realname}`;
+      //           const markdownPath = `${dir.replace(gitShortName, "")}/assays/${encodeURIComponent(assayId)}/dataset/${index}_${realname}`;
+                
+      //           // Replace URLs in protocol HTML
+      //           statusHTML = statusHTML.replaceAll(longname, objectURL);
+      //           statusHTML = statusHTML.replaceAll(longnameEncoded, objectURL);
+      //           statusHTML = statusHTML.replace(/&amp;storage=[12]/g, "");
+
+      //           // Replace URLs in markdown
+      //           markdown = markdown.replace(new RegExp(longname, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
+      //           markdown = markdown.replace(new RegExp(longnameEncoded, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
+      //           markdown = markdown.replace(/&storage=./g, "");
+
+      //           // Write file and update Git
+      //           await fs.promises.writeFile(`${dir}/${path}`, new Uint8Array(await blob.arrayBuffer()));
+      //           await git.add({ fs, dir: gitRoot, filepath: gitSubfolder.replace("/", "")+ path });
+      //           const finalPath = `${dir}/${path}`
+      //           // Update status HTML with file info
+      //           if (blob.type.includes("image")) {
+      //               statusHTML += `
+      //                   <tr>
+      //                       <td><img src="${objectURL}"></td>
+      //                       <td>Submitted ARC file path is: ${dir}/${path}.<br>
+      //                           <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/${encodeURIComponent(path)}" target="_blank">Click to check the file</a>
+      //                       </td>
+      //                   </tr>
+      //               `;
+      //           } else {
+      //               statusHTML += `
+      //                   <tr>
+      //                       <td>File name is ${realname}</td>
+      //                       <td>Submitted ARC file path is: ${path}.<br>
+      //                           <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/${encodeURIComponent(path)}" target="_blank">Click to check the file</a>
+      //                       </td>
+      //                   </tr>
+      //               `;
+      //           }
+
+      //           updateInfo(`Added file ${realname}`, ratio * (10 + (index / uploads.length * 10)));
+      //       }
+
+      //       return [statusHTML, markdown];
+      //   }
+      //   // Format assay ID
         function formatAssayId(title) {
             return title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
         }
@@ -1892,7 +2142,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
 
     async function fulfillReadContract (basePath, contract) {
       async function fulfill() {
-          const normalizedPath = normalizePathSeparators(path.join(basePath, contract.Path))
+          const normalizedPath = normalizePathSeparators(memfsPathJoin(basePath, contract.Path))
           switch (contract.DTOType) {
               case "ISA_Assay":
               case "ISA_Study":
@@ -1922,7 +2172,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       function loop (dir) {
           const files = fs.readdirSync(dir);
           for (const file of files) {
-              const filePath = path.join(dir, file);
+              const filePath = getAllFilePaths(dir, file);
       
               if (fs.statSync(filePath).isDirectory()) {
                   // If it's a directory, recursively call the function on that directory
