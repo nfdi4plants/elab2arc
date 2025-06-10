@@ -87,7 +87,7 @@
       </div>
     
     </nav>
-  <main class="container" style="min-height: 75rem;padding-top: 3.25rem;">
+  <main class="container" style="min-height: 75rem;padding-top: 4.25rem;">
     <div name="tab" class=" col-12 justify-content-center d-none text-center" id="introTab">
       <a href="#elab">
         <h1>Fetch eLabFTW experiments </h1>
@@ -176,57 +176,94 @@
 
 
       
-        <div class="row justify-content-center align-items-end">
-        <div class="my-3 col-lg-4 ">
-          <label for="elabURLInput1" class="form-label">
-           
-            <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#instanceCanvas" aria-controls="instanceCanvas">
-              eLabFTW Instance&nbsp;&#128712;</button>
-              
-          </label> 
-          <br>
-        <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button"  data-bs-toggle="dropdown" aria-expanded="false">
-          eLabFTW Instance: HHU
-        </button>
-        <ul class="dropdown-menu">
-          <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')" type="button">eLabFTW Instance: DataPLANT</button></li>
-          <li><button class="dropdown-item d-none" onclick="setelabURL('https://demo.elabftw.net/api/v2/')" type="button">eLabFTW Instance: Demo</button></li>
-          <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
-          <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2" </li>
-        </ul>
+        
+        <div class="row justify-content-center align-items-end">  
+          <div class="my-3 col-lg-8 ">
+            <label for="elabURLInput1" class="form-label">
+            
+              <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#instanceCanvas" aria-controls="instanceCanvas">
+                eLabFTW Instance&nbsp;&#128712;</button>
+                
+            </label> 
+            <br>
+          <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button"  data-bs-toggle="dropdown" aria-expanded="false">
+            eLabFTW Instance: HHU
+          </button>
+          <ul class="dropdown-menu">
+            <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')" type="button">eLabFTW Instance: DataPLANT</button></li>
+            <li><button class="dropdown-item d-none" onclick="setelabURL('https://demo.elabftw.net/api/v2/')" type="button">eLabFTW Instance: Demo</button></li>
+            <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
+            <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2" </li>
+          </ul>
 
+          </div>
         </div>
-        <div class="my-3 col-lg-2 ">
-          <label for="elabToken" class="form-label">
-           
-            <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
-              eLabFTW API Key&nbsp;&#128712;</button>
-          </label>
-          <input type="text" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken"  required>
+        <div class="row justify-content-center align-items-end">  
+          <div class="my-3 col-lg-8 ">
+            <label for="elabToken" class="form-label">
+            
+              <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
+                eLabFTW API Key&nbsp;&#128712;</button>
+            </label>
+            <div class="input-group mb-3">
+            <input type="password" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken"  required/>
+            <button 
+                class="btn btn-secondary" 
+                type="button" 
+                name="togglePassword"
+                data-show-id="elabToken"
+                onclick="showPassword(this)"
+                
+              >
+                👁️
+              </button>
+            </div>
+          </div>
         </div>
-
-         <div class="my-3 col-lg-2">
+        <div class="row justify-content-center align-items-end">  
+         <div class="my-3 col-lg-8">
           <label for="datahubToken" class="form-label">
             <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#datahubTokenCanvas" aria-controls="datahubTokenCanvas">
               DataHub Token&nbsp;&#128712;</button>
             
           </label>
-          <input type="text" name="datahubtoken" class="form-control" autocomplete="password"  id="datahubToken"  required>
+
+<div class="input-group mb-3">
+  <input 
+    type="password" 
+    name="datahubtoken" 
+    class="form-control" 
+    autocomplete="new-password" 
+    id="datahubToken" 
+    required
+  />
+  <button 
+    class="btn btn-secondary" 
+    type="button" 
+    name="togglePassword"
+    data-show-id="datahubToken"
+    onclick="showPassword(this)"
+  >
+    👁️
+  </button>
+</div>
         </div>
-        <div class="my-3 col-lg-1">
+        </div>
+        <div class="row justify-content-center align-items-end">  
+        <div class="my-3 col-lg-8">
             <button class="btn btn-primary" onclick="initCookies();" type="button"> Save 
 
             </button> 
           </div>
           </div>
-         
+         </div>
 
       </div>
       
      
        
         
-     </div>
+     
     
     <div name="tab" class="row justify-content-center" id="arcTab">
       
@@ -1011,8 +1048,8 @@ async function checkElabFTWConnection() {
                 data=results;
               }
                
-              console.log("here is data")
-              console.log(data)
+              //console.log("here is data")
+              //console.log(data)
               data.forEach((entry) => {
                 if ( !entry.id ) return; // Skip invalid entries
                 //if ( !(targetId==undefined || entry.id == targetId) ) return; // Skip invalid entries
@@ -1487,21 +1524,24 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
           if (elabtoken) {
             document.getElementById("elabToken").value = elabtoken;
           } else {
-            elabtoken = document.getElementById("elabToken").value;
+            elabtoken = extractCookie("elabtoken");
+            document.getElementById("elabToken").value = elabtoken;
           }
 
           // Set or get DataHub token
           if (datahubtoken) {
             document.getElementById("datahubToken").value = datahubtoken;
           } else {
-            datahubtoken = document.getElementById("datahubToken").value;
+            datahubtoken = extractCookie("datahubtoken");
+            document.getElementById("datahubToken").value = datahubtoken;
           }
 
           // Set or get instance URL
           if (instance) {
             document.getElementById("elabURLInput1").value = instance;
           } else {
-            instance = document.getElementById("elabURLInput1").value;
+            instance = localStorage.getItem("instance");
+            document.getElementById("elabURLInput1").value = instance;
           }
 
           // Persist values in cookies
@@ -2042,9 +2082,25 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       checkGitLabConnection();
      
 
-
     }
     );
+    function showPassword(ele){
+      
+        const id = ele.dataset.showId ;
+          
+        const passwordInput = document.getElementById(id);
+        const eyeIcon = this;
+
+        if (passwordInput.type === 'password') {
+          passwordInput.type = 'text';
+          eyeIcon.textContent = '👁️'; // Show open eye
+        } else {
+          passwordInput.type = 'password';
+          eyeIcon.textContent = '👁️'; // Still show open eye (you can change to a slashed eye using another Unicode)
+        }
+    }
+        
+
 
     function normalizePathSeparators (str) {
       const normalizedPath = path.normalize(str)
