@@ -207,6 +207,7 @@
             </label>
             <div class="input-group mb-3">
             <input type="password" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken"  required/>
+            
             <button 
                 class="btn btn-secondary" 
                 type="button" 
@@ -237,6 +238,15 @@
     id="datahubToken" 
     required
   />
+    <button 
+    class="btn btn-secondary" 
+    type="button" 
+    name="togglePassword"
+    data-show-id="datahubToken"
+    onclick="location.href='https://datahublogin.dataplan.top/auth/gitlab'"
+  >
+    get a token (alpha test)
+  </button>
   <button 
     class="btn btn-secondary" 
     type="button" 
