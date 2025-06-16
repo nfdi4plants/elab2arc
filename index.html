@@ -1737,6 +1737,8 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
         const protocolMdPath = memfsPathJoin(protocolPath, 'eLabFTW_protocol.md');
         await fs.promises.writeFile(protocolMdPath, markdown);
         await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.protocols}/eLabFTW_protocol.md` });
+        
+        
 
         const readmePath = memfsPathJoin(datasetPath, 'readme.md');
         await fs.promises.writeFile(readmePath, "# Data files");
@@ -1776,7 +1778,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
             params.instance
           );
 
-          const realname = upload.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+          const realname = upload.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
           const longname = upload.long_name;
           const longnameEncoded = encodeURIComponent(longname);
           const filePath = memfsPathJoin(datasetPath, `${index}_${realname}`);
@@ -1787,18 +1789,22 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
           statusHTML = statusHTML.replaceAll(longnameEncoded, URL.createObjectURL(blob));
           statusHTML = statusHTML.replace(/&amp;storage=[12]/g, "");
 
-          markdown = markdown.replace(new RegExp(longname, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
-          markdown = markdown.replace(new RegExp(longnameEncoded, "g"), `${gitName}/-/raw/${mainOrMaster}${markdownPath}`);
+          markdown = markdown.replace(new RegExp(longname, "g"), `../${datasetSubDir}/${index}_${realname}`);
+          markdown = markdown.replace(new RegExp(longnameEncoded, "g"), `../${datasetSubDir}/${index}_${realname}`);
           markdown = markdown.replace(/&storage=./g, "");
 
           // Write file
           const fullPath = memfsPathJoin(gitRoot, filePath);
-           console.log("filepath:", filePath, "| fullpath:", fullPath);
+          console.log("filepath:", filePath, "| fullpath:", fullPath);
+          //const imagePath = memfsPathJoin(baseDir, assayId, "protocol/images", `${index}_${realname}` );
           await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
+          //await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
+
           await git.add({ fs, dir: gitRoot, filepath: `${filePath}` });
          
           // Update status HTML
-          if (blob.type.includes("image")) {
+                  
+          if (blob.type.includes("image")) { //
             statusHTML += `
               <tr>
                 <td><img src="${URL.createObjectURL(blob)}"></td>
@@ -1809,13 +1815,14 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
                 </td>
               </tr>
             `;
-          } else {
+          } else {//
             statusHTML += `
               <tr>
                 <td>File name is ${realname}</td>
                 <td>
                   Submitted ARC file path is: ${filePath}.
                   <br>
+                  
                   <a href="${gitName}/-/blob/${mainOrMaster}${dir.replace(gitShortName, "")}/${encodeURIComponent(filePath)}" target="_blank">Click to check the file</a>
                 </td>
               </tr>
