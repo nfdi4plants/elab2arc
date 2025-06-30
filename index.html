@@ -87,7 +87,7 @@
       </div>
     
     </nav>
-  <main class="container" style="min-height: 75rem;padding-top: 4.25rem;">
+  <main class="container-xxl" style="min-height: 75rem;padding-top: 4.25rem;">
     <div name="tab" class=" col-12 justify-content-center d-none text-center" id="introTab">
       <a href="#elab">
         <h1>Fetch eLabFTW experiments </h1>
@@ -139,29 +139,30 @@
     </div>
     
   </div>
-       <div class="row justify-content-center align-items-center ">
-        <div class="col-lg-12 my-2">
-      <div class="rounded border p-0 m-2 " >
+       <div class="row justify-content-center align-items-center " style="height:55vh; overflow-y: scroll">
+        <div class="col-lg-12 my-2" >
+          <div class="rounded border p-0 m-2 " >
 
-        <table class="table table-striped table-hover border-0 overflow-hidden" style="table-layout:auto ; width:100%; ">
-          <thead>
-            <tr>
-              <th scope="col">Type</th>
-              <th scope="col">ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
-              <th scope="col">Name</th>
-              <th scope="col">Preview&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
-              <th scope="col">Creation Date</th>
-              <th scope="col">Author</th>
-              <th scope="col">Selection</th>
-            </tr>
-          </thead>
-          <tbody id="elabTable">
-           <tr> <th></th> <td> No eLabFTW experiments/resources available. Use <a href="#token">Token tab</a> to add an eLabFTW API key</td><td></td>
-          <td></td>
-          <td></td></tr>
-          
-          </tbody>
-        </table>
+            <table class="table table-striped table-hover border-0 overflow-hidden" style="table-layout:auto ; width:100%; ">
+              <thead>
+                <tr>
+                  <th scope="col">Type</th>
+                  <th scope="col">ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Preview&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+                  <th scope="col">Creation Date</th>
+                  <th scope="col">Author</th>
+                  <th scope="col">Selection</th>
+                </tr>
+              </thead>
+              <tbody id="elabTable">
+              <tr> <th></th> <td> No eLabFTW experiments/resources available. Use <a href="#token">Token tab</a> to add an eLabFTW API key</td><td></td>
+              <td></td>
+              <td></td></tr>
+              
+              </tbody>
+            </table>
+          </div>
       </div>
 
         </div>
@@ -1008,7 +1009,7 @@ async function checkElabFTWConnection() {
           check.checked =true; 
          check.onchange();  
         } catch (error) {
-          await fillElabTable("?q="+e+"&order=id&sort=des&limit=999&", "elabTable", "append",  typeConfig, e);
+          await fillElabTable("?q="+e+"&order=id&sort=des&limit=99&", "elabTable", "append",  typeConfig, e);
           check= document.getElementById("check"+typeConfig[str].short+e);
           elabCheckSync();
           check.checked =true; 
@@ -1021,7 +1022,7 @@ async function checkElabFTWConnection() {
             check.onchange(); 
         }
       }
-    const fillElabTable = async ( query= "?order=id&sort=des&scope=1&limit=999", tableid="elabTable", action="update", typeConfig=window.typeConfig, targetId) => {
+    const fillElabTable = async ( query= "?order=id&sort=des&scope=1&limit=99", tableid="elabTable", action="update", typeConfig=window.typeConfig, targetId) => {
       try {
         // Define the API endpoint for fetching user-related projects
         const params = await getParameters();
