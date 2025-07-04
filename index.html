@@ -1141,6 +1141,8 @@ async function checkElabFTWConnection() {
       try {
         const split =  elabURL1.split("/api");
         split.length ==1?  elabURL1= elabURL1 +"api/v2/": {}  ;
+        elabURL1= elabURL1.replace("login.php", "");
+        
       } catch (error) {
         
       }
