@@ -54,15 +54,15 @@
     
         <button type="button" name="navBtn" aria-current="homeTab" onclick="window.history.pushState('', '', '/elab2arc/#home'); showTab('homeTab')" class="nav-linkc px-3"
         id="homeBtn">
-      Home&nbsp;
+      Home&nbsp;<span id="elabFTWCheck">&#127760;</span>
       </button>
    
         
         <button type="button" name="navBtn" data-bs-toggle="offcanvas"
                             data-bs-target="#elabPreviewCanvas"
-                            aria-controls="elabPreviewCanvas" class="nav-linkc px-3"
+                            aria-controls="elabPreviewCanvas" class="nav-linkc px-3 d-none"
           id="ftwBtn">
-        elabFTW&nbsp;<span id="elabFTWCheck">&#127760;</span>
+        elabFTW&nbsp;
         </button>
         
         <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="nav-linkc px-3"
@@ -104,41 +104,9 @@
       </h1>
       <h4 class="text-center">
         <span class="d-none"> Tool for converting eLabFTW experiment data into ARC (Annotated Research Context) format</span>
-          Please select your elabFTW experiments/resources to be converted
+          Select your elabFTW experiments/resources using the checkboxes or by typing their IDs below, then go to the ARCs tab and choose your ARC to start the conversion.
       </h4>
-<div class="row justify-content-center align-items-center ">
-      <div class="col-lg-3 my-3">
-      <label for="elabExperimentid" class="form-label">
-        <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
-          eLabFTW Experiment ID &#128712;</button>
-      </label>
-      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabExperimentid" aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
-      <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
-      </div>
-      </div>
-<div class="col-lg-3 my-3">
-      <label for="elabResourceid" class="form-label">
-        <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
-          eLabFTW Resource ID &#128712;</button>
-      </label>
-      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabResourceid" aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
-      <div id="elabresourceHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
-      </div>
-</div>
-<div class="col-lg-3 my-3">
-      <label for="elabsubmit" class="form-label my-3 d-none">Submit Options</label>
-          <button class="btn btn-primary my-3 w-100 d-none"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
-          
-          <button  class="btn btn-primary my-3 w-100" type="button" onclick="showTab('arcTab')" ><span> Submission</span></button>
-          
-          <button class="btn btn-secondary my-3 w-100" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
-            Check Status
-          </button>
-          <div id="toolstatus"  class="col-10 m-auto">       
-          </div>
-    </div>
-    
-  </div>
+
        <div class="row justify-content-center align-items-center " style="height:55vh; overflow-y: scroll">
         <div class="col-lg-12 my-2" >
           <div class="rounded border p-0 m-2 " >
@@ -149,10 +117,9 @@
                   <th scope="col">Type</th>
                   <th scope="col">ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
                   <th scope="col">Name</th>
-                  <th scope="col">Preview&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
                   <th scope="col">Creation Date</th>
                   <th scope="col">Author</th>
-                  <th scope="col">Selection</th>
+                  <th scope="col">Selection/Preview</th>
                 </tr>
               </thead>
               <tbody id="elabTable">
@@ -167,7 +134,39 @@
 
         </div>
 
-   
+   <div class="border row text-center p-3 mt-3 convert-container rounded justify-content-center align-items-end ">
+      <div class="col-lg-3 my-3">
+      <label for="elabExperimentid" class="form-label">
+        <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
+        Selected  eLabFTW Experiment ID &#128712;</button>
+      </label>
+      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabExperimentid" aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
+      <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
+      </div>
+      </div>
+<div class="col-lg-3 my-3">
+      <label for="elabResourceid" class="form-label">
+        <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
+         Selected eLabFTW Resource ID &#128712;</button>
+      </label>
+      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabResourceid" aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
+      <div id="elabresourceHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
+      </div>
+</div>
+<div class="col-lg-3 my-3">
+      <label for="elabsubmit" class="form-label my-3 d-none">Submit Options</label>
+          <button class="btn btn-primary my-3 w-100 d-none"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
+          
+          <button  class="btn btn-primary my-3 w-100" type="button" onclick="showTab('arcTab')" ><span> Confirm eLabFTW Selection</span></button>
+          
+          <button class="btn btn-secondary my-3 w-100 d-none" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
+            Check Status
+          </button>
+          <div id="toolstatus"  class="col-10 m-auto">       
+          </div>
+    </div>
+    
+  </div>
       
     </div>
     
@@ -207,7 +206,7 @@
                 eLabFTW API Key&nbsp;&#128712;</button>
             </label>
             <div class="input-group mb-3">
-            <input type="password" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken"  required/>
+            <input type="password" onchange="initCookies();" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken"  required/>
             
             <button 
                 class="btn btn-secondary" 
@@ -262,7 +261,7 @@
         </div>
         <div class="row justify-content-center align-items-end">  
         <div class="my-3 col-lg-8">
-            <button class="btn btn-primary" onclick="initCookies();" type="button"> Save 
+            <button class="btn btn-primary" onclick="initCookies();redirect();" type="button"> Save 
 
             </button> 
           </div>
@@ -288,7 +287,7 @@
               <th scope="col">Number</th>
               <th scope="col">Repo Name</th>
               <th scope="col">Link</th>
-              <th scope="col">Action</th>
+              <th scope="col">Select the target ARC directory</th>
             </tr>
           </thead>
           <tbody id="userProjectsTable">
@@ -846,8 +845,9 @@ async function checkElabFTWConnection() {
 
     const   createNewArc  = async ()=>{
       loading.show();
-      const projectDescription = document.getElementById("descriptionInput").value;
-      const projectName = document.getElementById("projectnameInput").value;
+      // const projectDescription = document.getElementById("descriptionInput").value;
+      const projectDescription = "An ARC create by eLab2ARC tool"
+      const projectName = document.getElementById("projectnameInput").value.replace(/[^a-zA-Z0-9_\-]/g, "-");
       const username = window.userId.username;
       
           const accessToken = document.getElementById("datahubToken").value;
@@ -864,8 +864,9 @@ async function checkElabFTWConnection() {
           await git.add({ fs, dir: projectName, filepath: '.' });
           const gitRoot = projectName+"/";
           await commitPush(accessToken,url,"elab2arcTool","", projectName, gitRoot);
-            document.getElementById('gitlabInfo').innerHTML= `${url}`;
-            document.getElementById('arcInfo').innerHTML= `${projectName}`;
+            //document.getElementById('gitlabInfo').innerHTML= `${url}`;
+            //document.getElementById('arcInfo').innerHTML= `${projectName}`;
+          checkGitLabConnection()
           loading.hide()
         }
 
@@ -951,11 +952,11 @@ async function checkElabFTWConnection() {
                   <div class="" role="group" aria-label="Basic example">
                     <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
         document.getElementById('arcInfo').innerHTML= '${project.name}';" class="btn btn-success ">
-                     Convert to assay
+                     Select assay
                     </button>
                     <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
         document.getElementById('arcInfo').innerHTML= '${project.name}/studies';" class="btn btn-secondary ">
-                     Convert to study
+                     Select study
                     </button>
                   </div>
                 </td>
@@ -1088,7 +1089,7 @@ async function checkElabFTWConnection() {
                     <th scope="row">${config.displayName}</th>
                     <td>${entry.id}</td>
                     <td>${entry.title}</td>
-                    <td> ${previewBtn}</td>
+                   
                     <td>${entry.date}</td>
                     <td>${entry.fullname}</td>
                     <td>
@@ -1101,6 +1102,7 @@ async function checkElabFTWConnection() {
                               value="option1">
                         <label class="form-check-label" for="${checkboxId}"></label>
                         ${extraDiv}
+                          ${previewBtn}
                       </div>
                     </td>
                   </tr>
@@ -1313,17 +1315,22 @@ async function checkElabFTWConnection() {
 
     function initCookies(){
       const maxAge = 60*60*24*31;
-          const instance = document.getElementById("elabURLInput1").value;
+          
           elabtoken= document.getElementById("elabToken").value;
           datahubtoken= document.getElementById("datahubToken").value;
           document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
           document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
-          window.localStorage.setItem("instance", instance);
-          location.href=location.href.split('#')[0]+'#home'
-          location.reload();
+
           
     }
 
+    function redirect(){
+                const instance = document.getElementById("elabURLInput1").value;
+          window.localStorage.setItem("instance", instance);
+          location.href=location.href.split('#')[0]+'#home'
+          location.reload();
+
+    }
 
     function setCookies(elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
       const maxAge = 60*60*24*31;
