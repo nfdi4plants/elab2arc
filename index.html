@@ -955,7 +955,7 @@ async function checkElabFTWConnection() {
                      Select assay
                     </button>
                     <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
-        document.getElementById('arcInfo').innerHTML= '${project.name}/studies';" class="btn btn-secondary ">
+        document.getElementById('arcInfo').innerHTML= '${project.name}/studies';" class="btn btn-success ">
                      Select study
                     </button>
                   </div>
@@ -973,7 +973,7 @@ async function checkElabFTWConnection() {
                 <td>
                   <div class="" role="group" aria-label="Basic example">
                    <input type="text" class="form-control d-none" id="descriptionInput" value="An ARC created by elab2arc tool" placeholder="Project Name" aria-label="Projectname">
-        <button class="btn btn-primary" onclick="createNewArc()"> Create a new ARC </button>
+        <button class="btn btn" onclick="createNewArc()"> Create a new ARC </button>
                   </div>
                 </td>
               </tr>
@@ -1067,7 +1067,7 @@ async function checkElabFTWConnection() {
                 //if ( !(targetId==undefined || entry.id == targetId) ) return; // Skip invalid entries
                 const checkboxId = `check${config.short}${entry.id}`;
                 const previewBtn = config.hasPreview
-                  ? `<button class="btn btn-sm btn-success" type="button"
+                  ? `<button class="btn btn-sm " type="button"
                             data-bs-toggle="offcanvas"
                             data-bs-target="#elabPreviewCanvas"
                             aria-controls="elabPreviewCanvas"
