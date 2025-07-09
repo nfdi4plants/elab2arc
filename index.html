@@ -87,7 +87,7 @@
       </div>
     
     </nav>
-  <main class="container-xxl" style="min-height: 75rem;padding-top: 4.25rem;">
+  <main class="container-xxl" style="padding-top: 3.25rem;">
     <div name="tab" class=" col-12 justify-content-center d-none text-center" id="introTab">
       <a href="#elab">
         <h1>Fetch eLabFTW experiments </h1>
@@ -97,7 +97,7 @@
     </div>
 
 
-    <div name="tab" class="row justify-content-center align-items-center" id="homeTab">
+    <div name="tab" class="justify-content-center align-items-center" id="homeTab">
       
       <h1 class="text-center">
         elab2ARC
@@ -107,7 +107,7 @@
           Select your elabFTW experiments/resources using the checkboxes or by typing their IDs below, then go to the ARCs tab and choose your ARC to start the conversion.
       </h4>
 
-       <div class="row justify-content-center align-items-center " style="height:55vh; overflow-y: scroll">
+       <div class="justify-content-center align-items-center " style="height:55vh; overflow-y: scroll">
         <div class="col-lg-12 my-2" >
           <div class="rounded border p-0 m-2 " >
 
@@ -134,30 +134,30 @@
 
         </div>
 
-   <div class="border row text-center p-3 mt-3 convert-container rounded justify-content-center align-items-end ">
-      <div class="col-lg-3 my-3">
+   <div class="border row text-center pb-3 convert-container rounded justify-content-center align-items-end ">
+      <div class="col-lg-3 ">
       <label for="elabExperimentid" class="form-label">
-        <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
-        Selected  eLabFTW Experiment ID &#128712;</button>
+        <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
+        Selected eLabFTW Experiment ID &#128712;</button>
       </label>
-      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabExperimentid" aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
+      <textarea type="text"  name="elabid" class="form-control " autocomplete="username"  id="elabExperimentid" aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
       <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
       </div>
       </div>
-<div class="col-lg-3 my-3">
+<div class="col-lg-3 ">
       <label for="elabResourceid" class="form-label">
-        <button class="border-0 bg-white text-success my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
+        <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
          Selected eLabFTW Resource ID &#128712;</button>
       </label>
-      <textarea type="text"  name="elabid" class="form-control my-3" autocomplete="username"  id="elabResourceid" aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
+      <textarea type="text"  name="elabid" class="form-control " autocomplete="username"  id="elabResourceid" aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
       <div id="elabresourceHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
       </div>
 </div>
-<div class="col-lg-3 my-3">
+<div class="col-lg-3 ">
       <label for="elabsubmit" class="form-label my-3 d-none">Submit Options</label>
           <button class="btn btn-primary my-3 w-100 d-none"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
           
-          <button  class="btn btn-primary my-3 w-100" type="button" onclick="showTab('arcTab')" ><span> Confirm eLabFTW Selection</span></button>
+          <button  class="btn btn-primary w-100" type="button" onclick="showTab('arcTab')" ><span> Confirm eLabFTW Selection</span></button>
           
           <button class="btn btn-secondary my-3 w-100 d-none" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
             Check Status
@@ -171,7 +171,7 @@
     </div>
     
   </div>
-    <div name="tab" class="row justify-content-center" id="elabTab">
+    <div name="tab" class="justify-content-center" id="elabTab">
       <h1 class="center"> Please select your eLabFTW instance and enter your tokens </h1>
 
 
@@ -269,13 +269,8 @@
          </div>
 
       </div>
-      
-     
-       
-        
-     
-    
-    <div name="tab" class="row justify-content-center" id="arcTab">
+
+    <div name="tab" class="justify-content-center" id="arcTab">
       
       <h2 class="text-center">Please choose your ARC</h2>
       
@@ -302,7 +297,7 @@
       <div class=" my-3">
         <div class="col-12">
 
-        <div class="border row text-center p-3 mt-3 convert-container rounded" >
+        <div class="border row text-center p-3 mt-1 convert-container rounded" >
           <div class="lead col-3" id="elabFTWInfo"> eLabFTW IDs  
             <div id="elabExpInfo"></div>
             <div id="elabResInfo"></div>
@@ -347,15 +342,12 @@
 
 
     </div>
-    <div name="tab" class="row justify-content-center align-items-center m-auto" id="ftwTab">
-   
+    <div name="tab" class=" justify-content-center align-items-center m-auto" id="ftwTab">
 
     </div>
+
     
-    
-    
-    
-    <div name="tab" class=" col-8 d-none align-items-center m-auto" id="updateTab">
+    <div name="tab" class="  d-none align-items-center m-auto" id="updateTab">
 
       <div class=" area uploadarea my-3" id="importArea" ondragenter="this.className='area uploadarea dragging'"
         ondrop=";DragAndDrop(event)" style=" width:100%">
