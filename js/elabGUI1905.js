@@ -142,3 +142,49 @@ async function loadExperiment(instance, elabid, elabtoken, type) {
     }
 }
 
+const arcReadmeText = `#   Project Title: [Your Project Title]
+
+## Abstract
+
+[Provide a concise summary of your research project.]
+
+## Investigators
+
+* [Name 1, Affiliation 1]
+* [Name 2, Affiliation 2]
+    ...
+
+## Funding
+
+[List funding sources and grant numbers.]
+
+## Project Description
+
+[Provide a detailed description of the research, including background, objectives, and methodology.]
+
+## Data Overview
+
+[Describe the types of data generated in this project.]
+
+## ARC Structure
+
+This ARC is organized as follows:
+
+* **Studies:** Each study represents a specific experiment within the project.
+* **Assays:** Each assay represents a specific technical analysis performed within a study.
+
+## Studies
+
+* [Study 1: *Descriptive Study Title 1*](./study1/README.md)
+* [Study 2: *Descriptive Study Title 2*](./study2/README.md)
+    ...
+
+## License
+
+CC BY 4.0
+
+
+## Citations
+
+[List relevant publications or datasets.]
+`
