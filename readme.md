@@ -54,6 +54,8 @@ Modern microbiological and life sciences research generates vast amounts of both
    - Let elab2arc automatically structure your metadata and files into a FAIR-compliant ARC
 5. **Commit & Push**:
    - Review changes and push directly to your GitLab repository
+     
+A detailed user guide can be found [here](https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/) . 
 
 ---
 
