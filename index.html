@@ -1523,9 +1523,10 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       //   alert("No eLabFTW is selected, please go to eLabFTW tab to select.");
       //   return;
       // };
-      const arcName = document.getElementById("arcInfo").innerHTML;
-      const list = arcName.split("/");
-        const gitRoot = list[0]
+      const arcName = gitlabURL.split("/").slice(-1)[0].replace(".git", "");
+      // const list = arcName.split("/");
+      // const gitRoot = list[0]
+      const gitRoot = arcName;
       deleteAll(); 
       await cloneARC(gitlabURL, gitRoot);
       refreshTree("./"+gitRoot)
