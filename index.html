@@ -137,6 +137,7 @@
                   <th scope="col">Name 
         <input class="" type="search" id="elabSearch" placeholder="Search">
         <button id="elabSearchBtn" class="btn btn-sm" onclick="updateelabList(document.getElementById('elabSearch').value)">Search</button>
+         <button id="elabSearchResetBtn" class="btn btn-sm" onclick="fillElabTable()" >Reset</button>  
               </th>
                   <th scope="col">Creation Date</th>
                   <th scope="col">Author</th>
@@ -304,7 +305,8 @@
               <th scope="col">Repo Name   <span class="" role="search">
         <input class="" type="search" id="arcSearch" placeholder="Search" aria-label="Search">
         <button id="arcSearchBtn" class="btn btn-sm" onclick="updateARCList(document.getElementById('arcSearch').value)" >Search</button>
-              </span> </th>
+        <button id="arcSearchResetBtn" class="btn btn-sm" onclick="updateARCList('')" >Reset</button>  
+      </span> </th>
               <th scope="col">Link &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
               <th scope="col">Select the target ARC directory &nbsp;&nbsp;&nbsp;&nbsp;</th>
             </tr>
@@ -637,9 +639,6 @@ function elabListSync(newList) {
 
    const updateelabList = async ( search) => {
     fillElabTable("?q="+search+"&order=id&sort=des&limit=999&", "elabTable", "update");
-
-
-
    }
 
 
@@ -1000,7 +999,19 @@ async function checkElabFTWConnection() {
         // Build the HTML table dynamically
         let tableHTML = '';
         let newIndex = 0;
-
+        tableHTML += `
+              <tr>
+                <th scope="row">New ARC</th>
+                <td><input type="text" class="form-control" id="projectnameInput"  placeholder="Project Name" aria-label="Projectname"></td>
+                <td> </td>
+                <td>
+                  <div class="" role="group" aria-label="Basic example">
+                   <input type="text" class="form-control d-none" id="descriptionInput" value="An ARC created by elab2arc tool" placeholder="Project Name" aria-label="Projectname">
+        <button class="btn btn" onclick="createNewArc()"> Create a new ARC </button>
+                  </div>
+                </td>
+              </tr>
+            `
         projects.forEach((project) => {
           if (project.name) { // Ensure the project has a valid name
             newIndex += 1;
@@ -1027,19 +1038,7 @@ async function checkElabFTWConnection() {
           }
         });
         
-        tableHTML += `
-              <tr>
-                <th scope="row">New ARC</th>
-                <td><input type="text" class="form-control" id="projectnameInput"  placeholder="Project Name" aria-label="Projectname"></td>
-                <td> </td>
-                <td>
-                  <div class="" role="group" aria-label="Basic example">
-                   <input type="text" class="form-control d-none" id="descriptionInput" value="An ARC created by elab2arc tool" placeholder="Project Name" aria-label="Projectname">
-        <button class="btn btn" onclick="createNewArc()"> Create a new ARC </button>
-                  </div>
-                </td>
-              </tr>
-            `
+        
 
         // Insert the generated table HTML into the DOM
         document.getElementById("userProjectsTable").innerHTML = tableHTML;
@@ -1468,7 +1467,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
       const dir = arcName;
       // Process the experiment
-      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
+      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir, params.instance);
     }
 
 
@@ -1509,7 +1508,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
       const dir = arcName;
       // Process the experiment
-      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir);
+      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir, params.instance);
     }
   } catch (error) {
     console.error("Error processing eLab entries:", error);
@@ -1708,7 +1707,7 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
             return PATH_CONFIG.default;
           }
 
-      async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir) {
+      async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir, instance) {
         const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
         updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);
 
@@ -1720,6 +1719,8 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
         let protocol = res.body;
         const elabWWW = params.instance.replace("api/v2/", "");
         protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
+        protocol = protocol.replace('<a href="experiments.php?', '<a target="_blank" href="'+instance.replace("api/v2/", "")+'experiments.php?');
+        protocol = protocol.replace('<a href="database.php?', '<a  target="_blank" href="'+instance.replace("api/v2/", "")+'experiments.php?');
         const protocolHTML = protocol;
 
         // Convert to markdown
