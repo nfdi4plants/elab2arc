@@ -10,21 +10,22 @@
   <meta http-equiv="Expires" content="0" />
   <link rel="icon" type="image/x-icon" href="favicon.png">
   <style>
-    
     #homegif {
-      background-image: url('images/Animation.gif'); /* Replace with your GIF's URL */
+      background-image: url('images/Animation.gif');
+      /* Replace with your GIF's URL */
       background-size: cover;
       background-position: center;
-      background-repeat: no-repeat; /* Prevent repeating */
-      width: 100vh; /* Make sure the background covers the full viewport height */
-      margin: 0; /* Remove default body margins */
+      background-repeat: no-repeat;
+      /* Prevent repeating */
+      width: 100vh;
+      /* Make sure the background covers the full viewport height */
+      margin: 0;
+      /* Remove default body margins */
     }
+
     /* Optional: Add styles for content on top of the background */
-    .content {
-
-    }
-
-  </style>  
+    .content {}
+  </style>
   <link href="./css/bootstrap.min.css" rel="stylesheet">
   <script src="./js/bootstrap.bundle.min.js"></script>
   <link href="./css/custom2005.css" rel="stylesheet" />
@@ -47,305 +48,323 @@
 
 </head>
 
-<body >
-  <nav class="navbar  navbar-expand-lg navbar-dark fixed-top" style="background: rgb(45, 62, 80); height: 3.25rem; margin: 0 0 0 0px; padding: 0 0 0 0; ">
-    
+<body>
+  <nav class="navbar  navbar-expand-lg navbar-dark fixed-top"
+    style="background: rgb(45, 62, 80); height: 3.25rem; margin: 0 0 0 0px; padding: 0 0 0 0; ">
+
     <div class=" container-fluid " style=" height: 3.25rem;  ">
       <a class="" href="https://nfdi4plants.org/" style="">
         <img src="images/logo.png" alt="Logo" width="32" height="32"
           style=" margin: 8px 20px 8px 12px; left: 0px; padding-top: 4px;" />
       </a>
 
-      
-       
-        <button type="button" name="navBtn"  onclick="location.href=location.href.split('#')[0]+'#elab'" class="btn d-none  nav-linkc px-3"
-        id="submitNavBtn">
+
+
+      <button type="button" name="navBtn" onclick="location.href=location.href.split('#')[0]+'#elab'"
+        class="btn d-none  nav-linkc px-3" id="submitNavBtn">
         Fetch eLabFTW &nbsp;
-        </button>
-     
-    
-        <button type="button" name="navBtn" aria-current="homeTab" onclick="window.history.pushState('', '', '/elab2arc/#home'); showTab('homeTab')" class="nav-linkc px-3"
+      </button>
+
+
+      <button type="button" name="navBtn" aria-current="homeTab"
+        onclick="window.history.pushState('', '', '/elab2arc/#home'); showTab('homeTab')" class="nav-linkc px-3"
         id="homeBtn">
-      Home&nbsp;
+        Home&nbsp;
       </button>
-      <button type="button" name="navBtn" aria-current="elabftwTab" onclick="window.history.pushState('', '', '/elab2arc/#elabftw'); showTab('elabftwTab')" class="nav-linkc px-3"
+      <button type="button" name="navBtn" aria-current="elabftwTab"
+        onclick="window.history.pushState('', '', '/elab2arc/#elabftw'); showTab('elabftwTab')" class="nav-linkc px-3"
         id="elabftwBtn">
-      eLabFTW&nbsp;<span id="elabFTWCheck">&#127760;</span>
+        eLabFTW&nbsp;<span id="elabFTWCheck">&#127760;</span>
       </button>
-   
-        
-        <button type="button" name="navBtn" data-bs-toggle="offcanvas"
-                            data-bs-target="#elabPreviewCanvas"
-                            aria-controls="elabPreviewCanvas" class="nav-linkc px-3 d-none"
-          id="ftwBtn">
+
+
+      <button type="button" name="navBtn" data-bs-toggle="offcanvas" data-bs-target="#elabPreviewCanvas"
+        aria-controls="elabPreviewCanvas" class="nav-linkc px-3 d-none" id="ftwBtn">
         elabFTW&nbsp;
-        </button>
-        
-        <button type="button" name="navBtn" onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="nav-linkc px-3"
-          id="arcBtn">
-        ARCs&nbsp;<span  id="arcCheck">&#127760;</span>
-        </button>
+      </button>
 
-        <button type="button" name="navBtn" onclick="location.href=location.href.split('#')[0]+'#token'" class="nav-linkc px-3"
-        id="tokenBtn">
+      <button type="button" name="navBtn"
+        onclick="window.history.pushState('', '', '/elab2arc/#arc'); showTab( 'arcTab')" class="nav-linkc px-3"
+        id="arcBtn">
+        ARCs&nbsp;<span id="arcCheck">&#127760;</span>
+      </button>
+
+      <button type="button" name="navBtn" onclick="location.href=location.href.split('#')[0]+'#token'"
+        class="nav-linkc px-3" id="tokenBtn">
         Tokens&nbsp;
-        </button>
-       
-
-        <span class="ms-auto">
-        <a id="kblink" class="p-2  nav-linkc"  target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> Help</a>
+      </button>
 
 
+      <span class="ms-auto">
+        <a id="kblink" class="p-2  nav-linkc" target="_blank"
+          href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img
+            src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> Help</a>
 
 
-        <a id="ghlink" class=" p-2 nav-linkc" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img src="images/github-mark-white.png" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"> Github</a>
-        </span> 
-      </div>
-    
-    </nav>
+
+
+        <a id="ghlink" class=" p-2 nav-linkc" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img
+            src="images/github-mark-white.png" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"> Github</a>
+      </span>
+    </div>
+
+  </nav>
   <main class="container-xxl" style="padding-top: 3.25rem;">
     <div name="tab" class=" col-12 justify-content-center d-none text-center" id="homeTab">
       <h1 class="text-center">
         elab2ARC
       </h1>
       <h4 class="text-center">
-        <span class="d-none"> Tool for converting eLabFTW experiment data into ARC (Annotated Research Context) format</span>
-          Here's a concise one-minute tutorial animation explaining how to convert eLabFTW entries into ARCs with just a few clicks using elab2arc:
+        <span class="d-none"> Tool for converting eLabFTW experiment data into ARC (Annotated Research Context)
+          format</span>
+        Here's a concise one-minute tutorial animation explaining how to convert eLabFTW entries into ARCs with just a
+        few clicks using elab2arc:
       </h4>
-     <div id="homegif" style="width:90vw; height:70vh">
+      <div id="homegif" style="width:90vw; height:70vh">
 
 
-     </div>
-     
+      </div>
+
 
     </div>
 
 
     <div name="tab" class="justify-content-center align-items-center" id="elabftwTab">
-      
+
       <h2 class="text-center">Please choose your eLabFTW experiments or resources</h2>
 
-       <div class="justify-content-center align-items-center " style="height:55vh; overflow-y: scroll">
-        <div class="col-lg-12 my-2" >
-          <div class="rounded border p-0 m-2 " >
+      <div class="justify-content-center align-items-center " style="height:55vh; overflow-y: scroll">
+        <div class="col-lg-12 my-2">
+          <div class="rounded border p-0 m-2 ">
 
-            <table class="table table-striped table-hover border-0 overflow-hidden" style="table-layout:auto ; width:100%; ">
+            <table class="table table-striped table-hover border-0 overflow-hidden"
+              style="table-layout:auto ; width:100%; ">
               <thead class="align-middle">
                 <tr>
                   <th scope="col">Type</th>
                   <th scope="col">ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
-                  <th scope="col">Name 
-        <input class="" type="search" id="elabSearch" placeholder="Search">
-        <button id="elabSearchBtn" class="btn btn-sm" onclick="updateelabList(document.getElementById('elabSearch').value)">Search</button>
-         <button id="elabSearchResetBtn" class="btn btn-sm" onclick="fillElabTable()" >Reset</button>  
-              </th>
+                  <th scope="col">Name
+                    <input class="" type="search" id="elabSearch" placeholder="Search">
+                    <button id="elabSearchBtn" class="btn btn-sm"
+                      onclick="updateelabList(document.getElementById('elabSearch').value)">Search</button>
+                    <button id="elabSearchResetBtn" class="btn btn-sm" onclick="fillElabTable()">Reset</button>
+                  </th>
                   <th scope="col">Creation Date</th>
                   <th scope="col">Author</th>
                   <th scope="col">Selection/Preview</th>
                 </tr>
               </thead>
               <tbody id="elabTable">
-              <tr> <th></th> <td> No eLabFTW experiments/resources available. Use <a href="#token">Token tab</a> to add an eLabFTW API key</td><td></td>
-              <td></td>
-              <td></td></tr>
-              
+                <tr>
+                  <th></th>
+                  <td> No eLabFTW experiments/resources available. Use <a href="#token">Token tab</a> to add an eLabFTW
+                    API key</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+
               </tbody>
             </table>
           </div>
-      </div>
-
         </div>
 
-   <div class="border row text-center pb-3 convert-container rounded justify-content-center align-items-end ">
-      <div class="col-lg-3 ">
-      <label for="elabExperimentid" class="form-label">
-        <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
-        Selected eLabFTW Experiment ID &#128712;</button>
-      </label>
-      <textarea type="text"  name="elabid" class="form-control " autocomplete="username"  id="elabExperimentid" aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
-      <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
       </div>
-      </div>
-<div class="col-lg-3 ">
-      <label for="elabResourceid" class="form-label">
-        <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas" data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
-         Selected eLabFTW Resource ID &#128712;</button>
-      </label>
-      <textarea type="text"  name="elabid" class="form-control " autocomplete="username"  id="elabResourceid" aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
-      <div id="elabresourceHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
-      </div>
-</div>
-<div class="col-lg-3 ">
-      <label for="elabsubmit" class="form-label my-3 d-none">Submit Options</label>
-          <button class="btn btn-primary my-3 w-100 d-none"  type="submit" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus" > One Click Submission </button>
-          
-          <button  class="btn btn-primary w-100" type="button" onclick="showTab('arcTab')" ><span> Confirm eLabFTW Selection</span></button>
-          
-          <button class="btn btn-secondary my-3 w-100 d-none" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
+
+      <div class="border row text-center pb-3 convert-container rounded justify-content-center align-items-end ">
+        <div class="col-lg-3 ">
+          <label for="elabExperimentid" class="form-label">
+            <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas"
+              data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
+              Selected eLabFTW Experiment ID &#128712;</button>
+          </label>
+          <textarea type="text" name="elabid" class="form-control " autocomplete="username" id="elabExperimentid"
+            aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
+          <div id="elabexpHelp" class="form-text d-none">Experiment ID can be found in the address bar of the browser.
+          </div>
+        </div>
+        <div class="col-lg-3 ">
+          <label for="elabResourceid" class="form-label">
+            <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas"
+              data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
+              Selected eLabFTW Resource ID &#128712;</button>
+          </label>
+          <textarea type="text" name="elabid" class="form-control " autocomplete="username" id="elabResourceid"
+            aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
+          <div id="elabresourceHelp" class="form-text d-none">Experiment ID can be found in the address bar of the
+            browser.
+          </div>
+        </div>
+        <div class="col-lg-3 ">
+          <label for="elabsubmit" class="form-label my-3 d-none">Submit Options</label>
+          <button class="btn btn-primary my-3 w-100 d-none" type="submit" data-bs-toggle="collapse"
+            data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus"> One Click Submission
+          </button>
+
+          <button class="btn btn-primary w-100" type="button" onclick="showTab('arcTab')"><span> Confirm eLabFTW
+              Selection</span></button>
+
+          <button class="btn btn-secondary my-3 w-100 d-none" id="statusModalBtn" data-bs-toggle="modal"
+            data-bs-target="#statusModal">
             Check Status
           </button>
-          <div id="toolstatus"  class="col-10 m-auto">       
+          <div id="toolstatus" class="col-10 m-auto">
           </div>
+        </div>
+
+      </div>
+
     </div>
-    
-  </div>
-      
+
     </div>
-    
-  </div>
     <div name="tab" class="justify-content-center" id="tokenTab">
       <h1 class="center"> Please select your eLabFTW instance and enter your tokens </h1>
 
 
-      
-        
-        <div class="row justify-content-center align-items-end">  
-          <div class="my-3 col-lg-8 ">
-            <label for="elabURLInput1" class="form-label">
-            
-              <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#instanceCanvas" aria-controls="instanceCanvas">
-                eLabFTW Instance&nbsp;&#128712; (click me to learn more)</button>
-                
-            </label> 
-            <br>
-          <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button"  data-bs-toggle="dropdown" aria-expanded="false">
+
+
+      <div class="row justify-content-center align-items-end">
+        <div class="my-3 col-lg-8 ">
+          <label for="elabURLInput1" class="form-label">
+
+            <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas"
+              data-bs-target="#instanceCanvas" aria-controls="instanceCanvas">
+              eLabFTW Instance&nbsp;&#128712; (click me to learn more)</button>
+
+          </label>
+          <br>
+          <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button" data-bs-toggle="dropdown"
+            aria-expanded="false">
             eLabFTW Instance: HHU
           </button>
           <ul class="dropdown-menu">
-            <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')" type="button">eLabFTW Instance: DataPLANT</button></li>
-            <li><button class="dropdown-item d-none" onclick="setelabURL('https://demo.elabftw.net/api/v2/')" type="button">eLabFTW Instance: Demo</button></li>
-            <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')" type="button">eLabFTW Instance: HHU</button></li>
-            <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab" onchange="setelabURL(this.value)" placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2" </li>
+            <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')"
+                type="button">eLabFTW Instance: DataPLANT</button></li>
+            <li><button class="dropdown-item d-none" onclick="setelabURL('https://demo.elabftw.net/api/v2/')"
+                type="button">eLabFTW Instance: Demo</button></li>
+            <li><button class="dropdown-item" onclick="setelabURL('https://elabftw.hhu.de/api/v2/')"
+                type="button">eLabFTW Instance: HHU</button></li>
+            <li>&nbsp;&nbsp;&nbsp;Add&nbsp;instance:&nbsp;<input type="text" id="customElab"
+                onchange="setelabURL(this.value)"
+                placeholder=" https://elabftw/api/v2/"><br>&nbsp;&nbsp;&nbsp;For&nbsp;example:&nbsp;"https://elabftw.test.hhu.de/api/v2"
+            </li>
           </ul>
 
+        </div>
+      </div>
+      <div class="row justify-content-center align-items-end">
+        <div class="my-3 col-lg-8 ">
+          <label for="elabToken" class="form-label">
+
+            <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas"
+              data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
+              eLabFTW API Key&nbsp;&#128712; (click me to learn more)</button>
+          </label>
+          <div class="input-group mb-3">
+            <input type="password" onchange="initCookies();" name="elabtoken" class="form-control"
+              autocomplete="password" id="elabToken" required />
+
+            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="elabToken"
+              onclick="showPassword(this)">
+              👁️
+            </button>
           </div>
         </div>
-        <div class="row justify-content-center align-items-end">  
-          <div class="my-3 col-lg-8 ">
-            <label for="elabToken" class="form-label">
-            
-              <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
-                eLabFTW API Key&nbsp;&#128712; (click me to learn more)</button>
-            </label>
-            <div class="input-group mb-3">
-            <input type="password" onchange="initCookies();" name="elabtoken" class="form-control" autocomplete="password"  id="elabToken"  required/>
-            
-            <button 
-                class="btn btn-secondary" 
-                type="button" 
-                name="togglePassword"
-                data-show-id="elabToken"
-                onclick="showPassword(this)"
-                
-              >
-                👁️
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="row justify-content-center align-items-end">  
-         <div class="my-3 col-lg-8">
+      </div>
+      <div class="row justify-content-center align-items-end">
+        <div class="my-3 col-lg-8">
           <label for="datahubToken" class="form-label">
-            <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas" data-bs-target="#datahubTokenCanvas" aria-controls="datahubTokenCanvas">
+            <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas"
+              data-bs-target="#datahubTokenCanvas" aria-controls="datahubTokenCanvas">
               DataHub Token&nbsp;&#128712; (click me to learn more)</button>
-            
+
           </label>
 
-<div class="input-group mb-3">
-  <input 
-    type="password" 
-    name="datahubtoken" 
-    class="form-control" 
-    autocomplete="new-password" 
-    id="datahubToken" 
-    required
-  />
-    <button 
-    class="btn btn-secondary" 
-    type="button" 
-    name="togglePassword"
-    data-show-id="datahubToken"
-    onclick="location.href='https://datahublogin.dataplan.top/auth/gitlab'"
-  >
-    get a token
-  </button>
-  <button 
-    class="btn btn-secondary" 
-    type="button" 
-    name="togglePassword"
-    data-show-id="datahubToken"
-    onclick="showPassword(this)"
-  >
-    👁️
-  </button>
-</div>
-        </div>
-        </div>
-        <div class="row justify-content-center align-items-end">  
-        <div class="my-3 col-lg-8">
-            <button class="btn btn-primary" onclick="initCookies();redirect();" type="button"> Save 
-
-            </button> 
+          <div class="input-group mb-3">
+            <input type="password" name="datahubtoken" class="form-control" autocomplete="new-password"
+              id="datahubToken" required />
+            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="datahubToken"
+              onclick="location.href='https://datahublogin.dataplan.top/auth/gitlab'">
+              get a token
+            </button>
+            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="datahubToken"
+              onclick="showPassword(this)">
+              👁️
+            </button>
           </div>
-          </div>
-         </div>
-
+        </div>
       </div>
+      <div class="row justify-content-center align-items-end">
+        <div class="my-3 col-lg-8">
+          <button class="btn btn-primary" onclick="initCookies();redirect();" type="button"> Save
+
+          </button>
+        </div>
+      </div>
+    </div>
+
+    </div>
 
     <div name="tab" class="justify-content-center" id="arcTab">
-      
-      <h2 class="text-center">Please choose your ARC</h2>
-      
-      <div class="rounded border p-0 m-2 " style="height:60vh; overflow-y: scroll" >
 
-        <table class="table table-striped table-hover border-0 overflow-hidden" style="table-layout:auto ; width:100%; ">
+      <h2 class="text-center">Please choose your ARC</h2>
+
+      <div class="rounded border p-0 m-2 " style="height:60vh; overflow-y: scroll">
+
+        <table class="table table-striped table-hover border-0 overflow-hidden"
+          style="table-layout:auto ; width:100%; ">
           <thead class="align-middle">
-            <tr >
-              <th  scope="col">Number</th>
-              <th scope="col">Repo Name   <span class="" role="search">
-        <input class="" type="search" id="arcSearch" placeholder="Search" aria-label="Search">
-        <button id="arcSearchBtn" class="btn btn-sm" onclick="updateARCList(document.getElementById('arcSearch').value)" >Search</button>
-        <button id="arcSearchResetBtn" class="btn btn-sm" onclick="updateARCList('')" >Reset</button>  
-      </span> </th>
+            <tr>
+              <th scope="col">Number</th>
+              <th scope="col">Repo Name <span class="" role="search">
+                  <input class="" type="search" id="arcSearch" placeholder="Search" aria-label="Search">
+                  <button id="arcSearchBtn" class="btn btn-sm"
+                    onclick="updateARCList(document.getElementById('arcSearch').value)">Search</button>
+                  <button id="arcSearchResetBtn" class="btn btn-sm" onclick="updateARCList('')">Reset</button>
+                </span> </th>
               <th scope="col">Link &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
               <th scope="col">Select the target ARC directory &nbsp;&nbsp;&nbsp;&nbsp;</th>
             </tr>
           </thead>
           <tbody id="userProjectsTable">
-           <tr> <th></th> <td> No ARC available. Use <a href="#home">home tab</a> to start a conversion</td>
-          <td></td>
-          <td></td>
-          </tr>
+            <tr>
+              <th></th>
+              <td> No ARC available. Use <a href="#home">home tab</a> to start a conversion</td>
+              <td></td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
       </div>
-      
+
       <div class=" my-3">
         <div class="col-12">
 
-        <div class="border row text-center p-3 mt-1 convert-container rounded" >
-          <div class="lead col-3" id="elabFTWInfo"> eLabFTW IDs  
-            <div id="elabExpInfo"></div>
-            <div id="elabResInfo"></div>
-            
-          </div> 
+          <div class="border row text-center p-3 mt-1 convert-container rounded">
+            <div class="lead col-3" id="elabFTWInfo"> eLabFTW IDs
+              <div id="elabExpInfo"></div>
+              <div id="elabResInfo"></div>
 
-            <div class=" text-success col-1" id=""> ====>>>  </div>
-          <div class=" col-3" >
-            <span class=" lead" id="gitlabInfo"> GitLab URL </span> <br>
-          <span class=" lead" id="arcInfo"> Please select your ARC </span>
-        </div> 
-          &nbsp; &nbsp; &nbsp; &nbsp;
-          <div class="lead col-4" >
-          <button type="button"  class="btn btn-primary" onclick="multiConvert()"> <span class="lead">  Start Conversion</span></button>
-          
-          &nbsp; &nbsp; &nbsp; &nbsp;
-          <button type="button" class="btn btn-secondary "  id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
-            <span class="lead"> Check Status</span>
-          </button>
+            </div>
+
+            <div class=" text-success col-1" id=""> ====>>> </div>
+            <div class=" col-3">
+              <span class=" lead" id="gitlabInfo"> GitLab URL </span> <br>
+              <span class=" lead" id="arcInfo"> Please select your ARC </span>
+            </div>
+            &nbsp; &nbsp; &nbsp; &nbsp;
+            <div class="lead col-4">
+              <button type="button" class="btn btn-primary" onclick="multiConvert()"> <span class="lead"> Start
+                  Conversion</span></button>
+
+              &nbsp; &nbsp; &nbsp; &nbsp;
+              <button type="button" class="btn btn-secondary " id="statusModalBtn" data-bs-toggle="modal"
+                data-bs-target="#statusModal">
+                <span class="lead"> Check Status</span>
+              </button>
+            </div>
           </div>
-          </div>
-       
+
           <!-- <h4> Imported ARCs </h4>
           <table class="table table-striped table-hover" style="table-layout:auto ; width:100%; ">
             <thead>
@@ -361,10 +380,10 @@
         </div>
         <div class="col-7">
 
-         
+
         </div>
       </div>
-     
+
 
 
     </div>
@@ -372,7 +391,7 @@
 
     </div>
 
-    
+
     <div name="tab" class="  d-none align-items-center m-auto" id="updateTab">
 
       <div class=" area uploadarea my-3" id="importArea" ondragenter="this.className='area uploadarea dragging'"
@@ -382,18 +401,19 @@
         <input type="file" id="import" multiple>
       </div>
       <div class="text-center m-auto">
-        <button class="text btn btn-primary d-none" id="toSubmit" onclick="location.href=location.href.split('#')[0]+'#submit'" > 
+        <button class="text btn btn-primary d-none" id="toSubmit"
+          onclick="location.href=location.href.split('#')[0]+'#submit'">
           Start Submission
         </button>
       </div>
       <div id="alertPlace"> </div>
-      
-      
+
+
     </div>
-  
+
     <button type="button" class="btn btn-primary d-none" id="loadingModalBtn" data-bs-toggle="modal"
-    data-bs-target="#loadingModal">
-    Launch loading modal
+      data-bs-target="#loadingModal">
+      Launch loading modal
     </button>
     <div class="modal" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
       aria-labelledby="#loadingModalLabel" aria-hidden="true">
@@ -410,135 +430,140 @@
               </div>
 
 
+            </div>
+
+
           </div>
-         
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
 
 
-  <button type="button" class="btn btn-primary d-none" id="folderModalBtn" data-bs-toggle="modal"
-  data-bs-target="#folderModal">
-  Launch folderModal
-</button>
-<div class="modal" id="folderModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-  aria-labelledby="#folderModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="folderModalLabel">Select the folder for conversion</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        
-          <div class="explorer-container">
-            <div id="address-bar">
-              <button id="back-button">←</button>
+    <button type="button" class="btn btn-primary d-none" id="folderModalBtn" data-bs-toggle="modal"
+      data-bs-target="#folderModal">
+      Launch folderModal
+    </button>
+    <div class="modal" id="folderModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+      aria-labelledby="#folderModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="folderModalLabel">Select the folder for conversion</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+
+            <div class="explorer-container">
+              <div id="address-bar">
+                <button id="back-button">←</button>
                 <span>Address:</span>
                 <input type="text" id="current-path" readonly>
-            </div>
-            
-            <div class="main-content">
+              </div>
+
+              <div class="main-content">
                 <div id="sidebar">
-                    <div id="fileTree"></div>
+                  <div id="fileTree"></div>
                 </div>
-                
+
                 <div id="main-area"></div>
+              </div>
+
+
             </div>
-            
 
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="select-button">Select Folder</button>
+
+          </div>
         </div>
-       
-
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="select-button">Select Folder</button>
-
       </div>
     </div>
-  </div>
-</div>
-
-  
 
 
 
-  <!-- Button trigger modal -->
-<button type="button" class="btn btn-primary d-none" id="statusModalBtn" data-bs-toggle="modal" data-bs-target="#statusModal">
-  Launch Status modal
-</button>
 
-<!-- Modal -->
-<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="statusModalLabel">Conversion Status</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="progress">
-          <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
-            aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
-            style="width: 1%">
+
+    <!-- Button trigger modal -->
+    <button type="button" class="btn btn-primary d-none" id="statusModalBtn" data-bs-toggle="modal"
+      data-bs-target="#statusModal">
+      Launch Status modal
+    </button>
+
+    <!-- Modal -->
+    <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="statusModalLabel">Conversion Status</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-        </div>
-        <div class="accordion" id="accordionUI">
-          <div class="accordion-item">
-            <h2 class="accordion-header" id="statusHeading">
-              <button class="accordion-button" id="pbarLabel" type="button" data-bs-toggle="collapse" data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus">
-                Conversion Status
-
-              </button>
-
-            </h2>
-            <div id="submitStatus" class="accordion-collapse collapse" aria-labelledby="statusHeading" data-bs-parent="#accordionUI">
-              <div class="accordion-body" id="detailedStatus">
-
+          <div class="modal-body">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
+                aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
+                style="width: 1%">
               </div>
             </div>
-          </div>
-          <div class="accordion-item">
-            <h2 class="accordion-header" id="elabHeading">
-              <button class="accordion-button" type="button" data-bs-toggle="collapse" id="filesAcc" data-bs-target="#elabInfo" aria-expanded="true" aria-controls="elabInfo">
-                Files Changed in ARC 
+            <div class="accordion" id="accordionUI">
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="statusHeading">
+                  <button class="accordion-button" id="pbarLabel" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus">
+                    Conversion Status
 
-              </button>
-             
-            </h2>
-            <div id="elabInfo" class="accordion-collapse collapse" aria-labelledby="elabHeading" data-bs-parent="#accordionUI">
-              <div class="accordion-body">
-                <div class="center" id="filesChanged">
-                  
+                  </button>
+
+                </h2>
+                <div id="submitStatus" class="accordion-collapse collapse" aria-labelledby="statusHeading"
+                  data-bs-parent="#accordionUI">
+                  <div class="accordion-body" id="detailedStatus">
+
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="elabHeading">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse" id="filesAcc"
+                    data-bs-target="#elabInfo" aria-expanded="true" aria-controls="elabInfo">
+                    Files Changed in ARC
+
+                  </button>
+
+                </h2>
+                <div id="elabInfo" class="accordion-collapse collapse" aria-labelledby="elabHeading"
+                  data-bs-parent="#accordionUI">
+                  <div class="accordion-body">
+                    <div class="center" id="filesChanged">
+
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary d-none" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary d-none">Save changes</button>
+          </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary d-none" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary d-none">Save changes</button>
-      </div>
     </div>
-  </div>
-</div>
-  
-  
-</main>
+
+
+  </main>
 
   <script type="text/javascript">
     var fs = FS.fs;
     var elabJSON;
-    var statusInfo="";
+    var statusInfo = "";
     const version = "2025-06-03";
     var blobb = [];
     var typeConfig = {
@@ -546,14 +571,14 @@
         displayName: 'Experiment',
         short: 'Exp',
         endpoint: 'experiments',
-        idendpoint:'experiments/',
+        idendpoint: 'experiments/',
         hasPreview: true,
       },
       Resource: {
         displayName: 'Resource',
         short: 'Res',
         endpoint: 'items',
-        idendpoint:'items/',
+        idendpoint: 'items/',
         hasPreview: true,
       },
       // Add more types here as needed
@@ -567,124 +592,124 @@
       */
     };
     const detailedInfo = document.getElementById("detailedStatus");
-    const filesChanged =document.getElementById("filesChanged");
-    
+    const filesChanged = document.getElementById("filesChanged");
+
     var turndownService = new TurndownService();
     var mainOrMaster = "main";
     turndownService.keep(['table']);
-    function connectionTest(url){
+    function connectionTest(url) {
 
     }
 
-    function proxySwitch(){
+    function proxySwitch() {
     }
-    const kblinkJSON= {
-      home:"https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/",
-      arc:"https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/#select-arc--start-conversion",
+    const kblinkJSON = {
+      home: "https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/",
+      arc: "https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/#select-arc--start-conversion",
       token: "https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/#create-an-personal-access-token-in-datahub",
       elabftw: "https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/#select-elabftw-experimentresource"
 
     }
 
 
-/**
- * Syncs experiment and resource IDs between input fields and localStorage.
- * If a new list is provided, updates DOM and localStorage.
- * If not, reads from DOM and updates internal state.
- *
- * @param {Object} [newList] - Optional object containing elabExperimentid / elabResourceid arrays
- * @returns {Object} - Updated or existing elablist object
- */
-function elabListSync(newList) {
-  const expInput = document.getElementById("elabExperimentid");
-  const resInput = document.getElementById("elabResourceid");
-  const expInfo = document.getElementById("elabExpInfo");
-  const resInfo = document.getElementById("elabResInfo");
+    /**
+     * Syncs experiment and resource IDs between input fields and localStorage.
+     * If a new list is provided, updates DOM and localStorage.
+     * If not, reads from DOM and updates internal state.
+     *
+     * @param {Object} [newList] - Optional object containing elabExperimentid / elabResourceid arrays
+     * @returns {Object} - Updated or existing elablist object
+     */
+    function elabListSync(newList) {
+      const expInput = document.getElementById("elabExperimentid");
+      const resInput = document.getElementById("elabResourceid");
+      const expInfo = document.getElementById("elabExpInfo");
+      const resInfo = document.getElementById("elabResInfo");
 
-  let elablist;
+      let elablist;
 
-  if (newList) {
-    // Use provided list and update inputs
-    const expIDs = ElabidToText(newList.elabExperimentid);
-    const resIDs = ElabidToText(newList.elabResourceid);
+      if (newList) {
+        // Use provided list and update inputs
+        const expIDs = ElabidToText(newList.elabExperimentid);
+        const resIDs = ElabidToText(newList.elabResourceid);
 
-    expInput.value = expIDs;
-    resInput.value = resIDs;
-    
-    // Save to localStorage
-    localStorage.setItem('elabid', JSON.stringify(newList));
+        expInput.value = expIDs;
+        resInput.value = resIDs;
 
-    elablist = newList;
+        // Save to localStorage
+        localStorage.setItem('elabid', JSON.stringify(newList));
 
-  } else {
-    // Read from inputs and convert to arrays
-    const expIDs = textToElabid(expInput.value);
-    const resIDs = textToElabid(resInput.value);
+        elablist = newList;
 
-    elablist = {
-      elabExperimentid: expIDs,
-      elabResourceid: resIDs
-    };
+      } else {
+        // Read from inputs and convert to arrays
+        const expIDs = textToElabid(expInput.value);
+        const resIDs = textToElabid(resInput.value);
 
-    // Update localStorage with latest values
-    localStorage.setItem('elabid', JSON.stringify(elablist));
-  }
+        elablist = {
+          elabExperimentid: expIDs,
+          elabResourceid: resIDs
+        };
 
-  expInfo.innerHTML = "Experiment IDs: "+ expInput.value;
-    resInfo.innerHTML = "Resource IDs: " + resInput.value;
+        // Update localStorage with latest values
+        localStorage.setItem('elabid', JSON.stringify(elablist));
+      }
 
-  return elablist;
-}
+      expInfo.innerHTML = "Experiment IDs: " + expInput.value;
+      resInfo.innerHTML = "Resource IDs: " + resInput.value;
+
+      return elablist;
+    }
 
 
-   const updateelabList = async ( search) => {
-    fillElabTable("?q="+search+"&order=id&sort=des&limit=999&", "elabTable", "update");
-   }
+    const updateelabList = async (search) => {
+      fillElabTable("?q=" + search + "&order=id&sort=des&limit=999&", "elabTable", "update");
+    }
 
 
     const elabCheckSync = async () => {
-          let newExp =[], newRes=[];
-          let elablist = elabListSync();
-            const expChecks = document.querySelectorAll('[data-type="Experiment"]');
-            expChecks.forEach(e=> {e.checked=false});
-            const resChecks = document.querySelectorAll('[data-type="Resource"]');
-            resChecks.forEach(e=> {e.checked=false});
-          for (let e of  elablist.elabExperimentid) {
+      let newExp = [], newRes = [];
+      let elablist = elabListSync();
+      const expChecks = document.querySelectorAll('[data-type="Experiment"]');
+      expChecks.forEach(e => { e.checked = false });
+      const resChecks = document.querySelectorAll('[data-type="Resource"]');
+      resChecks.forEach(e => { e.checked = false });
+      for (let e of elablist.elabExperimentid) {
+        try {
+          document.getElementById("checkExp" + e).checked = true;
+          newExp.push(e);
+        } catch (error) {
           try {
-        document.getElementById("checkExp"+e).checked = true;
-        newExp.push(e);
-         } catch (error) {
-          try {
-            await fillElabTable("?q="+e+"&order=last_activity_at&sort=des&limit=999&", "elabTable", "append", {"Experiment":window.typeConfig.Experiment}, e);
-            document.getElementById("checkExp"+e).checked = true;
+            await fillElabTable("?q=" + e + "&order=last_activity_at&sort=des&limit=999&", "elabTable", "append", { "Experiment": window.typeConfig.Experiment }, e);
+            document.getElementById("checkExp" + e).checked = true;
             newExp.push(e);
           } catch (error) {
-            alert("there is an error: "+ error+". Experiment No. "+e+" can not be accessed and has been removed from the list.  ")
+            alert("there is an error: " + error + ". Experiment No. " + e + " can not be accessed and has been removed from the list.  ")
           }
+        }
       }
-      }
-      for (let e of  elablist.elabResourceid){
-           try {
-        document.getElementById("checkRes"+e).checked = true;
-       newRes.push(e);
-      }catch (error) {
+      for (let e of elablist.elabResourceid) {
+        try {
+          document.getElementById("checkRes" + e).checked = true;
+          newRes.push(e);
+        } catch (error) {
           try {
-           await fillElabTable("?q="+e+"&order=id&sort=des&limit=999&", "elabTable", "append", {"Resource":window.typeConfig.Resource}, e);
-            document.getElementById("checkRes"+e).checked = true;
+            await fillElabTable("?q=" + e + "&order=id&sort=des&limit=999&", "elabTable", "append", { "Resource": window.typeConfig.Resource }, e);
+            document.getElementById("checkRes" + e).checked = true;
             newRes.push(e);
           } catch (error) {
-            alert("there is an error: "+ error+". Resource No. "+e+" can not be accessed and has been removed from the list.  ")
+            alert("there is an error: " + error + ". Resource No. " + e + " can not be accessed and has been removed from the list.  ")
           }
-      }
+        }
       }
       elablist.elabExperimentid = newExp;
       elablist.elabResourceid = newRes;
-      elablist.elabExperimentid.forEach(e=>{document.getElementById("checkExp"+e).checked = true;})
-      elablist.elabResourceid.forEach(e=>{document.getElementById("checkRes"+e).checked = true;})
-    elabListSync(elablist)
+      elablist.elabExperimentid.forEach(e => { document.getElementById("checkExp" + e).checked = true; })
+      elablist.elabResourceid.forEach(e => { document.getElementById("checkRes" + e).checked = true; })
+      elabListSync(elablist)
     }
 
-    
+
 
 
 
@@ -705,7 +730,7 @@ function elabListSync(newList) {
     const ElabidToText = (arr) => {
       return arr.filter(Boolean).join(',');
     };
-    
+
     const elabPreview = async (element) => {
       loading.show();
 
@@ -717,14 +742,14 @@ function elabListSync(newList) {
 
       // Set cookies with current values
       setCookies(elabtoken, datahubtoken, instance);
-      
+
 
       // Load experiment/resource preview
       await loadExperiment(instance, elabid, elabtoken, element.dataset.type);
 
       loading.hide();
     };
-    
+
 
     // const startStepByStep= async ()=>{
     //   document.getElementById("ftwBtn").click();
@@ -744,52 +769,52 @@ function elabListSync(newList) {
     //   else{
     //     return;
     //   }
-     
+
     //  await loadExperiment(instance, elabid, elabToken);
-     
-     
+
+
     //  //const checkbox = document.getElementById("multiElabSwitch");
     //    // multiElabSelect(checkbox); 
 
     // }
 
     // Function to check connection to eLabFTW API
-async function checkElabFTWConnection() {
-  const elabid= JSON.parse(localStorage.getItem("elabid"))
-  const params = await getParameters(elabid.elabExperimentid, elabid.elabResourceid );
+    async function checkElabFTWConnection() {
+      const elabid = JSON.parse(localStorage.getItem("elabid"))
+      const params = await getParameters(elabid.elabExperimentid, elabid.elabResourceid);
       // const elabtoken = document.getElementById("elabToken").value;
       // const datahubtoken = document.getElementById("datahubToken").value;
       // const instance = document.getElementById("elabURLInput").value;
-      
-  
-  try {
-    const response = await fetchElabJSON(params.elabtoken, "users",  params.instance); 
 
-    console.log('ElabFTW API Status Code:', response.statuscode);
 
-    if (response.statuscode==200) {
-      document.getElementById("elabFTWCheck").innerHTML = "&#127760;";
-      await fillElabTable();
-      await elabCheckSync();
-      console.log('✅ Successfully connected to eLabFTW API');
-      return true;
-    } else {
-      document.getElementById("elabFTWCheck").innerHTML = "&#10060;";
-      console.error('❌ eLabFTW API returned an error:', response.statuscode);
-      return false;
+      try {
+        const response = await fetchElabJSON(params.elabtoken, "users", params.instance);
+
+        console.log('ElabFTW API Status Code:', response.statuscode);
+
+        if (response.statuscode == 200) {
+          document.getElementById("elabFTWCheck").innerHTML = "&#127760;";
+          await fillElabTable();
+          await elabCheckSync();
+          console.log('✅ Successfully connected to eLabFTW API');
+          return true;
+        } else {
+          document.getElementById("elabFTWCheck").innerHTML = "&#10060;";
+          console.error('❌ eLabFTW API returned an error:', response.statuscode);
+          return false;
+        }
+      } catch (error) {
+        document.getElementById("elabFTWCheck").innerHTML = "&#128680;";
+        console.error('🚨 Failed to connect to eLabFTW API:', error.message);
+        return false;
+      }
     }
-  } catch (error) {
-    document.getElementById("elabFTWCheck").innerHTML = "&#128680;";
-    console.error('🚨 Failed to connect to eLabFTW API:', error.message);
-    return false;
-  }
-}
 
-  const updateARCList = async ( search) => {
+    const updateARCList = async (search) => {
       const { elabtoken, datahubtoken, instance, elabidList } = await getParameters();
       // Fetch user info
       const id = await fetchUser(datahubtoken);
-      const apiParameter= "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true&search_namespaces=true&"+"search="+search;
+      const apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true&search_namespaces=true&" + "search=" + search;
       if (id) {
         // Optionally load user projects
         await fetchUserProjects(id.username, datahubtoken, apiParameter);
@@ -802,58 +827,58 @@ async function checkElabFTWConnection() {
         return;
       }
 
-  }  
-
-  // Function to check connection to GitLab API
-  async function checkGitLabConnection() {
-    const url = 'https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects';
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        // Authentication may be required depending on endpoint
-        // headers: { 'PRIVATE-TOKEN': 'YOUR_PRIVATE_TOKEN' }
-      });
-
-      console.log('GitLab API Status Code:', response.status);
-
-      if (response.status === 404) {
-        console.warn('⚠️ GitLab API endpoint not found (404)');
-        return false;
-      }
-
-      if (response.ok) {
-        
-        const { elabtoken, datahubtoken, instance, elabidList } = await getParameters();
-      // Fetch user info
-      const id = await fetchUser(datahubtoken);
-
-      if (id) {
-        // Optionally load user projects
-        await fetchUserProjects(id.username, datahubtoken);
-        document.getElementById("arcCheck").innerHTML = "&#127760;";
-        console.log('✅ Successfully connected to DataHUB API');
-        return true;
-
-      } else {
-        console.error('🚨 DataHUB API can be accessed but the user information could not be fetched. Please check your credentials. Error :', error.message);
-        return;
-      }
-        
-      } else {
-        document.getElementById("arcCheck").innerHTML = "&#10060;";
-        console.error('❌ DataHUB API returned an error:', response.statusText);
-        return false;
-      }
-    } catch (error) {
-      document.getElementById("arcCheck").innerHTML = "&#128680;";
-      console.error('🚨 Failed to connect to DataHUB API:', error.message);
-      return false;
     }
-  }
+
+    // Function to check connection to GitLab API
+    async function checkGitLabConnection() {
+      const url = 'https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects';
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          // Authentication may be required depending on endpoint
+          // headers: { 'PRIVATE-TOKEN': 'YOUR_PRIVATE_TOKEN' }
+        });
+
+        console.log('GitLab API Status Code:', response.status);
+
+        if (response.status === 404) {
+          console.warn('⚠️ GitLab API endpoint not found (404)');
+          return false;
+        }
+
+        if (response.ok) {
+
+          const { elabtoken, datahubtoken, instance, elabidList } = await getParameters();
+          // Fetch user info
+          const id = await fetchUser(datahubtoken);
+
+          if (id) {
+            // Optionally load user projects
+            await fetchUserProjects(id.username, datahubtoken);
+            document.getElementById("arcCheck").innerHTML = "&#127760;";
+            console.log('✅ Successfully connected to DataHUB API');
+            return true;
+
+          } else {
+            console.error('🚨 DataHUB API can be accessed but the user information could not be fetched. Please check your credentials. Error :', error.message);
+            return;
+          }
+
+        } else {
+          document.getElementById("arcCheck").innerHTML = "&#10060;";
+          console.error('❌ DataHUB API returned an error:', response.statusText);
+          return false;
+        }
+      } catch (error) {
+        document.getElementById("arcCheck").innerHTML = "&#128680;";
+        console.error('🚨 Failed to connect to DataHUB API:', error.message);
+        return false;
+      }
+    }
 
 
-    const fetchUser = async (accessToken ) => {
+    const fetchUser = async (accessToken) => {
       try {
         // Define the API endpoint for fetching user-related projects
         const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/user`;
@@ -867,12 +892,12 @@ async function checkElabFTWConnection() {
         });
         console.log(response);
         // Check for bad responses (status codes between 400 and 599)
-        if (response.status == 401){
+        if (response.status == 401) {
           loading.hide();
           throw new Error(" Unauthorized, the DataHUB token is wrong or expired. Or a project-token has been used for step by step conversion. Please use a personal-token with correct rights ");
-        }else if(response.status >= 400 && response.status < 500){
+        } else if (response.status >= 400 && response.status < 500) {
           throw new Error(" Unauthorized, the DataHUB token is wrong or expired. Or a project-token has been used for step by step conversion. Please use a personal-token with correct rights  ");
-        }else if (response.status >= 500 && response.status < 600) {
+        } else if (response.status >= 500 && response.status < 600) {
           throw new Error("Bad response from server, please check the availability of the server. ");
         }
 
@@ -883,99 +908,99 @@ async function checkElabFTWConnection() {
         window.userId = userJSON;
 
         // Build the HTML table dynamically
-       return userJSON;
+        return userJSON;
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
         alert(error.message || error);
       }
     };
 
-    const   createNewArc  = async ()=>{
+    const createNewArc = async () => {
       loading.show();
       // const projectDescription = document.getElementById("descriptionInput").value;
       const projectDescription = arcReadmeText;
       const projectName = document.getElementById("projectnameInput").value.replace(/[^a-zA-Z0-9_\-]/g, "-");
       const username = window.userId.username;
-      
-          const accessToken = document.getElementById("datahubToken").value;
-          await  createGitLabRepo(projectName, projectDescription, accessToken);
-          const url = `https://git.nfdi4plants.org/${username}/${projectName}.git`;
-          await  cloneARC(url, projectName );
-          newARC = new arctrl.ARC();
-          const name = window.userId.name;
 
-          await  arcWrite(projectName, newARC);
-          let inv = arctrl.ArcInvestigation.init(projectName);
-          const newContact = arctrl.Person.create(void 0, name.split(" ")[0], name.split(" ").slice(-1)[0], window.userId.commit_email, void 0, void 0, void 0, void 0, void 0, void 0);
-          
+      const accessToken = document.getElementById("datahubToken").value;
+      await createGitLabRepo(projectName, projectDescription, accessToken);
+      const url = `https://git.nfdi4plants.org/${username}/${projectName}.git`;
+      await cloneARC(url, projectName);
+      newARC = new arctrl.ARC();
+      const name = window.userId.name;
 
-          // for (const ee of isa_inv.Contacts){
-          //     if (ee.toString() != ccc.toString()){
-          //         console.log("no same person");
-          //     }else{ 
-          //         console.log("same person");
-          //         break;
-          //     };
-          // }
-          inv.Contacts =[newContact];
-          let invXlsx = arctrl.XlsxController.Investigation.toFsWorkbook(inv);
-          Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
-          await git.add({ fs, dir: projectName, filepath: '.' });
-          const gitRoot = projectName+"/";
-          await commitPush(accessToken,url,"elab2arcTool","", projectName, gitRoot);
-            //document.getElementById('gitlabInfo').innerHTML= `${url}`;
-            //document.getElementById('arcInfo').innerHTML= `${projectName}`;
-          checkGitLabConnection()
-          loading.hide()
-        }
+      await arcWrite(projectName, newARC);
+      let inv = arctrl.ArcInvestigation.init(projectName);
+      const newContact = arctrl.Person.create(void 0, name.split(" ")[0], name.split(" ").slice(-1)[0], window.userId.commit_email, void 0, void 0, void 0, void 0, void 0, void 0);
+
+
+      // for (const ee of isa_inv.Contacts){
+      //     if (ee.toString() != ccc.toString()){
+      //         console.log("no same person");
+      //     }else{ 
+      //         console.log("same person");
+      //         break;
+      //     };
+      // }
+      inv.Contacts = [newContact];
+      let invXlsx = arctrl.XlsxController.Investigation.toFsWorkbook(inv);
+      Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
+      await git.add({ fs, dir: projectName, filepath: '.' });
+      const gitRoot = projectName + "/";
+      await commitPush(accessToken, url, "elab2arcTool", "", projectName, gitRoot);
+      //document.getElementById('gitlabInfo').innerHTML= `${url}`;
+      //document.getElementById('arcInfo').innerHTML= `${projectName}`;
+      checkGitLabConnection()
+      loading.hide()
+    }
 
 
     const createGitLabRepo = async (projectName, projectDescription, accessToken) => {
-          try {
-              // Define the API endpoint for creating a new project [[4]][[6]]
-              const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects`;
+      try {
+        // Define the API endpoint for creating a new project [[4]][[6]]
+        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects`;
 
-              // Prepare request configuration
-              const response = await fetch(apiUrl, {
-                  method: 'POST',
-                  headers: {
-                      'Authorization': `Bearer ${accessToken}`, // Authentication header [[3]]
-                      'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify({
-                      name: projectName,
-                      description: projectDescription,
-                      visibility: 'private', // Optional: Set default visibility [[7]]
-                      initialize_with_readme: 'true',
-                      default_branch:'main',
-                      lfs_enabled: 'true',
+        // Prepare request configuration
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`, // Authentication header [[3]]
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: projectName,
+            description: projectDescription,
+            visibility: 'private', // Optional: Set default visibility [[7]]
+            initialize_with_readme: 'true',
+            default_branch: 'main',
+            lfs_enabled: 'true',
 
 
-                  })
-              });
+          })
+        });
 
-              // Handle non-success responses [[3]]
-              if (response.status >= 400) {
-                  const errorDetails = await response.json();
-                  throw new Error(`Error ${response.status}: ${errorDetails.message}`);
-              }
+        // Handle non-success responses [[3]]
+        if (response.status >= 400) {
+          const errorDetails = await response.json();
+          throw new Error(`Error ${response.status}: ${errorDetails.message}`);
+        }
 
-              // Return the created project details [[6]]
-              return await response.json();
+        // Return the created project details [[6]]
+        return await response.json();
 
-          } catch (error) {
-              // Handle network/API errors [[6]]
-              alert(" ARC creation failed, please check if the name is unique"+error.message || error);
-              throw new Error(`Project creation failed: ${error.message}`);
-          }
-      };
+      } catch (error) {
+        // Handle network/API errors [[6]]
+        alert(" ARC creation failed, please check if the name is unique" + error.message || error);
+        throw new Error(`Project creation failed: ${error.message}`);
+      }
+    };
 
-    const fetchUserProjects = async (userId, accessToken, apiParameter="?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
+    const fetchUserProjects = async (userId, accessToken, apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
       try {
         // Define the API endpoint for fetching user-related projects
         // const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/users/${userId}/projects`;
         // Define the API endpoint for fetching user-related projects
-        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects`+apiParameter;
+        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects` + apiParameter;
 
         // Fetch the data from the API with the access token in the headers
         const response = await fetch(apiUrl, {
@@ -1037,8 +1062,8 @@ async function checkElabFTWConnection() {
             `;
           }
         });
-        
-        
+
+
 
         // Insert the generated table HTML into the DOM
         document.getElementById("userProjectsTable").innerHTML = tableHTML;
@@ -1049,86 +1074,86 @@ async function checkElabFTWConnection() {
     };
 
 
-    function addidToText(ele){
+    function addidToText(ele) {
       const type = ele.dataset.type;
-      let newList= [];
-      const elements = document.querySelectorAll('[data-type="'+type+'"]');
+      let newList = [];
+      const elements = document.querySelectorAll('[data-type="' + type + '"]');
       let list = elabListSync();
-      elements.forEach(e=>{
-        e.checked == true? newList.push(e.dataset.id):{};
+      elements.forEach(e => {
+        e.checked == true ? newList.push(e.dataset.id) : {};
       })
-      list["elab"+type+"id"] = newList;
+      list["elab" + type + "id"] = newList;
       elabListSync(list);
     }
-    const linkCheck = async (checkbox) =>  {
+    const linkCheck = async (checkbox) => {
       const str = checkbox.dataset.type1;
       const e = checkbox.dataset.id;
       let typeConfig = [];
       typeConfig[str] = window.typeConfig[str];
-      let check= document.getElementById("check"+typeConfig[str].short+e);
-            if (checkbox.checked) {      
+      let check = document.getElementById("check" + typeConfig[str].short + e);
+      if (checkbox.checked) {
         try {
-          check.checked =true; 
-         check.onchange();  
-        } catch (error) {
-          await fillElabTable("?q="+e+"&order=id&sort=des&limit=99&", "elabTable", "append",  typeConfig, e);
-          check= document.getElementById("check"+typeConfig[str].short+e);
-          elabCheckSync();
-          check.checked =true; 
+          check.checked = true;
           check.onchange();
-          
-        } 
-        } else{
-            
-            check.checked =false;
-            check.onchange(); 
+        } catch (error) {
+          await fillElabTable("?q=" + e + "&order=id&sort=des&limit=99&", "elabTable", "append", typeConfig, e);
+          check = document.getElementById("check" + typeConfig[str].short + e);
+          elabCheckSync();
+          check.checked = true;
+          check.onchange();
+
         }
+      } else {
+
+        check.checked = false;
+        check.onchange();
       }
-    const fillElabTable = async ( query= "?order=id&sort=des&scope=1&limit=99", tableid="elabTable", action="update", typeConfig=window.typeConfig, targetId) => {
+    }
+    const fillElabTable = async (query = "?order=id&sort=des&scope=1&limit=99", tableid = "elabTable", action = "update", typeConfig = window.typeConfig, targetId) => {
       try {
         // Define the API endpoint for fetching user-related projects
         const params = await getParameters();
         async function fetchAndBuildTable(params, typeConfig) {
-        // Helper function to fetch data based on type
-        async function fetchData(typeKey) {
-              const config = typeConfig[typeKey];
-              if (!config || !config.idendpoint) {
-                console.warn(`No endpoint defined for type: ${typeKey}`);
-                return [];
-              }
-              if (targetId==undefined){
-                return fetchElabJSON(params.elabtoken, `${config.endpoint}/${query}`, params.instance);
-              }else{
-                return fetchElabJSON(params.elabtoken, `${config.idendpoint}${targetId}`, params.instance);
-              }
-              
+          // Helper function to fetch data based on type
+          async function fetchData(typeKey) {
+            const config = typeConfig[typeKey];
+            if (!config || !config.idendpoint) {
+              console.warn(`No endpoint defined for type: ${typeKey}`);
+              return [];
+            }
+            if (targetId == undefined) {
+              return fetchElabJSON(params.elabtoken, `${config.endpoint}/${query}`, params.instance);
+            } else {
+              return fetchElabJSON(params.elabtoken, `${config.idendpoint}${targetId}`, params.instance);
             }
 
-            // Fetch all configured types in parallel
-            const promises = Object.keys(typeConfig).map(key => fetchData(key));
-            const results = await Promise.all(promises);
-            console.log("here is result")
-            console.log(results)
-            let tableHTML = '';
+          }
 
-            // Process each entry for each type
-            Object.keys(typeConfig).forEach((typeKey, index) => {
-              const config = typeConfig[typeKey];
-              let data;
-              if (targetId==undefined){
-                data= results[index];
-              }else{
-                data=results;
-              }
-               
-              //console.log("here is data")
-              //console.log(data)
-              data.forEach((entry) => {
-                if ( !entry.id ) return; // Skip invalid entries
-                //if ( !(targetId==undefined || entry.id == targetId) ) return; // Skip invalid entries
-                const checkboxId = `check${config.short}${entry.id}`;
-                const previewBtn = config.hasPreview
-                  ? `<button class="btn btn-sm " type="button"
+          // Fetch all configured types in parallel
+          const promises = Object.keys(typeConfig).map(key => fetchData(key));
+          const results = await Promise.all(promises);
+          console.log("here is result")
+          console.log(results)
+          let tableHTML = '';
+
+          // Process each entry for each type
+          Object.keys(typeConfig).forEach((typeKey, index) => {
+            const config = typeConfig[typeKey];
+            let data;
+            if (targetId == undefined) {
+              data = results[index];
+            } else {
+              data = results;
+            }
+
+            //console.log("here is data")
+            //console.log(data)
+            data.forEach((entry) => {
+              if (!entry.id) return; // Skip invalid entries
+              //if ( !(targetId==undefined || entry.id == targetId) ) return; // Skip invalid entries
+              const checkboxId = `check${config.short}${entry.id}`;
+              const previewBtn = config.hasPreview
+                ? `<button class="btn btn-sm " type="button"
                             data-bs-toggle="offcanvas"
                             data-bs-target="#elabPreviewCanvas"
                             aria-controls="elabPreviewCanvas"
@@ -1139,13 +1164,13 @@ async function checkElabFTWConnection() {
                             >
                       Preview
                     </button>`
-                  : '';
+                : '';
 
-                const extraDiv = config.hasPreview
-                  ? `<div id="linked${typeKey}${entry.id}"></div>`
-                  : '';
+              const extraDiv = config.hasPreview
+                ? `<div id="linked${typeKey}${entry.id}"></div>`
+                : '';
 
-                tableHTML += `
+              tableHTML += `
                   <tr>
                     <th scope="row">${config.displayName}</th>
                     <td>${entry.id}</td>
@@ -1168,11 +1193,11 @@ async function checkElabFTWConnection() {
                     </td>
                   </tr>
                 `;
-              });
             });
-              // document.getElementById('your-table-body').innerHTML = tableHTML;
+          });
+          // document.getElementById('your-table-body').innerHTML = tableHTML;
 
-        return tableHTML;
+          return tableHTML;
         };
 
         // Insert the generated table HTML into the DOM
@@ -1187,100 +1212,100 @@ async function checkElabFTWConnection() {
           default:
             break;
         }
-        
+
 
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
         alert(error.message || error);
       }
     };
-    
 
 
-    
-    function setelabURL(elabURL){
+
+
+    function setelabURL(elabURL) {
       var elabURL1 = unescape(elabURL);
-      elabURL1.slice(-1)=="/"? {} : elabURL1= elabURL1 +"/"  ;
+      elabURL1.slice(-1) == "/" ? {} : elabURL1 = elabURL1 + "/";
       try {
-        const split =  elabURL1.split("/api");
-        split.length ==1?  elabURL1= elabURL1 +"api/v2/": {}  ;
-        elabURL1= elabURL1.replace("login.php", "");
-        
+        const split = elabURL1.split("/api");
+        split.length == 1 ? elabURL1 = elabURL1 + "api/v2/" : {};
+        elabURL1 = elabURL1.replace("login.php", "");
+
       } catch (error) {
-        
+
       }
-      window.localStorage.setItem('instance',elabURL1); 
-      
-      document.getElementById('elabURLInput1').innerHTML = 'instance: '+elabURL1; 
-      document.getElementById('elabURLInput1').value = elabURL1; 
-     
+      window.localStorage.setItem('instance', elabURL1);
+
+      document.getElementById('elabURLInput1').innerHTML = 'instance: ' + elabURL1;
+      document.getElementById('elabURLInput1').value = elabURL1;
+
     }
-    async function fetchElabJSON( elabToken, query='experiments/',  elabURL , corsproxy ='https://corsproxy.cplantbox.com/'){
+    async function fetchElabJSON(elabToken, query = 'experiments/', elabURL, corsproxy = 'https://corsproxy.cplantbox.com/') {
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
       // Define the API key      
-      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with'};
+      const headers = { 'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with' };
       // Make the fetch request      
       try {
-       const response = await fetch(elabftwServerUrl, { headers, method: 'GET'});
-       const json = await response.json();
-       json.statuscode = response.status;
-       return json;
+        const response = await fetch(elabftwServerUrl, { headers, method: 'GET' });
+        const json = await response.json();
+        json.statuscode = response.status;
+        return json;
       } catch (error) {
-        if (error.message.includes(`is not valid JSON`)||error.message.includes(`Invalid host`) || error.message.includes(`!DOCTYPE`)){
+        if (error.message.includes(`is not valid JSON`) || error.message.includes(`Invalid host`) || error.message.includes(`!DOCTYPE`)) {
           showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, or the elabFTW instance might be wrong. Please first check the eLabFTW instance and then go to the settings of the eLabFTW to create a new API key and use it");
-        }else{
-          showError("Access of eLabFTW is not successful, error message is "+ error);
+        } else {
+          showError("Access of eLabFTW is not successful, error message is " + error);
         }
         return error;
       }
     }
 
-    async function fetchElabFiles( elabToken, query='experiments/',  elabURL, corsproxy ='https://corsproxy.cplantbox.com/' ){
+    async function fetchElabFiles(elabToken, query = 'experiments/', elabURL, corsproxy = 'https://corsproxy.cplantbox.com/') {
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
       // Define the API key
-      const headers = {'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with'};
+      const headers = { 'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with' };
       // Make the fetch request
       try {
-      var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET'});
-      return response.blob();
+        var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET' });
+        return response.blob();
       } catch (error) {
-        if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`)){
+        if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`)) {
           console.error(error);
           showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, please go to settings to create a new API key and use it");
-        }else{
-          showError("Access of eLabFTW is not successful, error message is "+ error);
+        } else {
+          showError("Access of eLabFTW is not successful, error message is " + error);
         }
-        
+
         return error;
       }
-      }
-    
-    function gitUrlCheck(url){
-      if (/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/.test(url)){
-        updateInfo("DataHub URL was collected successfully" ,"30");
+    }
+
+    function gitUrlCheck(url) {
+      if (/(?:git|ssh|https?|git@[-\w.]+):(\/\/)?(.*?)(\.git)(\/?|\#[-\d\w._]+?)$/.test(url)) {
+        updateInfo("DataHub URL was collected successfully", "30");
         return url;
       }
-      else{
+      else {
         //updateInfo("DataHub URL is not correct, automatic patches are done " ,"30");
-        if (!url.endsWith(".git")){
-        url = url + ".git";
-        //updateInfo("Added \" .git\" at the end, current url is "+ url ,"30");
+        if (!url.endsWith(".git")) {
+          url = url + ".git";
+          //updateInfo("Added \" .git\" at the end, current url is "+ url ,"30");
+        }
+        if (!url.startsWith("https://")) {
+          url = "https://" + url;
+          updateInfo("Added \" https:// \" at the start, current url is " + url, "30");
+        }
+        return url;
       }
-      if (!url.startsWith("https://")){
-        url = "https://" + url ;
-        updateInfo("Added \" https:// \" at the start, current url is "+ url ,"30");
-      }
-      return url;
-      }
-      
+
     }
-    
-    async function datahubClone(datahubURL, dir, datahubtoken){
+
+    async function datahubClone(datahubURL, dir, datahubtoken) {
       const [begin, end] = datahubURL.split("//");
       url = begin + "//oath2:" + datahubtoken + "@" + end;
-          console.log(url);
+      console.log(url);
       try {
         const cloneResponse = await git.clone({
           fs,
@@ -1289,15 +1314,15 @@ async function checkElabFTWConnection() {
           corsProxy: 'https://gitcors.cplantbox.com',
           url: url,
           ref: 'main',
-          singleBranch:true,
+          singleBranch: true,
           depth: 1,
           force: true,
           onProgress: event => {
             updateLabel(event.phase)
             if (event.total) {
-              updateProgressBar(10 + (event.loaded / event.total)*30)
+              updateProgressBar(10 + (event.loaded / event.total) * 30)
             } else {
-              updateIndeterminateProgressBar(10 + (event.loaded / 100)*30)
+              updateIndeterminateProgressBar(10 + (event.loaded / 100) * 30)
             }
           }
         });
@@ -1312,36 +1337,36 @@ async function checkElabFTWConnection() {
           corsProxy: 'https://gitcors.cplantbox.com',
           url: url,
           ref: 'master',
-          singleBranch:true,
+          singleBranch: true,
           depth: 1,
           force: true,
           onProgress: event => {
             updateLabel(event.phase)
             if (event.total) {
-              updateProgressBar(50 + (event.loaded / event.total)*30)
+              updateProgressBar(50 + (event.loaded / event.total) * 30)
             } else {
-              updateIndeterminateProgressBar(50 + (event.loaded / 100)*30)
+              updateIndeterminateProgressBar(50 + (event.loaded / 100) * 30)
             }
           }
         });
         mainOrMaster = "master";
       }
-      
+
     }
 
-    async function commitPush( datahubtoken, datahubURL, fullname, email, dir, gitRoot ){
+    async function commitPush(datahubtoken, datahubURL, fullname, email, dir, gitRoot) {
       let sha = await git.commit({
-          fs,
-          dir: gitRoot,
-          author: {
-            name: fullname,
-            email: email,
-          },
-          message: "eLabFTW2ARC version "+ version +".  "+ statusInfo
-        });
-        console.log("commit finished");
-        try {
-          let pushResult = await git.push({
+        fs,
+        dir: gitRoot,
+        author: {
+          name: fullname,
+          email: email,
+        },
+        message: "eLabFTW2ARC version " + version + ".  " + statusInfo
+      });
+      console.log("commit finished");
+      try {
+        let pushResult = await git.push({
           fs,
           http,
           dir: gitRoot,
@@ -1350,13 +1375,13 @@ async function checkElabFTWConnection() {
           ref: 'main',
           onAuth: () => ({ username: datahubtoken }),
         });
-        console.log(pushResult)  ;
+        console.log(pushResult);
         updateInfo("PLANTDataHUB has been updated.  <br>", "100");
         //
-        } catch (error) {
-          console.error(error);
-          updateInfo( error+" Push to main failed, now try to push to branch master", "0");
-          let pushResult = await git.push({
+      } catch (error) {
+        console.error(error);
+        updateInfo(error + " Push to main failed, now try to push to branch master", "0");
+        let pushResult = await git.push({
           fs,
           http,
           dir: dir,
@@ -1365,55 +1390,55 @@ async function checkElabFTWConnection() {
           ref: 'master',
           onAuth: () => ({ username: datahubtoken }),
         });
-        console.log(pushResult)  ;
-        showError( datahubURL +"ARC has been updated on master branch");
-          //showError( "push to git failed. The error is "+ error)
-        }
-    }
-    
-
-
-
-    function initCookies(){
-      const maxAge = 60*60*24*31;
-          
-          elabtoken= document.getElementById("elabToken").value;
-          datahubtoken= document.getElementById("datahubToken").value;
-          document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
-          document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
-
-          
+        console.log(pushResult);
+        showError(datahubURL + "ARC has been updated on master branch");
+        //showError( "push to git failed. The error is "+ error)
+      }
     }
 
-    function redirect(){
-                const instance = document.getElementById("elabURLInput1").value;
-          window.localStorage.setItem("instance", instance);
-          location.href=location.href.split('#')[0]+'#home'
-          location.reload();
+
+
+
+    function initCookies() {
+      const maxAge = 60 * 60 * 24 * 31;
+
+      elabtoken = document.getElementById("elabToken").value;
+      datahubtoken = document.getElementById("datahubToken").value;
+      document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+      document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+
 
     }
 
-    function setCookies(elabtoken, datahubtoken, instance="https://elabftw.hhu.de/api/v2/"){
-      const maxAge = 60*60*24*31;
-          
-          document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
-          document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
-          window.localStorage.setItem("instance", instance);
-          
+    function redirect() {
+      const instance = document.getElementById("elabURLInput1").value;
+      window.localStorage.setItem("instance", instance);
+      location.href = location.href.split('#')[0] + '#home'
+      location.reload();
+
     }
 
-    function updateInfo(text, percent){
+    function setCookies(elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/") {
+      const maxAge = 60 * 60 * 24 * 31;
+
+      document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+      document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+      window.localStorage.setItem("instance", instance);
+
+    }
+
+    function updateInfo(text, percent) {
       updateLabel(text);
       updateProgressBar(percent);
       const event = new Date();
-      statusInfo += event.toLocaleString('en-GB', { timeZone: 'UTC' }) +"&nbsp; &nbsp; &nbsp;" + text +"\t " + "<br>";
-      detailedInfo.innerHTML = statusInfo;       
+      statusInfo += event.toLocaleString('en-GB', { timeZone: 'UTC' }) + "&nbsp; &nbsp; &nbsp;" + text + "\t " + "<br>";
+      detailedInfo.innerHTML = statusInfo;
     }
 
-    function deleteAll(){
+    function deleteAll() {
       const vol = FS.Volume.fromJSON({
         '/': null, // Create root directory
-        
+
       });
       fs = vol;
       // const fileList = fs.readdirSync(".");
@@ -1425,98 +1450,105 @@ async function checkElabFTWConnection() {
 
 
 
-/**
- * Process eLabFTW experiments or items by handling possible prefix mismatches and authorization issues.
- * @param {Object} params - Configuration parameters including elabtoken, elabidList, instance
- * @param {Object} users - User data from eLabFTW (optional: if not provided, it will be fetched)
- * @param {string} gitlabURL - Optional GitLab URL override
- * @param {string} arcName - Not used in this snippet but kept for compatibility
- */
-async function processElabEntries(params, users, gitlabURL, arcName) {
-  try {
-    for (const [expIndex, expId] of Object.entries(params.elabidList.elabExperimentid)) {
-      if (!expId) continue;
+    /**
+     * Process eLabFTW experiments or items by handling possible prefix mismatches and authorization issues.
+     * @param {Object} params - Configuration parameters including elabtoken, elabidList, instance
+     * @param {Object} users - User data from eLabFTW (optional: if not provided, it will be fetched)
+     * @param {string} gitlabURL - Optional GitLab URL override
+     * @param {string} arcName - Not used in this snippet but kept for compatibility
+     */
+    async function processElabEntries(params, users, gitlabURL, arcName) {
+      try {
+        for (const [expIndex, expId] of Object.entries(params.elabidList.elabExperimentid)) {
+          if (!expId) continue;
 
-      let res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
+          let res = await fetchElabJSON(params.elabtoken, `experiments/${expId}`, params.instance);
 
-      // Authorization error
-      if (res.code === 403) {
-        alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
-        continue;
-      }
+          // Authorization error
+          if (res.code === 403) {
+            alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
+            continue;
+          }
 
-      // If users not passed, fetch them
-      if (!users) {
-        users = await fetchElabJSON(params.elabtoken, "users", params.instance);
-        if (users.code >= 400) {
-          console.error("Failed to fetch users:", users);
-          alert("Failed to fetch user data from eLabFTW.");
-          continue;
+          // If users not passed, fetch them
+          if (!users) {
+            users = await fetchElabJSON(params.elabtoken, "users", params.instance);
+            if (users.code >= 400) {
+              console.error("Failed to fetch users:", users);
+              alert("Failed to fetch user data from eLabFTW.");
+              continue;
+            }
+          }
+
+          // Determine URLs
+          const extraFields = gitlabURL || res.metadata_decoded?.extra_fields;
+          const datahubURL = gitlabURL || gitUrlCheck(extraFields?.datahub_url?.value);
+          if (!datahubURL) {
+            console.warn(`No valid datahub_url found for experiment ${expId}`);
+            continue;
+          }
+
+          const gitName = datahubURL.slice(0, -4); // Remove .git suffix
+          //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
+          const dir = arcName;
+          // Process the experiment
+          await processExperiment(expIndex, expId, params, res, users, datahubURL, dir, params.instance);
         }
-      }
-
-      // Determine URLs
-      const extraFields = gitlabURL || res.metadata_decoded?.extra_fields;
-      const datahubURL = gitlabURL || gitUrlCheck(extraFields?.datahub_url?.value);
-      if (!datahubURL) {
-        console.warn(`No valid datahub_url found for experiment ${expId}`);
-        continue;
-      }
-
-      const gitName = datahubURL.slice(0, -4); // Remove .git suffix
-      //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
-      const dir = arcName;
-      // Process the experiment
-      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir, params.instance);
-    }
 
 
 
 
 
 
-    for (const [expIndex, expId] of Object.entries(params.elabidList.elabResourceid)) {
-      if (!expId) continue;
+        for (const [expIndex, expId] of Object.entries(params.elabidList.elabResourceid)) {
+          if (!expId) continue;
 
-      let res = await fetchElabJSON(params.elabtoken, `items/${expId}`, params.instance);
+          let res = await fetchElabJSON(params.elabtoken, `items/${expId}`, params.instance);
 
-      // Authorization error
-      if (res.code === 403) {
-        alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
-        continue;
-      }
+          // Authorization error
+          if (res.code === 403) {
+            alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
+            continue;
+          }
 
-      // If users not passed, fetch them
-      if (!users) {
-        users = await fetchElabJSON(params.elabtoken, "users", params.instance);
-        if (users.code >= 400) {
-          console.error("Failed to fetch users:", users);
-          alert("Failed to fetch user data from eLabFTW.");
-          continue;
+          // If users not passed, fetch them
+          if (!users) {
+            users = await fetchElabJSON(params.elabtoken, "users", params.instance);
+            if (users.code >= 400) {
+              console.error("Failed to fetch users:", users);
+              alert("Failed to fetch user data from eLabFTW.");
+              continue;
+            }
+          }
+
+          // Determine URLs
+          const extraFields = gitlabURL || res.metadata_decoded?.extra_fields;
+          const datahubURL = gitlabURL || gitUrlCheck(extraFields?.datahub_url?.value);
+          if (!datahubURL) {
+            console.warn(`No valid datahub_url found for experiment ${expId}`);
+            continue;
+          }
+
+          const gitName = datahubURL.slice(0, -4); // Remove .git suffix
+          //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
+          const dir = arcName;
+          // Process the experiment
+          await processExperiment(expIndex, expId, params, res, users, datahubURL, dir, params.instance);
         }
+      (async () => {
+      document.getElementById("pbarLabel").innerHTML = "All conversions were done, you can close this pop up";
+        console.log(users)
+      })()
+      } catch (error) {
+        console.error("Error processing eLab entries:", error);
+        alert("An unexpected error occurred while processing eLabFTW entries.");
       }
-
-      // Determine URLs
-      const extraFields = gitlabURL || res.metadata_decoded?.extra_fields;
-      const datahubURL = gitlabURL || gitUrlCheck(extraFields?.datahub_url?.value);
-      if (!datahubURL) {
-        console.warn(`No valid datahub_url found for experiment ${expId}`);
-        continue;
-      }
-
-      const gitName = datahubURL.slice(0, -4); // Remove .git suffix
-      //const dir = gitName.split("/").slice(-1)[0]; // Get repo name
-      const dir = arcName;
-      // Process the experiment
-      await processExperiment(expIndex, expId, params, res, users, datahubURL, dir, params.instance);
     }
-  } catch (error) {
-    console.error("Error processing eLab entries:", error);
-    alert("An unexpected error occurred while processing eLabFTW entries.");
-  }
-}  
-     multiConvert = async ()=>{
-       document.getElementById("statusModalBtn").click();
+    
+
+
+    multiConvert = async () => {
+      document.getElementById("statusModalBtn").click();
       //const gitlabusername = document.getElementById("usernameInput").value;
       const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
       // if (gitlabURL.includes("Please select your")){
@@ -1527,10 +1559,10 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       // const list = arcName.split("/");
       // const gitRoot = list[0]
       const gitRoot = arcName;
-      deleteAll(); 
+      deleteAll();
       await cloneARC(gitlabURL, gitRoot);
-      refreshTree("./"+gitRoot)
-      if (gitRoot.includes("Please select your ARC")){
+      refreshTree("./" + gitRoot)
+      if (gitRoot.includes("Please select your ARC")) {
 
         alert("please select your ARC.");
         return;
@@ -1540,233 +1572,233 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       // const elabtoken = document.getElementById("elabToken").value;
       // const datahubtoken = document.getElementById("datahubToken").value;
       // const instance = document.getElementById("elabURLInput").value;
-      const users = await fetchElabJSON(params.elabtoken, "users",  params.instance); 
+      const users = await fetchElabJSON(params.elabtoken, "users", params.instance);
 
-          // Process each experiment ID
-        await processElabEntries(params, users, gitlabURL, arcName);
+      // Process each experiment ID
+      await processElabEntries(params, users, gitlabURL, arcName);
       refreshTree(gitRoot);
     }
-   
-
-        // Main function orchestrating the process
-        async function updateAll(elabidText, elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/", gitURL, elabResourceidText) {
-            try {
-                // Initialize UI elements and parameters
-                initializeUI();
-                const params = await getParameters(elabidText,elabResourceidText, elabtoken, datahubtoken, instance);
-
-                // Process each experiment ID
-                //const gitlabusername = document.getElementById("usernameInput").value;
-                const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
-                // if (gitlabURL.includes("Please select your")){
-                //   alert("No eLabFTW is selected, please go to eLabFTW tab to select.");
-                //   return;
-                // };
-                const arcName = document.getElementById("arcInfo").innerHTML;
-                if (arcName.includes("Please select your ARC")){
-                  alert("please select your ARC.");
-                  return;
-                };
-              
-                // const elabtoken = document.getElementById("elabToken").value;
-                // const datahubtoken = document.getElementById("datahubToken").value;
-                // const instance = document.getElementById("elabURLInput").value;
-                const users = await fetchElabJSON(params.elabtoken, "users",  params.instance); 
-
-                // Process each experiment ID
-              await processElabEntries(params, users, gitlabURL, arcName);
-                  } catch (error) {
-                    console.error(error);
-                      handleError(error);
-                  }
-          }
-
-              // Initialize UI elements
-              function initializeUI() {
-                  filesChanged.innerHTML = "";
-                  statusInfo = "";
-              }
 
 
+    // Main function orchestrating the process
+    async function updateAll(elabidText, elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/", gitURL, elabResourceidText) {
+      try {
+        // Initialize UI elements and parameters
+        initializeUI();
+        const params = await getParameters(elabidText, elabResourceidText, elabtoken, datahubtoken, instance);
 
-        /**
-         * Gets or sets parameter values from/to DOM inputs.
-         * If values are provided, they update the DOM.
-         * Otherwise, values are read from the DOM.
-         *
-         * @param {string} [elabidText] - Optional experiment ID to set or read
-         * @param {string} [elabResourceidText] - Optional resource ID to set or read
-         * @param {string} [elabtoken] - Optional eLab token to set or read
-         * @param {string} [datahubtoken] - Optional DataHub token to set or read
-         * @param {string} [instance] - Optional eLab instance URL to set or read
-         * @returns {Object} - Object containing: elabidList, elabtoken, datahubtoken, instance
-         */
-        async function getParameters(elabidText, elabResourceidText, elabtoken, datahubtoken, instance) {
-          // Set or get eLab API token
-          if (elabtoken) {
-            document.getElementById("elabToken").value = elabtoken;
-          } else {
-            elabtoken = extractCookie("elabtoken");
-            document.getElementById("elabToken").value = elabtoken;
-          }
+        // Process each experiment ID
+        //const gitlabusername = document.getElementById("usernameInput").value;
+        const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
+        // if (gitlabURL.includes("Please select your")){
+        //   alert("No eLabFTW is selected, please go to eLabFTW tab to select.");
+        //   return;
+        // };
+        const arcName = document.getElementById("arcInfo").innerHTML;
+        if (arcName.includes("Please select your ARC")) {
+          alert("please select your ARC.");
+          return;
+        };
 
-          // Set or get DataHub token
-          if (datahubtoken) {
-            document.getElementById("datahubToken").value = datahubtoken;
-          } else {
-            datahubtoken = extractCookie("datahubtoken");
-            document.getElementById("datahubToken").value = datahubtoken;
-          }
+        // const elabtoken = document.getElementById("elabToken").value;
+        // const datahubtoken = document.getElementById("datahubToken").value;
+        // const instance = document.getElementById("elabURLInput").value;
+        const users = await fetchElabJSON(params.elabtoken, "users", params.instance);
 
-          // Set or get instance URL
-          if (instance) {
-            document.getElementById("elabURLInput1").value = instance;
-          } else {
-            instance = localStorage.getItem("instance");
-            document.getElementById("elabURLInput1").value = instance;
-          }
+        // Process each experiment ID
+        await processElabEntries(params, users, gitlabURL, arcName);
+      } catch (error) {
+        console.error(error);
+        handleError(error);
+      }
+    }
 
-          // Persist values in cookies
-          setCookies(elabtoken, datahubtoken, instance);
+    // Initialize UI elements
+    function initializeUI() {
+      filesChanged.innerHTML = "";
+      statusInfo = "";
+    }
 
-          // Set or get experiment ID
-          if (elabidText) {
-            document.getElementById("elabExperimentid").value = elabidText;
-          } else {
-            elabidText = document.getElementById("elabExperimentid").value;
-          }
 
-          // Set or get resource ID
-          if (elabResourceidText) {
-            document.getElementById("elabResourceid").value = elabResourceidText;
-          } else {
-            // Fixed: Previously used wrong element ("elabExperimentid")
-            elabResourceidText = document.getElementById("elabResourceid").value;
-          }
 
-          // Sync and retrieve list of IDs
-          const elabidList = elabListSync();
+    /**
+     * Gets or sets parameter values from/to DOM inputs.
+     * If values are provided, they update the DOM.
+     * Otherwise, values are read from the DOM.
+     *
+     * @param {string} [elabidText] - Optional experiment ID to set or read
+     * @param {string} [elabResourceidText] - Optional resource ID to set or read
+     * @param {string} [elabtoken] - Optional eLab token to set or read
+     * @param {string} [datahubtoken] - Optional DataHub token to set or read
+     * @param {string} [instance] - Optional eLab instance URL to set or read
+     * @returns {Object} - Object containing: elabidList, elabtoken, datahubtoken, instance
+     */
+    async function getParameters(elabidText, elabResourceidText, elabtoken, datahubtoken, instance) {
+      // Set or get eLab API token
+      if (elabtoken) {
+        document.getElementById("elabToken").value = elabtoken;
+      } else {
+        elabtoken = extractCookie("elabtoken");
+        document.getElementById("elabToken").value = elabtoken;
+      }
 
-          return {
-            elabidList,
-            elabtoken,
-            datahubtoken,
-            instance
-          };
+      // Set or get DataHub token
+      if (datahubtoken) {
+        document.getElementById("datahubToken").value = datahubtoken;
+      } else {
+        datahubtoken = extractCookie("datahubtoken");
+        document.getElementById("datahubToken").value = datahubtoken;
+      }
+
+      // Set or get instance URL
+      if (instance) {
+        document.getElementById("elabURLInput1").value = instance;
+      } else {
+        instance = localStorage.getItem("instance");
+        document.getElementById("elabURLInput1").value = instance;
+      }
+
+      // Persist values in cookies
+      setCookies(elabtoken, datahubtoken, instance);
+
+      // Set or get experiment ID
+      if (elabidText) {
+        document.getElementById("elabExperimentid").value = elabidText;
+      } else {
+        elabidText = document.getElementById("elabExperimentid").value;
+      }
+
+      // Set or get resource ID
+      if (elabResourceidText) {
+        document.getElementById("elabResourceid").value = elabResourceidText;
+      } else {
+        // Fixed: Previously used wrong element ("elabExperimentid")
+        elabResourceidText = document.getElementById("elabResourceid").value;
+      }
+
+      // Sync and retrieve list of IDs
+      const elabidList = elabListSync();
+
+      return {
+        elabidList,
+        elabtoken,
+        datahubtoken,
+        instance
+      };
+    }
+    const PATH_CONFIG = {
+      default: {
+        baseDir: 'assays',
+        baseDir2: "assays",
+        subDirs: {
+          protocols: 'protocols',
+          datasets: 'dataset'
+        },
+        slash: "/"
+      },
+      studies: {
+        baseDir: 'studies',
+        baseDir2: "",
+        subDirs: {
+          protocols: 'protocols',
+          resources: 'resources'
+        },
+        slash: ""
+      }
+    };
+
+    async function createAssay(assayId, dir, gitSubfolder) {
+      const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
+      const baseAssayPath = memfsPathJoin(dir, baseDir2, assayId);
+
+      // Ensure base assay directory exists
+      if (!fs.existsSync(baseAssayPath)) {
+        fs.mkdirSync(baseAssayPath, { recursive: true });
+      }
+
+      // Create subfolders
+      Object.values(subDirs).forEach(sub => {
+        const fullPath = memfsPathJoin(baseAssayPath, sub);
+        if (!fs.existsSync(fullPath)) {
+          fs.mkdirSync(fullPath, { recursive: true });
         }
-      const PATH_CONFIG = {
-          default: {
-            baseDir: 'assays',
-            baseDir2: "assays",
-            subDirs: {
-              protocols: 'protocols',
-              datasets: 'dataset'
-            },
-            slash:"/"
-          },
-          studies: {
-            baseDir: 'studies',
-            baseDir2: "",
-            subDirs: {
-              protocols: 'protocols',
-              resources: 'resources'
-            },
-            slash:""
-          }
-        };  
+      });
 
-        async function createAssay(assayId, dir, gitSubfolder) {
-          const { baseDir, baseDir2, subDirs, slash} = getDirectoryStructure(gitSubfolder);
-          const baseAssayPath = memfsPathJoin(dir, baseDir2, assayId);
+      // Delete and recreate dataset/resources folder if necessary
+      const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
+      if (fs.existsSync(datasetPath)) {
+        fs.rmSync(datasetPath, { recursive: true, force: true });
+      }
+      fs.mkdirSync(datasetPath, { recursive: true });
+    }
 
-          // Ensure base assay directory exists
-          if (!fs.existsSync(baseAssayPath)) {
-            fs.mkdirSync(baseAssayPath, { recursive: true });
-          }
+    function getDirectoryStructure(gitSubfolder = '') {
+      const normalized = gitSubfolder.trim().toLowerCase();
+      if (normalized === 'studies') {
+        return PATH_CONFIG.studies;
+      }
+      return PATH_CONFIG.default;
+    }
 
-          // Create subfolders
-          Object.values(subDirs).forEach(sub => {
-            const fullPath = memfsPathJoin(baseAssayPath, sub);
-            if (!fs.existsSync(fullPath)) {
-              fs.mkdirSync(fullPath, { recursive: true });
-            }
-          });
+    async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir, instance) {
+      const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
+      updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);
 
-          // Delete and recreate dataset/resources folder if necessary
-          const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
-          if (fs.existsSync(datasetPath)) {
-            fs.rmSync(datasetPath, { recursive: true, force: true });
-          }
-          fs.mkdirSync(datasetPath, { recursive: true });
-        }
+      const assayId = formatAssayId(res.title);
+      const user = users.find(e => e.fullname === res.fullname);
+      const email = user?.email || '';
 
-        function getDirectoryStructure(gitSubfolder = '') {
-            const normalized = gitSubfolder.trim().toLowerCase();
-            if (normalized === 'studies') {
-              return PATH_CONFIG.studies;
-            }
-            return PATH_CONFIG.default;
-          }
+      // Process protocol HTML
+      let protocol = res.body;
+      const elabWWW = params.instance.replace("api/v2/", "");
+      protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
+      protocol = protocol.replace('<a href="experiments.php?', '<a target="_blank" href="' + instance.replace("api/v2/", "") + 'experiments.php?');
+      protocol = protocol.replace('<a href="database.php?', '<a  target="_blank" href="' + instance.replace("api/v2/", "") + 'experiments.php?');
+      const protocolHTML = protocol;
 
-      async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir, instance) {
-        const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
-        updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);
+      // Convert to markdown
+      let markdown = turndownService.turndown(protocol);
 
-        const assayId = formatAssayId(res.title);
-        const user = users.find(e => e.fullname === res.fullname);
-        const email = user?.email || '';
+      // Determine git info
+      const gitName = datahubURL.slice(0, -4);
+      const gitShortName = gitName.split("/").slice(-1)[0];
+      const list = arcDir.split("/");
+      const gitRoot = list[0] + "/";
+      let gitSubfolder = arcDir.replace(list[0], "").replace(/^\//, "");
 
-        // Process protocol HTML
-        let protocol = res.body;
-        const elabWWW = params.instance.replace("api/v2/", "");
-        protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
-        protocol = protocol.replace('<a href="experiments.php?', '<a target="_blank" href="'+instance.replace("api/v2/", "")+'experiments.php?');
-        protocol = protocol.replace('<a href="database.php?', '<a  target="_blank" href="'+instance.replace("api/v2/", "")+'experiments.php?');
-        const protocolHTML = protocol;
+      console.log("Git Root:", gitRoot, "| Git Subfolder:", gitSubfolder);
 
-        // Convert to markdown
-        let markdown = turndownService.turndown(protocol);
+      const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
 
-        // Determine git info
-        const gitName = datahubURL.slice(0, -4);
-        const gitShortName = gitName.split("/").slice(-1)[0];
-        const list = arcDir.split("/");
-        const gitRoot = list[0] + "/";
-        let gitSubfolder = arcDir.replace(list[0], "").replace(/^\//, "");
+      const baseAssayPath = memfsPathJoin(arcDir, baseDir2, assayId);
+      const protocolPath = memfsPathJoin(baseAssayPath, subDirs.protocols);
+      const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
 
-        console.log("Git Root:", gitRoot, "| Git Subfolder:", gitSubfolder);
-
-        const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
-
-        const baseAssayPath = memfsPathJoin(arcDir, baseDir2, assayId);
-        const protocolPath = memfsPathJoin(baseAssayPath, subDirs.protocols);
-        const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
-
-        // Create required directories
-        await createAssay(assayId, arcDir, gitSubfolder);
-        if (gitSubfolder==""){
-          await fullAssay2(
-            assayId,
-            "new metadata table",
-            res.lastname,
-            res.firstname,
-            email,
-            res.team_name,
-            `Generated by elab2ARC tool on ${Date()} datahub_url is: ${datahubURL}`,
-            arcDir,
-            datahubURL
-          );
+      // Create required directories
+      await createAssay(assayId, arcDir, gitSubfolder);
+      if (gitSubfolder == "") {
+        await fullAssay2(
+          assayId,
+          "new metadata table",
+          res.lastname,
+          res.firstname,
+          email,
+          res.team_name,
+          `Generated by elab2ARC tool on ${Date()} datahub_url is: ${datahubURL}`,
+          arcDir,
+          datahubURL
+        );
 
         updateInfo(`isa.assay.xlsx has been updated at <b>${assayId}</b>`, ratio * 35);
         await git.add({ fs, dir: arcDir, filepath: `${baseDir}/${assayId}/isa.assay.xlsx` });
-        }else{
-          updateInfo(`no isa.assay.xlsx, because studies folder has been selected <b>${assayId}</b>`, ratio * 35);
-        }
-        // Write isa.assay.xlsx
-        
+      } else {
+        updateInfo(`no isa.assay.xlsx, because studies folder has been selected <b>${assayId}</b>`, ratio * 35);
+      }
+      // Write isa.assay.xlsx
 
-        // Status HTML
-        let statusHTML = `
+
+      // Status HTML
+      let statusHTML = `
           <table class="table table-striped table-hover">
             <thead>
               <tr>
@@ -1785,46 +1817,10 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
               </tr>
         `;
 
-        // Process uploads
-        [statusHTML, markdown] = await processUploadsAndReplaceUrls(
-          res.uploads,
-          arcDir,
-          gitRoot,
-          gitSubfolder,
-          assayId,
-          datahubURL,
-          params,
-          ratio,
-          statusHTML,
-          markdown,
-          protocolHTML,
-          elabid,
-          res
-        );
-
-        // Finalize HTML and write files
-        statusHTML += "</tbody></table>";
-        statusHTML = statusHTML.replaceAll("<img", "<img class='img-fluid'");
-        filesChanged.innerHTML = statusHTML;
-
-        // Write markdown files
-        const protocolMdPath = memfsPathJoin(protocolPath, 'eLabFTW_protocol.md');
-        await fs.promises.writeFile(protocolMdPath, markdown);
-        await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.protocols}/eLabFTW_protocol.md` });
-        
-        
-
-        const readmePath = memfsPathJoin(datasetPath, 'readme.md');
-        await fs.promises.writeFile(readmePath, "# Data files");
-        await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.datasets || subDirs.resources}/readme.md` });
-
-        finalizeExperimentDisplay(ratio);
-        await commitPush(params.datahubtoken, datahubURL, res.fullname, email, arcDir, gitRoot);
-      }    
-
-      async function processUploadsAndReplaceUrls(
-        uploads,
-        dir,
+      // Process uploads
+      [statusHTML, markdown] = await processUploadsAndReplaceUrls(
+        res.uploads,
+        arcDir,
         gitRoot,
         gitSubfolder,
         assayId,
@@ -1836,50 +1832,86 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
         protocolHTML,
         elabid,
         res
-      ) {
-        const gitName = datahubURL.slice(0, -4);
-        const gitShortName = gitName.split("/").slice(-1)[0];
+      );
 
-        const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
-         console.log("2nd Git Root:", gitRoot, "| Git Subfolder:", gitSubfolder);
-        const datasetSubDir = subDirs.datasets || subDirs.resources;
-        const datasetPath = memfsPathJoin(baseDir, assayId, datasetSubDir);
+      // Finalize HTML and write files
+      statusHTML += "</tbody></table>";
+      statusHTML = statusHTML.replaceAll("<img", "<img class='img-fluid'");
+      filesChanged.innerHTML = statusHTML;
 
-        for (const [index, upload] of Object.entries(uploads)) {
-          const blob = await fetchElabFiles(
-            params.elabtoken,
-            `experiments/${res.id}/uploads/${upload.id}?format=binary`,
-            params.instance
-          );
+      // Write markdown files
+      const protocolMdPath = memfsPathJoin(protocolPath, 'eLabFTW_protocol.md');
+      await fs.promises.writeFile(protocolMdPath, markdown);
+      await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.protocols}/eLabFTW_protocol.md` });
 
-          const realname = upload.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-          const longname = upload.long_name;
-          const longnameEncoded = encodeURIComponent(longname);
-          const filePath = memfsPathJoin(datasetPath, `${index}_${realname}`);
-          const markdownPath = `${gitRoot.replace(gitShortName, "")}/${filePath}`;
 
-          // Replace URLs in HTML and markdown
-          statusHTML = statusHTML.replaceAll(longname, URL.createObjectURL(blob));
-          statusHTML = statusHTML.replaceAll(longnameEncoded, URL.createObjectURL(blob));
-          statusHTML = statusHTML.replace(/&amp;storage=[12]/g, "");
 
-          markdown = markdown.replace(new RegExp(longname, "g"), `../${datasetSubDir}/${index}_${realname}`);
-          markdown = markdown.replace(new RegExp(longnameEncoded, "g"), `../${datasetSubDir}/${index}_${realname}`);
-          markdown = markdown.replace(/&storage=./g, "");
+      const readmePath = memfsPathJoin(datasetPath, 'readme.md');
+      await fs.promises.writeFile(readmePath, "# Data files");
+      await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.datasets || subDirs.resources}/readme.md` });
 
-          // Write file
-          const fullPath = memfsPathJoin(gitRoot, filePath);
-          console.log("filepath:", filePath, "| fullpath:", fullPath);
-          //const imagePath = memfsPathJoin(baseDir, assayId, "protocol/images", `${index}_${realname}` );
-          await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
-          //await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
+      finalizeExperimentDisplay(ratio);
+      await commitPush(params.datahubtoken, datahubURL, res.fullname, email, arcDir, gitRoot);
+    }
 
-          await git.add({ fs, dir: gitRoot, filepath: `${filePath}` });
-         
-          // Update status HTML
-                  
-          if (blob.type.includes("image")) { //
-            statusHTML += `
+    async function processUploadsAndReplaceUrls(
+      uploads,
+      dir,
+      gitRoot,
+      gitSubfolder,
+      assayId,
+      datahubURL,
+      params,
+      ratio,
+      statusHTML,
+      markdown,
+      protocolHTML,
+      elabid,
+      res
+    ) {
+      const gitName = datahubURL.slice(0, -4);
+      const gitShortName = gitName.split("/").slice(-1)[0];
+
+      const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
+      console.log("2nd Git Root:", gitRoot, "| Git Subfolder:", gitSubfolder);
+      const datasetSubDir = subDirs.datasets || subDirs.resources;
+      const datasetPath = memfsPathJoin(baseDir, assayId, datasetSubDir);
+
+      for (const [index, upload] of Object.entries(uploads)) {
+        const blob = await fetchElabFiles(
+          params.elabtoken,
+          `experiments/${res.id}/uploads/${upload.id}?format=binary`,
+          params.instance
+        );
+
+        const realname = upload.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+        const longname = upload.long_name;
+        const longnameEncoded = encodeURIComponent(longname);
+        const filePath = memfsPathJoin(datasetPath, `${index}_${realname}`);
+        const markdownPath = `${gitRoot.replace(gitShortName, "")}/${filePath}`;
+
+        // Replace URLs in HTML and markdown
+        statusHTML = statusHTML.replaceAll(longname, URL.createObjectURL(blob));
+        statusHTML = statusHTML.replaceAll(longnameEncoded, URL.createObjectURL(blob));
+        statusHTML = statusHTML.replace(/&amp;storage=[12]/g, "");
+
+        markdown = markdown.replace(new RegExp(longname, "g"), `../${datasetSubDir}/${index}_${realname}`);
+        markdown = markdown.replace(new RegExp(longnameEncoded, "g"), `../${datasetSubDir}/${index}_${realname}`);
+        markdown = markdown.replace(/&storage=./g, "");
+
+        // Write file
+        const fullPath = memfsPathJoin(gitRoot, filePath);
+        console.log("filepath:", filePath, "| fullpath:", fullPath);
+        //const imagePath = memfsPathJoin(baseDir, assayId, "protocol/images", `${index}_${realname}` );
+        await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
+        //await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
+
+        await git.add({ fs, dir: gitRoot, filepath: `${filePath}` });
+
+        // Update status HTML
+
+        if (blob.type.includes("image")) { //
+          statusHTML += `
               <tr>
                 <td><img src="${URL.createObjectURL(blob)}"></td>
                 <td>
@@ -1889,8 +1921,8 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
                 </td>
               </tr>
             `;
-          } else {//
-            statusHTML += `
+        } else {//
+          statusHTML += `
               <tr>
                 <td>File name is ${realname}</td>
                 <td>
@@ -1901,71 +1933,71 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
                 </td>
               </tr>
             `;
-          }
-
-          updateInfo(`Added file ${realname}`, ratio * (10 + (index / uploads.length * 10)));
         }
 
-        return [statusHTML, markdown];
+        updateInfo(`Added file ${realname}`, ratio * (10 + (index / uploads.length * 10)));
       }
 
-        function formatAssayId(title) {
-            return title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
-        }
+      return [statusHTML, markdown];
+    }
 
-        // Read directory contents
-        async function readDirectory(dir) {
-            try {
-                return fs.readdirSync(`${dir}/assays`);
-            } catch (error) {
-                return fs.readdirSync(dir);
-            }
-        }
+    function formatAssayId(title) {
+      return title.replace(/\//g, "|").replace(/[^a-zA-Z0-9_\-]/g, "_");
+    }
+
+    // Read directory contents
+    async function readDirectory(dir) {
+      try {
+        return fs.readdirSync(`${dir}/assays`);
+      } catch (error) {
+        return fs.readdirSync(dir);
+      }
+    }
 
 
-        // Finalize experiment display
-        function finalizeExperimentDisplay(ratio) {
-            updateInfo("Finished adding protocol files in ARC", ratio * 70);
-            updateInfo("All files have been added to ARC, starting to push ARC to", ratio * 80);
-            document.getElementById("filesAcc").click();
+    // Finalize experiment display
+    function finalizeExperimentDisplay(ratio) {
+      updateInfo("Finished adding protocol files in ARC", ratio * 70);
+      updateInfo("All files have been added to ARC, starting to push ARC to", ratio * 80);
+      document.getElementById("filesAcc").click();
 
-        }
+    }
 
-        // Handle errors
-        function handleError(error) {
-            if (error.message.includes("401")) {
-              
-                showError("Error: Unable to access PLANTdataHUB. Please verify that the DataHub Token matches the datahub_url in the extra_fields of eLabFTW.");
-            } else if (error.message.includes("Cannot read properties of undefined")) {
-              
-                showError("eLabFTW accessed successfully, but extra_fields is missing. Please check the experiment ID and extra_fields in eLabFTW.");
-            } else if (error.message.includes("403")) {
-              
-                showError("Error: PLANTdataHUB cannot be accessed. Please verify that the datahub_url in the extra_fields of eLabFTW is correct.");
-            } else {
-              
-                showError("Error: eLabFTW to ARC conversion failed.");
-            }
-            console.error(error);
-            updateInfo("ARC update failed", 0);
-        }
+    // Handle errors
+    function handleError(error) {
+      if (error.message.includes("401")) {
 
-        async function fetchElabExperimentData(elabid, elabtoken, instance, type) {
-          let res;
-            ;
-            res = await fetchElabJSON(elabtoken, `${typeConfig[type].endpoint}/${elabid}`, instance);
+        showError("Error: Unable to access PLANTdataHUB. Please verify that the DataHub Token matches the datahub_url in the extra_fields of eLabFTW.");
+      } else if (error.message.includes("Cannot read properties of undefined")) {
 
-          if (res.code > 400){
-            console.error(res);
-            
-          }
-          const users = await fetchElabJSON(elabtoken, "users", instance);
-          const user = users.find(u => u.fullname === res.fullname);
-          return res;
-        }
+        showError("eLabFTW accessed successfully, but extra_fields is missing. Please check the experiment ID and extra_fields in eLabFTW.");
+      } else if (error.message.includes("403")) {
 
- 
-      
+        showError("Error: PLANTdataHUB cannot be accessed. Please verify that the datahub_url in the extra_fields of eLabFTW is correct.");
+      } else {
+
+        showError("Error: eLabFTW to ARC conversion failed.");
+      }
+      console.error(error);
+      updateInfo("ARC update failed", 0);
+    }
+
+    async function fetchElabExperimentData(elabid, elabtoken, instance, type) {
+      let res;
+      ;
+      res = await fetchElabJSON(elabtoken, `${typeConfig[type].endpoint}/${elabid}`, instance);
+
+      if (res.code > 400) {
+        console.error(res);
+
+      }
+      const users = await fetchElabJSON(elabtoken, "users", instance);
+      const user = users.find(u => u.fullname === res.fullname);
+      return res;
+    }
+
+
+
     const loading = new bootstrap.Modal(document.getElementById('loadingModal'), {
       keyboard: true, show: false
     });
@@ -1974,167 +2006,167 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       keyboard: true, show: false
     });
 
-    addEventListener("load", (event) => { 
-      
+    addEventListener("load", (event) => {
+
       //showError("sorry there is currently a connection problem between this tool and DataHUB, please try again later.")
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-      softRoute(); 
+      softRoute();
       const instance = window.localStorage.getItem("instance");
       document.getElementById("elabURLInput1").value = instance;
-      document.getElementById("elabURLInput1").innerHTML= "instance: "+instance;
-      
+      document.getElementById("elabURLInput1").innerHTML = "instance: " + instance;
+
       document.getElementById("elabSearch").addEventListener('keypress', function (e) {
-          if (e.key === 'Enter') {
-            document.getElementById("elabSearchBtn").click()
-          }
+        if (e.key === 'Enter') {
+          document.getElementById("elabSearchBtn").click()
+        }
       });
       document.getElementById("arcSearch").addEventListener('keypress', function (e) {
-          if (e.key === 'Enter') {
-            document.getElementById("arcSearchBtn").click()
-          }
+        if (e.key === 'Enter') {
+          document.getElementById("arcSearchBtn").click()
+        }
       });
 
       checkElabFTWConnection();
       checkGitLabConnection();
-     
+
 
     }
     );
-    function showPassword(ele){
-      
-        const id = ele.dataset.showId ;
-          
-        const passwordInput = document.getElementById(id);
-        const eyeIcon = this;
+    function showPassword(ele) {
 
-        if (passwordInput.type === 'password') {
-          passwordInput.type = 'text';
-          eyeIcon.textContent = '👁️'; // Show open eye
-        } else {
-          passwordInput.type = 'password';
-          eyeIcon.textContent = '👁️'; // Still show open eye (you can change to a slashed eye using another Unicode)
-        }
+      const id = ele.dataset.showId;
+
+      const passwordInput = document.getElementById(id);
+      const eyeIcon = this;
+
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.textContent = '👁️'; // Show open eye
+      } else {
+        passwordInput.type = 'password';
+        eyeIcon.textContent = '👁️'; // Still show open eye (you can change to a slashed eye using another Unicode)
+      }
     }
-        
 
 
-    function normalizePathSeparators (str) {
+
+    function normalizePathSeparators(str) {
       const normalizedPath = path.normalize(str)
       return normalizedPath.replace(/\\/g, '/');
     }
 
     function memfsPathDirname(filePath) {
-        if (typeof filePath !== 'string') filePath = String(filePath);
-        if (filePath === '') return '.';
+      if (typeof filePath !== 'string') filePath = String(filePath);
+      if (filePath === '') return '.';
 
-        // Remove trailing slashes (except if path is all slashes)
-        let len = filePath.length;
-        while (len > 0 && filePath[len - 1] === '/') len--;
-        if (len === 0) return '/'; // Handle root path
+      // Remove trailing slashes (except if path is all slashes)
+      let len = filePath.length;
+      while (len > 0 && filePath[len - 1] === '/') len--;
+      if (len === 0) return '/'; // Handle root path
 
-        const normalized = filePath.slice(0, len);
-        const lastSlashIndex = normalized.lastIndexOf('/');
+      const normalized = filePath.slice(0, len);
+      const lastSlashIndex = normalized.lastIndexOf('/');
 
-        if (lastSlashIndex === -1) {
-          // No directory separators found
-          return (normalized === '.' || normalized === '..') ? normalized : '.';
-        }
-
-        // Slice to last slash and remove trailing slashes from the result
-        let result = normalized.slice(0, lastSlashIndex);
-        len = result.length;
-        while (len > 0 && result[len - 1] === '/') len--;
-
-        return len === 0 ? '/' : result.slice(0, len);
-      }
-      function memfsPathJoin(...segments) {
-        // Filter out empty/null segments and join with '/'
-        const joined = segments.filter(s => s != null && s !== '').join('/');
-
-        // Split into components and normalize
-        const stack = [];
-        joined.split('/').forEach(segment => {
-          if (segment === '.' || segment === '') return; // Skip no-ops
-          if (segment === '..') {
-            // Handle parent directory (if not at root)
-            if (stack.length > 0 && stack[stack.length - 1] !== '') stack.pop();
-          } else {
-            stack.push(segment);
-          }
-        });
-
-        // Rebuild path and remove trailing slash (except for root)
-        let normalized = stack.join('/');
-        if (normalized.endsWith('/') && normalized !== '') {
-          normalized = normalized.slice(0, -1);
-        }
-
-        // Handle absolute paths
-        const isAbsolute = joined.startsWith('/');
-        return isAbsolute ? `/${normalized}` : normalized || '.';
+      if (lastSlashIndex === -1) {
+        // No directory separators found
+        return (normalized === '.' || normalized === '..') ? normalized : '.';
       }
 
-      async function arcWrite(arcPath, arc)  {
-            let contracts = arc.GetWriteContracts()
-            for (const contract of contracts) {
-                // from Contracts.js docs
-                await fulfillWriteContract(arcPath,contract)
-            };
+      // Slice to last slash and remove trailing slashes from the result
+      let result = normalized.slice(0, lastSlashIndex);
+      len = result.length;
+      while (len > 0 && result[len - 1] === '/') len--;
+
+      return len === 0 ? '/' : result.slice(0, len);
+    }
+    function memfsPathJoin(...segments) {
+      // Filter out empty/null segments and join with '/'
+      const joined = segments.filter(s => s != null && s !== '').join('/');
+
+      // Split into components and normalize
+      const stack = [];
+      joined.split('/').forEach(segment => {
+        if (segment === '.' || segment === '') return; // Skip no-ops
+        if (segment === '..') {
+          // Handle parent directory (if not at root)
+          if (stack.length > 0 && stack[stack.length - 1] !== '') stack.pop();
+        } else {
+          stack.push(segment);
         }
+      });
+
+      // Rebuild path and remove trailing slash (except for root)
+      let normalized = stack.join('/');
+      if (normalized.endsWith('/') && normalized !== '') {
+        normalized = normalized.slice(0, -1);
+      }
+
+      // Handle absolute paths
+      const isAbsolute = joined.startsWith('/');
+      return isAbsolute ? `/${normalized}` : normalized || '.';
+    }
+
+    async function arcWrite(arcPath, arc) {
+      let contracts = arc.GetWriteContracts()
+      for (const contract of contracts) {
+        // from Contracts.js docs
+        await fulfillWriteContract(arcPath, contract)
+      };
+    }
 
 
 
 
-    async function fulfillWriteContract (basePath, contract) {
-        function ensureDirectory (filePath) {
-            let dirPath = memfsPathDirname(filePath)
-            if (!fs.existsSync(dirPath)){
-                fs.mkdirSync(dirPath, { recursive: true });
-            }
+    async function fulfillWriteContract(basePath, contract) {
+      function ensureDirectory(filePath) {
+        let dirPath = memfsPathDirname(filePath)
+        if (!fs.existsSync(dirPath)) {
+          fs.mkdirSync(dirPath, { recursive: true });
         }
-        
-        const p = memfsPathJoin(basePath,contract.Path)
-        if (contract.Operation = "CREATE") {
-            if (contract.DTO == undefined) {
-                ensureDirectory(p)
-                fs.writeFileSync(p, "")
-            } else if (contract.DTOType == "ISA_Assay" || contract.DTOType == "ISA_Assay" || contract.DTOType == "ISA_Investigation") {
-                ensureDirectory(p)
-                await Xlsx.toFile(p, contract.DTO)
-            } else if (contract.DTOType == "PlainText") {
-                ensureDirectory(p)
-                fs.writeFileSync(p, contract.DTO)
-            } else {
-                console.log("Warning: The given contract is not a correct ARC write contract: ", contract)
-            }
+      }
+
+      const p = memfsPathJoin(basePath, contract.Path)
+      if (contract.Operation = "CREATE") {
+        if (contract.DTO == undefined) {
+          ensureDirectory(p)
+          fs.writeFileSync(p, "")
+        } else if (contract.DTOType == "ISA_Assay" || contract.DTOType == "ISA_Assay" || contract.DTOType == "ISA_Investigation") {
+          ensureDirectory(p)
+          await Xlsx.toFile(p, contract.DTO)
+        } else if (contract.DTOType == "PlainText") {
+          ensureDirectory(p)
+          fs.writeFileSync(p, contract.DTO)
+        } else {
+          console.log("Warning: The given contract is not a correct ARC write contract: ", contract)
         }
+      }
     }
 
     // Read
 
-    async function fulfillReadContract (basePath, contract) {
+    async function fulfillReadContract(basePath, contract) {
       async function fulfill() {
-          const normalizedPath = normalizePathSeparators(memfsPathJoin(basePath, contract.Path))
-          switch (contract.DTOType) {
-              case "ISA_Assay":
-              case "ISA_Study":
-              case "ISA_Investigation":
-                  let fswb = await Xlsx.fromXlsxFile(normalizedPath)
-                  return fswb
-                  break;
-              case "PlainText":
-                  let content = fs.load(normalizedPath)
-                  return content
-                  break;
-              default:
-                  console.log(`Handling of ${contract.DTOType} in a READ contract is not yet implemented`)
-          }
+        const normalizedPath = normalizePathSeparators(memfsPathJoin(basePath, contract.Path))
+        switch (contract.DTOType) {
+          case "ISA_Assay":
+          case "ISA_Study":
+          case "ISA_Investigation":
+            let fswb = await Xlsx.fromXlsxFile(normalizedPath)
+            return fswb
+            break;
+          case "PlainText":
+            let content = fs.load(normalizedPath)
+            return content
+            break;
+          default:
+            console.log(`Handling of ${contract.DTOType} in a READ contract is not yet implemented`)
+        }
       }
       if (contract.Operation == "READ") {
-          return await fulfill()
+        return await fulfill()
       } else {
-          console.error(`Error (fulfillReadContract): "${contract}" is not a READ contract`)
+        console.error(`Error (fulfillReadContract): "${contract}" is not a READ contract`)
       }
     }
 
@@ -2142,21 +2174,21 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
 
     function getAllFilePaths(basePath) {
       const filesList = []
-      function loop (dir) {
-          const files = fs.readdirSync(dir);
-          for (const file of files) {
-              const filePath = getAllFilePaths(dir, file);
-      
-              if (fs.statSync(filePath).isDirectory()) {
-                  // If it's a directory, recursively call the function on that directory
-                  loop(filePath);
-              } else {
-                  // If it's a file, calculate the relative path and add it to the list
-                  const relativePath = path.relative(basePath, filePath);
-                  const normalizePath = normalizePathSeparators(relativePath)
-                  filesList.push(normalizePath);
-              }
+      function loop(dir) {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+          const filePath = getAllFilePaths(dir, file);
+
+          if (fs.statSync(filePath).isDirectory()) {
+            // If it's a directory, recursively call the function on that directory
+            loop(filePath);
+          } else {
+            // If it's a file, calculate the relative path and add it to the list
+            const relativePath = path.relative(basePath, filePath);
+            const normalizePath = normalizePathSeparators(relativePath)
+            filesList.push(normalizePath);
           }
+        }
       }
       loop(basePath)
       return filesList;
@@ -2167,48 +2199,50 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
 
     // put it all together
     async function read(basePath) {
-        let allFilePaths = getAllFilePaths(basePath)
-        // Initiates an ARC from FileSystem but no ISA info.
-        let arc = arctrl.ARC.fromFilePaths(allFilePaths)
-        // Read contracts will tell us what we need to read from disc.
-        let readContracts = arc.GetReadContracts()
-        console.log(readContracts)
-        let fcontracts = await Promise.all(
-            readContracts.map(async (contract) => {
-                let content = await fulfillReadContract(basePath, contract)
-                contract.DTO = content
-                return (contract) 
-            })
-        )
-        arc.SetISAFromContracts(fcontracts);
-        console.log(fcontracts);
-        return arc
+      let allFilePaths = getAllFilePaths(basePath)
+      // Initiates an ARC from FileSystem but no ISA info.
+      let arc = arctrl.ARC.fromFilePaths(allFilePaths)
+      // Read contracts will tell us what we need to read from disc.
+      let readContracts = arc.GetReadContracts()
+      console.log(readContracts)
+      let fcontracts = await Promise.all(
+        readContracts.map(async (contract) => {
+          let content = await fulfillReadContract(basePath, contract)
+          contract.DTO = content
+          return (contract)
+        })
+      )
+      arc.SetISAFromContracts(fcontracts);
+      console.log(fcontracts);
+      return arc
     }
 
     // execution
 
     // execution
-    window.ARC2JSON= async function(ARCName, JSONname ){
-        await read(ARCName).then(
-            arc =>  {try {
-                fs.writeFileSync(JSONname, arctrl.JsonController.Investigation.toISAJsonString(arc.ISA, void 0, true))
-                // file written successfully
-              } catch (err) {
-                console.error(err);
-              }}        
-        )
-    } 
+    window.ARC2JSON = async function (ARCName, JSONname) {
+      await read(ARCName).then(
+        arc => {
+          try {
+            fs.writeFileSync(JSONname, arctrl.JsonController.Investigation.toISAJsonString(arc.ISA, void 0, true))
+            // file written successfully
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      )
+    }
 
-    window.addInvestigationPerformers= async function(arcDir ,firstname, familyName){
+    window.addInvestigationPerformers = async function (arcDir, firstname, familyName) {
 
-      const inv1 = await Xlsx.fromXlsxFile(arcDir+"/isa.investigation.xlsx");
+      const inv1 = await Xlsx.fromXlsxFile(arcDir + "/isa.investigation.xlsx");
       let isa_inv = await arctrl.XlsxController.Investigation.fromFsWorkbook(inv1);
 
       const roles = new arctrl.OntologyAnnotation("Researcher", "AGRO", "AGRO:00000373");
-      const comment="generated by elab2arc"
-      let comments_p = arctrl.Comment$.create("generation log",comment);
+      const comment = "generated by elab2arc"
+      let comments_p = arctrl.Comment$.create("generation log", comment);
       const newContact = arctrl.Person.create(void 0, firstname, familyName, void 0, void 0, void 0, void 0, void 0, void 0, void 0);
-      
+
 
       // for (const ee of isa_inv.Contacts){
       //     if (ee.toString() != ccc.toString()){
@@ -2218,11 +2252,11 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       //         break;
       //     };
       // }
-      isa_inv.Contacts =[newContact];
+      isa_inv.Contacts = [newContact];
       let spreadsheet = arctrl.XlsxController.Investigation.toFsWorkbook(isa_inv);
-      const outPath = arcDir+"/isa.investigation.xlsx";
+      const outPath = arcDir + "/isa.investigation.xlsx";
 
-            console.log(spreadsheet);
+      console.log(spreadsheet);
 
       await Xlsx.toFile(outPath, spreadsheet);
     }
@@ -2230,8 +2264,8 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
 
 
 
-    window.fullAssay2= async function(assayName, tableName ="newtable", firstName=void 0, familyName=void 0, email= void 0, affiliation= void 0, comment="generated by elab2arc", dir , datahubURL){
-        try {
+    window.fullAssay2 = async function (assayName, tableName = "newtable", firstName = void 0, familyName = void 0, email = void 0, affiliation = void 0, comment = "generated by elab2arc", dir, datahubURL) {
+      try {
         // -------- 1. Create and manipulate object in datamodel ----------
         const growth = arctrl.ArcTable.init(tableName);
         // Add input column with one value to table
@@ -2249,175 +2283,174 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
         //const mplat = new arctrl.OntologyAnnotation("technology platform", "1", "2");
         const roles = new arctrl.OntologyAnnotation("Researcher", "AGRO", "AGRO:00000373");
 
-        let comments_p = arctrl.Comment$.create("generation log",comment);
+        let comments_p = arctrl.Comment$.create("generation log", comment);
         const person = arctrl.Person.create(void 0, firstName, familyName, void 0, email, void 0, void 0, void 0, affiliation, [roles], [comments_p]);
-        let comments_m = arctrl.Comment$.create("name","value");
+        let comments_m = arctrl.Comment$.create("name", "value");
         let comments_datahub_url = arctrl.Comment$.create("datahub_url", "arctest");
-        
+
         // Create annotation table
-        if (fs.existsSync(dir+"/assays/"+assayName+"/isa.assay.xlsx")){
-         try {        
+        if (fs.existsSync(dir + "/assays/" + assayName + "/isa.assay.xlsx")) {
+          try {
             console.log("isa.assay.xlsx file exist");
-            assay = await Xlsx.fromXlsxFile(dir+"/assays/"+assayName+"/isa.assay.xlsx");
+            assay = await Xlsx.fromXlsxFile(dir + "/assays/" + assayName + "/isa.assay.xlsx");
             isa_assay = await arctrl.XlsxController.Assay.fromFsWorkbook(assay);
             isa_assay.Performers = [person];
             isa_assay.Comment = [comments_datahub_url];
             let spreadsheet = arctrl.XlsxController.Assay.toFsWorkbook(isa_assay);
-            const outPath = dir+"/assays/"+assayName+"/isa.assay.xlsx";
+            const outPath = dir + "/assays/" + assayName + "/isa.assay.xlsx";
 
             console.log(spreadsheet);
 
-            await Xlsx.toFile(outPath,spreadsheet);
-         } catch (error) {
-          console.log(error);
-          
-         }
-        }else{
+            await Xlsx.toFile(outPath, spreadsheet);
+          } catch (error) {
+            console.log(error);
+
+          }
+        } else {
           //growth.AddColumn(arctrl.CompositeHeader.characteristic(oa_species), [arctrl.CompositeCell.createTerm(oa_chlamy )]);
 
-          const myAssay = arctrl.ArcAssay.create(assayName, void 0, void 0, void 0, [growth], void 0,[person], [comments_datahub_url]);
+          const myAssay = arctrl.ArcAssay.create(assayName, void 0, void 0, void 0, [growth], void 0, [person], [comments_datahub_url]);
           // -------- 2. Transform object to generic spreadsheet ----------
           let spreadsheet = arctrl.XlsxController.Assay.toFsWorkbook(myAssay);
           // -------- 3. Write spreadsheet to xlsx file (or bytes) ----------
-          const outPath = dir+"/assays/"+assayName+"/isa.assay.xlsx";
+          const outPath = dir + "/assays/" + assayName + "/isa.assay.xlsx";
 
           console.log(spreadsheet);
 
-          await Xlsx.toFile(outPath,spreadsheet);
-          }
-        } catch (err) {
+          await Xlsx.toFile(outPath, spreadsheet);
+        }
+      } catch (err) {
         console.error(err);
-        }
-    } 
-
-
-      function showError(text){
-        alert(text);
-        updateInfo(text,"0")
-
       }
-
-      function extractCookie(name){
-        const cookie = document.cookie;
-        const values = cookie.split("; ");
-        let value = "";
-        values.forEach(e=> { if (e.split("=")[0]===name){ value = e.split("=")[1]} }  );
-        return value;
-      }
-
-      function softRoute() {
-          const urlRoute = window.location.href.split("#");
-          const url1 =  urlRoute[0].split("?")[1];
-         
-          try {
-            if (url1){     
-              console.log("submission url is "+ url1);   
-              const submitData = url1.split("&");
-              let submitJSON = {};
-              submitData.forEach(e=>
-              { submitJSON[e.split("=")[0]] = e.split("=")[1]}
-            );
-              getParameters(submitJSON.elabid, submitJSON.elabResourceid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL);
-            //updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
-
-          } else {
-             console.log("submission url is "+ url1+". If url is undefined, switch tab to token tab");
-            showTab("tokenTab");
-          }
-          try {
-              const cookie = document.cookie;
-              // const cookieElabid= decodeURIComponent(decodeURIComponent(extractCookie("elabid")));
-              // if (cookieElabid){
-              //   document.getElementById("elabExperimentid").value = cookieElabid;
-              //   elabListSync()
-
-              // }
-              
-              document.getElementById("elabToken").value = extractCookie("elabtoken");
-              document.getElementById("datahubToken").value = extractCookie("datahubtoken");
-            } catch (error) {
-              console.error(error);
-              
-            }
-          } catch (error) {
-            showError("submission URL is wrong, error is " + error+". Please check your URL or remove everything after /elab2arc/")
-          }
-          
-          
-          const para = urlRoute.slice(-1)[0];
-          switch (para) {
-              case "home":
-              showTab("homeTab");
-              
-            case "elabftw":
-              showTab("elabftwTab");
-
-              break;
-            case "token":
-              showTab("tokenTab");
-            
-              break;
-            case "arc":
-              showTab("arcTab");
-
-              break;
-            case "ftw":
-              showTab("ftwTab");
-
-
-              break;
-              case "https://xrzhou.com/elab2arc/":
-              showTab("homeTab");
-            
-              break;
-              case "":
-              showTab("homeTab");
-              break;
-              
-            default:
-
-          }
-        }
-      
-  function multiElabSelect(sw){
-    if (sw.checked){
-      document.getElementById("multiElabBtn").classList.remove("d-none");
-     
-
-      document.querySelectorAll('input[name="multiElabCheckbox"]').forEach((e) => {
-             e.classList.remove("d-none"); 
-    });
-    }else{
-      document.getElementById("multiElabBtn").classList.add("d-none");
-      
-      document.querySelectorAll('input[name="multiElabCheckbox"]').forEach((e) => {
-             e.classList.add("d-none"); 
-    });
     }
-  }    
 
-  
-    function showTab(name){
+
+    function showError(text) {
+      alert(text);
+      updateInfo(text, "0")
+
+    }
+
+    function extractCookie(name) {
+      const cookie = document.cookie;
+      const values = cookie.split("; ");
+      let value = "";
+      values.forEach(e => { if (e.split("=")[0] === name) { value = e.split("=")[1] } });
+      return value;
+    }
+
+    function softRoute() {
+      const urlRoute = window.location.href.split("#");
+      const url1 = urlRoute[0].split("?")[1];
+
+      try {
+        if (url1) {
+          console.log("submission url is " + url1);
+          const submitData = url1.split("&");
+          let submitJSON = {};
+          submitData.forEach(e => { submitJSON[e.split("=")[0]] = e.split("=")[1] }
+          );
+          getParameters(submitJSON.elabid, submitJSON.elabResourceid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL);
+          //updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
+
+        } else {
+          console.log("submission url is " + url1 + ". If url is undefined, switch tab to token tab");
+          showTab("tokenTab");
+        }
+        try {
+          const cookie = document.cookie;
+          // const cookieElabid= decodeURIComponent(decodeURIComponent(extractCookie("elabid")));
+          // if (cookieElabid){
+          //   document.getElementById("elabExperimentid").value = cookieElabid;
+          //   elabListSync()
+
+          // }
+
+          document.getElementById("elabToken").value = extractCookie("elabtoken");
+          document.getElementById("datahubToken").value = extractCookie("datahubtoken");
+        } catch (error) {
+          console.error(error);
+
+        }
+      } catch (error) {
+        showError("submission URL is wrong, error is " + error + ". Please check your URL or remove everything after /elab2arc/")
+      }
+
+
+      const para = urlRoute.slice(-1)[0];
+      switch (para) {
+        case "home":
+          showTab("homeTab");
+
+        case "elabftw":
+          showTab("elabftwTab");
+
+          break;
+        case "token":
+          showTab("tokenTab");
+
+          break;
+        case "arc":
+          showTab("arcTab");
+
+          break;
+        case "ftw":
+          showTab("ftwTab");
+
+
+          break;
+        case "https://xrzhou.com/elab2arc/":
+          showTab("homeTab");
+
+          break;
+        case "":
+          showTab("homeTab");
+          break;
+
+        default:
+
+      }
+    }
+
+    function multiElabSelect(sw) {
+      if (sw.checked) {
+        document.getElementById("multiElabBtn").classList.remove("d-none");
+
+
+        document.querySelectorAll('input[name="multiElabCheckbox"]').forEach((e) => {
+          e.classList.remove("d-none");
+        });
+      } else {
+        document.getElementById("multiElabBtn").classList.add("d-none");
+
+        document.querySelectorAll('input[name="multiElabCheckbox"]').forEach((e) => {
+          e.classList.add("d-none");
+        });
+      }
+    }
+
+
+    function showTab(name) {
       document.querySelectorAll('div[name="tab"]').forEach((e) => {
-            if (e.id == name) { e.classList.remove("d-none");  }
-            else { e.classList.add("d-none") }
-    });
-    document.querySelectorAll('button[name="navBtn"]').forEach((e) => {
-            if (e.id == name.replace("Tab", "Btn")) { e.setAttribute("style", "background-color:white; color:black; border-radius: 5px 5px 0px 0px;");  }
-            else { e.setAttribute("style","") }
-    })
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    document.getElementById("kblink").href= kblinkJSON[name.replace("Tab", "")]
-  }
+        if (e.id == name) { e.classList.remove("d-none"); }
+        else { e.classList.add("d-none") }
+      });
+      document.querySelectorAll('button[name="navBtn"]').forEach((e) => {
+        if (e.id == name.replace("Tab", "Btn")) { e.setAttribute("style", "background-color:white; color:black; border-radius: 5px 5px 0px 0px;"); }
+        else { e.setAttribute("style", "") }
+      })
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById("kblink").href = kblinkJSON[name.replace("Tab", "")]
+    }
 
 
     async function cloneARC(http_url_to_repo, name) {
       loading.show()
       try {
-        
+
         const token = document.getElementById("datahubToken").value;
         await datahubClone(http_url_to_repo, name, token)
-        refreshTree("./"+name);
+        refreshTree("./" + name);
       } catch (error) {
         //throw showError(error),
         console.error(error);
@@ -2462,52 +2495,52 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
           <div class="container">
 
             <div class="form-check" id="submitRepos">
-              
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" value="1" id="biosamples" name="repo" checked>
-                      <label class="form-check-label" for="biosamples">
-                        Fetch eLabFTW 
 
-                      </label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="1" id="biosamples" name="repo" checked>
+                <label class="form-check-label" for="biosamples">
+                  Fetch eLabFTW
 
-
-                    </div>
-                    <div class="spinner-border text-primary d-none" id="biosamplesloading" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-
-
-
-
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" value="" id="ena" name="repo">
-                      <label class="form-check-label" for="ENA">
-                        Clone ARC
-                      </label>
-                    </div>
-                    <div class="spinner-border text-primary d-none" id="ENAloading" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-
-
-
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" value="" id="metabolights" name="repo">
-                      <label class="form-check-label" for="metabolights">
-                        Update ARC and Resubmit
-                      </label>
-                    </div>
-
-
-                    <div class="spinner-border text-primary d-none" id="metabolightsloading" role="status">
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
+                </label>
 
 
               </div>
+              <div class="spinner-border text-primary d-none" id="biosamplesloading" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
 
 
-            
+
+
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="" id="ena" name="repo">
+                <label class="form-check-label" for="ENA">
+                  Clone ARC
+                </label>
+              </div>
+              <div class="spinner-border text-primary d-none" id="ENAloading" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+
+
+
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="" id="metabolights" name="repo">
+                <label class="form-check-label" for="metabolights">
+                  Update ARC and Resubmit
+                </label>
+              </div>
+
+
+              <div class="spinner-border text-primary d-none" id="metabolightsloading" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+
+
+            </div>
+
+
+
           </div>
           <table id="validate_table" class="table table-bordered table-hover">
 
@@ -2523,53 +2556,55 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
     </div>
   </div>
 
-  <div class="offcanvas offcanvas-start w-75" tabindex="-1" id="elabPreviewCanvas" aria-labelledby="elabPreviewCanvasLabel">
+  <div class="offcanvas offcanvas-start w-75" tabindex="-1" id="elabPreviewCanvas"
+    aria-labelledby="elabPreviewCanvasLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="elabPreviewCanvasLabel">eLabFTW Preview</h5>
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-           <div class="container-fluid mt-3">
+      <div class="container-fluid mt-3">
         <div class="row g-4">
-      
+
           <!-- Main Content -->
           <div class="col-md-9">
-      
+
             <section class="section title bg-light rounded p-3 mb-4">
               <h1 id="expTitle" class="text-primary-emphasis"> Empty eLabFTW Preview</h1>
-              
+
             </section>
-      
+
             <section class="section content bg-light rounded p-3 mb-4" id="expContent">
               <!-- HTML content will be injected here -->
-               <h5>No eLabFTW available. Use <a href="#home"  data-bs-dismiss="offcanvas" aria-label="Close">home tab</a> to start a conversion</h5>
+              <h5>No eLabFTW available. Use <a href="#home" data-bs-dismiss="offcanvas" aria-label="Close">home tab</a>
+                to start a conversion</h5>
             </section>
-      
+
           </div>
-      
+
           <!-- Sidebar -->
           <div class="col-md-3 sidebar">
             <button class="btn btn-success my-3" data-bs-dismiss="offcanvas" aria-label="Close">Save </button>
-            
+
             <!-- Conversion Section -->
             <section class="section conversion rounded p-3 mb-4">
               <h3>Conversion</h3>
               <ul id="elabHeadLine"></ul>
             </section>
-      
+
             <!-- Metadata Section -->
             <section class="section metadata rounded p-3 mb-4">
               <h3>Metadata</h3>
               <ul id="metadataList"></ul>
             </section>
-      
+
             <!-- Related Items Section -->
             <section class="section related rounded p-3 mb-4">
               <h3>Linked Resources and Experiments</h3>
               <ul id="relatedItems"></ul>
               <ul id="relatedExps"></ul>
             </section>
-      
+
             <!-- Uploads / Gallery Section -->
             <section class="section uploads rounded p-3 mb-4">
               <h3>Attachments</h3>
@@ -2577,18 +2612,19 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
                 <!-- Gallery items will be injected as .col-sm-6 or .col-md-4 dynamically -->
               </div>
             </section>
-      
+
           </div>
         </div>
       </div>
-      
+
     </div>
   </div>
 
 
 
 
-  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="experimentIdCanvas" aria-labelledby="experimentIdCanvasLabel">
+  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="experimentIdCanvas"
+    aria-labelledby="experimentIdCanvasLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="experimentIdCanvasLabel">eLabFTW Experiment Id</h5>
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -2597,20 +2633,23 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
       <div>
         (use comma "," to seperate multiple IDs)
         <br>
-        eLabFTW experiment ID can be found in the address bar or in the experiment description. 
+        eLabFTW experiment ID can be found in the address bar or in the experiment description.
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/experimentId1.png" class="rounded mx-auto d-block w-100" alt="An image of eLabFTW Experiment Id">
-        eLabFTW resources ID can be found in the address bar or in the resource description. 
+        <img src="https://nfdi4plants.github.io/elab2arc/images/experimentId1.png" class="rounded mx-auto d-block w-100"
+          alt="An image of eLabFTW Experiment Id">
+        eLabFTW resources ID can be found in the address bar or in the resource description.
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/resourceId1.png" class="rounded mx-auto d-block w-100" alt="An image of eLabFTW Experiment Id">
-        A detailed user guide can be found <a target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
+        <img src="https://nfdi4plants.github.io/elab2arc/images/resourceId1.png" class="rounded mx-auto d-block w-100"
+          alt="An image of eLabFTW Experiment Id">
+        A detailed user guide can be found <a target="_blank"
+          href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
       </div>
-      
+
     </div>
   </div>
-  
 
- 
+
+
   <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="instanceCanvas" aria-labelledby="instanceCanvasLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="instanceCanvasLabel">Select eLabFTW Instance</h5>
@@ -2618,16 +2657,19 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
     </div>
     <div class="offcanvas-body">
       <div>
-        Select between the test instance and the Heinrich Heine University Düsseldorf (HHU) instance, or add your own eLabFTW instance
+        Select between the test instance and the Heinrich Heine University Düsseldorf (HHU) instance, or add your own
+        eLabFTW instance
         <br>
-        Copy the URL of a eLabFTW instance and paste the URL to the input field and add "api/v2/" after the URL. 
+        Copy the URL of a eLabFTW instance and paste the URL to the input field and add "api/v2/" after the URL.
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/instance.png" class="rounded mx-auto d-block " alt="instance image">
-        A detailed user guide can be found <a target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
+        <img src="https://nfdi4plants.github.io/elab2arc/images/instance.png" class="rounded mx-auto d-block "
+          alt="instance image">
+        A detailed user guide can be found <a target="_blank"
+          href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
       </div>
-      
+
     </div>
-  </div> 
+  </div>
 
   <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="elabTokenCanvas" aria-labelledby="elabTokenCanvasLabel">
     <div class="offcanvas-header">
@@ -2636,38 +2678,47 @@ async function processElabEntries(params, users, gitlabURL, arcName) {
     </div>
     <div class="offcanvas-body">
       <div>
-        eLabFTW API keys can be generated from settings -> API keys  
+        eLabFTW API keys can be generated from settings -> API keys
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/elabToken.png" class="rounded mx-auto d-block w-100" alt="an image of eLabFTW token">
+        <img src="https://nfdi4plants.github.io/elab2arc/images/elabToken.png" class="rounded mx-auto d-block w-100"
+          alt="an image of eLabFTW token">
         <br>
-        The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as anyone with the token can access eLabFTW. 
+        The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as
+        anyone with the token can access eLabFTW.
         <br>
-        A detailed user guide can be found <a target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
+        A detailed user guide can be found <a target="_blank"
+          href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
       </div>
-      
+
     </div>
   </div>
 
-  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="datahubTokenCanvas" aria-labelledby="datahubTokenCanvasLabel">
+  <div class="offcanvas offcanvas-start w-50" tabindex="-1" id="datahubTokenCanvas"
+    aria-labelledby="datahubTokenCanvasLabel">
     <div class="offcanvas-header">
       <h5 class="offcanvas-title" id="datahubTokenCanvasLabel">DataHub Personal Access Token </h5>
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
       <div>
-        To generate a DataHub personnal access token, go to icon → preferences → Access tokens → check api, read_api, read_user, read_repository, write_repository → Create.  The Scopes are: "check api", "read_api", "read_user", "read_repository" and "write_repository."
+        To generate a DataHub personnal access token, go to icon → preferences → Access tokens → check api, read_api,
+        read_user, read_repository, write_repository → Create. The Scopes are: "check api", "read_api", "read_user",
+        "read_repository" and "write_repository."
         <br>
-        <img src="https://nfdi4plants.github.io/elab2arc/images/datahubToken.png" class="rounded mx-auto d-block w-100" alt="An image of DataHub Personal Access Token">
+        <img src="https://nfdi4plants.github.io/elab2arc/images/datahubToken.png" class="rounded mx-auto d-block w-100"
+          alt="An image of DataHub Personal Access Token">
         <br>
-        The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as anyone with the token can access and modify the DataHUB repo. 
+        The access token will be displayed only once, so make sure to store it securely. Treat it like a password, as
+        anyone with the token can access and modify the DataHUB repo.
         <br>
-        A detailed user guide can be found <a target="_blank" href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
+        A detailed user guide can be found <a target="_blank"
+          href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"> here </a>
       </div>
-      
+
     </div>
   </div>
 
-  
+
 </body>
 <script>
 
