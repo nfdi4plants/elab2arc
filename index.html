@@ -263,7 +263,10 @@
           <div class="input-group mb-3">
             <input type="password" onchange="initCookies();" name="elabtoken" class="form-control"
               autocomplete="password" id="elabToken" required />
-
+            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="elabtoken"
+              onclick=" document.getElementById('elabToken').value = '20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320'; ">
+              get a test api key
+            </button>
             <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="elabToken"
               onclick="showPassword(this)">
               👁️
