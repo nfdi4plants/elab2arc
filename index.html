@@ -502,7 +502,7 @@
 
     <!-- Modal -->
     <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl">
+      <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
         <div class="modal-content">
           <div class="modal-header">
             <h1 class="modal-title fs-5" id="statusModalLabel">Conversion Status</h1>
@@ -950,7 +950,7 @@
       Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
       await git.add({ fs, dir: projectName, filepath: '.' });
       const gitRoot = projectName + "/";
-      await commitPush(accessToken, url, "elab2arcTool", "", projectName, gitRoot);
+      await commitPush(accessToken, url, "elab2arcTool", "", projectName, gitRoot, 1);
       //document.getElementById('gitlabInfo').innerHTML= `${url}`;
       //document.getElementById('arcInfo').innerHTML= `${projectName}`;
       checkGitLabConnection()
@@ -1320,14 +1320,14 @@
           singleBranch: true,
           depth: 1,
           force: true,
-          onProgress: event => {
-            updateLabel(event.phase)
-            if (event.total) {
-              updateProgressBar(10 + (event.loaded / event.total) * 30)
-            } else {
-              updateIndeterminateProgressBar(10 + (event.loaded / 100) * 30)
-            }
-          }
+          // onProgress: event => {
+          //   updateLabel(event.phase)
+          //   if (event.total) {
+          //     updateProgressBar(10 + (event.loaded / event.total) * 30)
+          //   } else {
+          //     updateIndeterminateProgressBar(10 + (event.loaded / 100) * 30)
+          //   }
+          // }
         });
         mainOrMaster = "main";
       } catch (error) {
@@ -1343,21 +1343,21 @@
           singleBranch: true,
           depth: 1,
           force: true,
-          onProgress: event => {
-            updateLabel(event.phase)
-            if (event.total) {
-              updateProgressBar(50 + (event.loaded / event.total) * 30)
-            } else {
-              updateIndeterminateProgressBar(50 + (event.loaded / 100) * 30)
-            }
-          }
+          // onProgress: event => {
+          //   updateLabel(event.phase)
+          //   if (event.total) {
+          //     updateProgressBar(50 + (event.loaded / event.total) * 30)
+          //   } else {
+          //     updateIndeterminateProgressBar(50 + (event.loaded / 100) * 30)
+          //   }
+          // }
         });
         mainOrMaster = "master";
       }
 
     }
 
-    async function commitPush(datahubtoken, datahubURL, fullname, email, dir, gitRoot) {
+    async function commitPush(datahubtoken, datahubURL, fullname, email, dir, gitRoot, ratio) {
       let sha = await git.commit({
         fs,
         dir: gitRoot,
@@ -1379,7 +1379,7 @@
           onAuth: () => ({ username: datahubtoken }),
         });
         console.log(pushResult);
-        updateInfo("PLANTDataHUB has been updated.  <br>", "100");
+        updateInfo("PLANTDataHUB has been updated.  <br>", 100*ratio);
         //
       } catch (error) {
         console.error(error);
@@ -1744,7 +1744,7 @@
     }
 
     async function processExperiment(expIndex, elabid, params, res, users, datahubURL, arcDir, instance) {
-      const ratio = (parseInt(expIndex) + 1) / params.elabidList.length;
+      const ratio = (parseInt(expIndex) + 1) / Object.values(params.elabidList).flat().length;
       updateInfo(`Fetching eLabFTW experiment <b>${elabid}</b>, instance is ${params.instance}`, ratio * 10);
 
       const assayId = formatAssayId(res.title);
@@ -1840,7 +1840,7 @@
       // Finalize HTML and write files
       statusHTML += "</tbody></table>";
       statusHTML = statusHTML.replaceAll("<img", "<img class='img-fluid'");
-      filesChanged.innerHTML = statusHTML;
+      filesChanged.innerHTML += statusHTML;
 
       // Write markdown files
       const protocolMdPath = memfsPathJoin(protocolPath, 'eLabFTW_protocol.md');
@@ -1854,7 +1854,7 @@
       await git.add({ fs, dir: gitRoot, filepath: `${gitSubfolder}${baseDir2}/${assayId}/${subDirs.datasets || subDirs.resources}/readme.md` });
 
       finalizeExperimentDisplay(ratio);
-      await commitPush(params.datahubtoken, datahubURL, res.fullname, email, arcDir, gitRoot);
+      await commitPush(params.datahubtoken, datahubURL, res.fullname, email, arcDir, gitRoot, ratio);
     }
 
     async function processUploadsAndReplaceUrls(
@@ -1938,7 +1938,7 @@
             `;
         }
 
-        updateInfo(`Added file ${realname}`, ratio * (10 + (index / uploads.length * 10)));
+        updateInfo(`Added file ${realname}`, ratio*100 + ( (index / uploads.length *20)));
       }
 
       return [statusHTML, markdown];
@@ -1962,7 +1962,7 @@
     function finalizeExperimentDisplay(ratio) {
       updateInfo("Finished adding protocol files in ARC", ratio * 70);
       updateInfo("All files have been added to ARC, starting to push ARC to", ratio * 80);
-      document.getElementById("filesAcc").click();
+      //document.getElementById("filesAcc").click();
 
     }
 
