@@ -10,21 +10,10 @@
   <meta http-equiv="Expires" content="0" />
   <link rel="icon" type="image/x-icon" href="favicon.png">
   <style>
-    #homegif {
-      background-image: url('images/Animation.gif');
-      /* Replace with your GIF's URL */
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      /* Prevent repeating */
-      width: 100vh;
-      /* Make sure the background covers the full viewport height */
-      margin: 0;
-      /* Remove default body margins */
-    }
-
-    /* Optional: Add styles for content on top of the background */
-    .content {}
+video {
+  width: 100%;
+  height: auto;
+}
   </style>
   <link href="./css/bootstrap.min.css" rel="stylesheet">
   <script src="./js/bootstrap.bundle.min.js"></script>
@@ -120,10 +109,11 @@
         Here's a concise one-minute tutorial animation explaining how to convert eLabFTW entries into ARCs with just a
         few clicks using elab2arc:
       </h4>
-      <div id="homegif" style="width:90vw; height:70vh">
+      <video controls >
 
+        <source src="https://raw.githubusercontent.com/nfdi4plants/elab2arc/refs/heads/main/images/elab2arc_with_token_generation.mp4" type="video/mp4" />
 
-      </div>
+      </video>
 
 
     </div>
@@ -502,7 +492,7 @@
 
     <!-- Modal -->
     <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+      <div class="modal-dialog modal-xxl modal-fullscreen-lg-down">
         <div class="modal-content">
           <div class="modal-header">
             <h1 class="modal-title fs-5" id="statusModalLabel">Conversion Status</h1>
