@@ -2,7 +2,12 @@
 
 **elab2arc** is a web-based Single Page Application (SPA) that bridges **eLabFTW** (an electronic lab notebook) and **PLANTdataHUB** (a GitLab-based Annotated Research Context (ARC) repository), enabling seamless synchronization of experimental metadata and raw data into **FAIR-compliant ARCs**.
 
-![ela2arc](https://github.com/user-attachments/assets/5c3ee047-cfc5-4515-84f9-09f77f9cda61)
+
+
+
+https://github.com/user-attachments/assets/6223d4ec-fd46-4ddd-9bfa-9b0e4a9e780f
+
+
 
 
 🔗 **Try it now**: [nfdi4plants.org/elab2arc/](https://nfdi4plants.org/elab2arc/)
