@@ -1049,6 +1049,10 @@ video {
         document.getElementById('arcInfo').innerHTML= '${project.name}/studies';" class="btn btn-success btn-sm">
                      Select study
                     </button>
+                    <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
+        document.getElementById('arcInfo').innerHTML= '${project.name}/'; fileExplorer.show()" class="btn btn-success btn-sm">
+                     Select your ARC folder
+                    </button>
                   </div>
                 </td>
               </tr>
