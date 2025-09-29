@@ -1049,9 +1049,10 @@ video {
         document.getElementById('arcInfo').innerHTML= '${project.name}/studies';" class="btn btn-success btn-sm">
                      Select study
                     </button>
-                    <button type="button" onclick="document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
-        document.getElementById('arcInfo').innerHTML= '${project.name}/'; fileExplorer.show()" class="btn btn-success btn-sm">
-                     Select your ARC folder
+                    <button type="button" onclick=" cloneARC('${project.http_url_to_repo}', '${project.name}');document.getElementById('gitlabInfo').innerHTML= '${project.http_url_to_repo}';
+        document.getElementById('arcInfo').innerHTML= '${project.name}/'; fileExplorer.show()" class="btn btn-success btn-sm"
+        title="Clone ARC and select target folder for conversion">
+                     📂 Select ARC folder & Clone
                     </button>
                   </div>
                 </td>
@@ -1172,7 +1173,7 @@ video {
                     <th scope="row">${config.displayName}</th>
                     <td>${entry.id}</td>
                     <td>${entry.title}</td>
-                   
+
                     <td>${entry.date}</td>
                     <td>${entry.fullname}</td>
                     <td>
@@ -1552,18 +1553,43 @@ video {
       //   alert("No eLabFTW is selected, please go to eLabFTW tab to select.");
       //   return;
       // };
-      const arcName = gitlabURL.split("/").slice(-1)[0].replace(".git", "");
-      // const list = arcName.split("/");
-      // const gitRoot = list[0]
-      const gitRoot = arcName;
-      deleteAll();
-      await cloneARC(gitlabURL, gitRoot);
-      refreshTree("./" + gitRoot)
-      if (gitRoot.includes("Please select your ARC")) {
 
+      // Get ARC information from arcInfo element (which may contain the full path)
+      const arcInfo = document.getElementById("arcInfo").innerHTML;
+      let gitRoot, arcName;
+
+      if (arcInfo && !arcInfo.includes("Please select")) {
+        // Extract ARC name from the selected path (could be arc_name/folder/subfolder)
+        const pathParts = arcInfo.split('/').filter(p => p);
+        gitRoot = pathParts.length > 0 ? pathParts[0] : gitlabURL.split("/").slice(-1)[0].replace(".git", "");
+        arcName = gitRoot;
+      } else {
+        // Fallback to extracting from GitLab URL
+        arcName = gitlabURL.split("/").slice(-1)[0].replace(".git", "");
+        gitRoot = arcName;
+      }
+
+      if (gitRoot.includes("Please select your ARC")) {
         alert("please select your ARC.");
         return;
       };
+
+      // Check if ARC was already cloned via folder selector
+      const skipCloning = window.arcClonedViaFolderSelector && fs && fs.existsSync(`./${gitRoot}`);
+
+      if (!skipCloning) {
+        console.log("Cloning ARC as part of conversion process...");
+        deleteAll();
+        await cloneARC(gitlabURL, gitRoot);
+        refreshTree("./" + gitRoot);
+      } else {
+        console.log("ARC already cloned via folder selector, skipping clone step");
+        // Just refresh the tree to ensure it's up to date
+        refreshTree("./" + gitRoot);
+
+        // Show notification that we're using the pre-cloned ARC
+        showConversionNotification(`📂 Using pre-cloned ARC: ${gitRoot}`);
+      }
 
       const params = await getParameters();
       // const elabtoken = document.getElementById("elabToken").value;
@@ -1574,6 +1600,48 @@ video {
       // Process each experiment ID
       await processElabEntries(params, users, gitlabURL, arcName);
       refreshTree(gitRoot);
+
+      // Reset the flag after conversion
+      window.arcClonedViaFolderSelector = false;
+    }
+
+
+    /**
+     * Show a simple conversion notification
+     * @param {string} message - The notification message
+     */
+    function showConversionNotification(message) {
+      // Create or update notification element
+      let notification = document.getElementById('conversion-notification');
+      if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'conversion-notification';
+        notification.style.cssText = `
+          position: fixed;
+          top: 90px;
+          right: 20px;
+          background: #d1ecf1;
+          border: 1px solid #bee5eb;
+          color: #0c5460;
+          border-radius: 5px;
+          padding: 10px 15px;
+          max-width: 350px;
+          z-index: 9999;
+          font-size: 14px;
+          font-weight: 500;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        `;
+        document.body.appendChild(notification);
+      }
+
+      notification.textContent = message;
+
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        if (notification && notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 3000);
     }
 
 
@@ -1691,7 +1759,9 @@ video {
           protocols: 'protocols',
           datasets: 'dataset'
         },
-        slash: "/"
+        slash: "/",
+        createNewStructure: true,
+        generateISA: true
       },
       studies: {
         baseDir: 'studies',
@@ -1700,40 +1770,178 @@ video {
           protocols: 'protocols',
           resources: 'resources'
         },
-        slash: ""
+        slash: "",
+        createNewStructure: true,
+        generateISA: false
+      },
+      existing_study: {
+        baseDir: 'studies',
+        baseDir2: "",
+        subDirs: {
+          protocols: 'protocols',
+          resources: 'resources'
+        },
+        slash: "",
+        createNewStructure: false,
+        generateISA: false,
+        useExistingStructure: true
+      },
+      existing_assay: {
+        baseDir: 'assays',
+        baseDir2: "assays",
+        subDirs: {
+          protocols: 'protocols',
+          datasets: 'dataset'
+        },
+        slash: "/",
+        createNewStructure: false,
+        generateISA: false,
+        useExistingStructure: true
+      },
+      new_assay_in_assays: {
+        baseDir: 'assays',
+        baseDir2: "assays",
+        subDirs: {
+          protocols: 'protocols',
+          datasets: 'dataset'
+        },
+        slash: "/",
+        createNewStructure: true,
+        generateISA: true
       }
     };
 
     async function createAssay(assayId, dir, gitSubfolder) {
-      const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
-      const baseAssayPath = memfsPathJoin(dir, baseDir2, assayId);
+      const pathConfig = getDirectoryStructure(gitSubfolder);
+      const { baseDir, baseDir2, subDirs, slash, createNewStructure, useExistingStructure } = pathConfig;
 
-      // Ensure base assay directory exists
-      if (!fs.existsSync(baseAssayPath)) {
-        fs.mkdirSync(baseAssayPath, { recursive: true });
-      }
+      if (useExistingStructure) {
+        // For existing structures, just ensure the target directory exists
+        const targetPath = dir; // dir should already point to the existing study/assay
+        console.log(`Using existing structure at: ${targetPath}`);
 
-      // Create subfolders
-      Object.values(subDirs).forEach(sub => {
-        const fullPath = memfsPathJoin(baseAssayPath, sub);
-        if (!fs.existsSync(fullPath)) {
-          fs.mkdirSync(fullPath, { recursive: true });
+        // Ensure the protocols and datasets/resources folders exist within the existing structure
+        Object.values(subDirs).forEach(sub => {
+          const fullPath = memfsPathJoin(targetPath, sub);
+          if (!fs.existsSync(fullPath)) {
+            console.log(`Creating missing subfolder: ${fullPath}`);
+            fs.mkdirSync(fullPath, { recursive: true });
+          }
+        });
+
+        // Clear and recreate dataset/resources folder for fresh content
+        const datasetPath = memfsPathJoin(targetPath, subDirs.datasets || subDirs.resources);
+        if (fs.existsSync(datasetPath)) {
+          console.log(`Clearing existing dataset/resources folder: ${datasetPath}`);
+          fs.rmSync(datasetPath, { recursive: true, force: true });
         }
-      });
+        fs.mkdirSync(datasetPath, { recursive: true });
 
-      // Delete and recreate dataset/resources folder if necessary
-      const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
-      if (fs.existsSync(datasetPath)) {
-        fs.rmSync(datasetPath, { recursive: true, force: true });
+        return;
       }
-      fs.mkdirSync(datasetPath, { recursive: true });
+
+      if (createNewStructure) {
+        // For new structures, create the full hierarchy
+        const baseAssayPath = memfsPathJoin(dir, baseDir2, assayId);
+        console.log(`Creating new structure at: ${baseAssayPath}`);
+
+        // Ensure base assay directory exists
+        if (!fs.existsSync(baseAssayPath)) {
+          fs.mkdirSync(baseAssayPath, { recursive: true });
+        }
+
+        // Create subfolders
+        Object.values(subDirs).forEach(sub => {
+          const fullPath = memfsPathJoin(baseAssayPath, sub);
+          if (!fs.existsSync(fullPath)) {
+            fs.mkdirSync(fullPath, { recursive: true });
+          }
+        });
+
+        // Delete and recreate dataset/resources folder if necessary
+        const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
+        if (fs.existsSync(datasetPath)) {
+          fs.rmSync(datasetPath, { recursive: true, force: true });
+        }
+        fs.mkdirSync(datasetPath, { recursive: true });
+      }
     }
 
     function getDirectoryStructure(gitSubfolder = '') {
-      const normalized = gitSubfolder.trim().toLowerCase();
-      if (normalized === 'studies') {
+      // Clean and analyze the path
+      const normalizedPath = gitSubfolder.replace(/^\.\//, '').replace(/\/$/, '').trim();
+      const pathParts = normalizedPath.split('/').filter(p => p);
+
+      console.log('getDirectoryStructure analysis:', { originalPath: gitSubfolder, normalizedPath, pathParts });
+
+      if (pathParts.length === 0) {
+        // Root level - create new assay
+        console.log('Selected: Root level - new assay');
+        return PATH_CONFIG.default;
+      }
+
+      if (pathParts.length === 1) {
+        // /arc_name/ - ARC root, create new assay
+        console.log('Selected: ARC root level - new assay');
+        return PATH_CONFIG.default;
+      }
+
+      // Check for studies and assays at the correct level (accounting for ARC name)
+      const relevantLevel = pathParts.length >= 2 ? pathParts[1] : pathParts[0];
+
+      if (relevantLevel.toLowerCase() === 'studies') {
+        if (pathParts.length === 2) {
+          // /arc_name/studies/ - create new study
+          console.log('Selected: Studies directory - new study');
+          return PATH_CONFIG.studies;
+        } else if (pathParts.length === 3) {
+          // /arc_name/studies/specific-study/ - load into existing study
+          console.log('Selected: Specific study - existing study');
+          return PATH_CONFIG.existing_study;
+        }
+        // Too deep or invalid - fallback to studies
+        console.warn('Invalid studies path, falling back to new study');
         return PATH_CONFIG.studies;
       }
+
+      if (relevantLevel.toLowerCase() === 'assays') {
+        if (pathParts.length === 2) {
+          // /arc_name/assays/ - create new assay in assays directory
+          console.log('Selected: Assays directory - new assay in assays');
+          return PATH_CONFIG.new_assay_in_assays;
+        } else if (pathParts.length === 3) {
+          // /arc_name/assays/specific-assay/ - load into existing assay
+          console.log('Selected: Specific assay - existing assay');
+          return PATH_CONFIG.existing_assay;
+        }
+        // Too deep or invalid - fallback to new assay in assays
+        console.warn('Invalid assays path, falling back to new assay in assays');
+        return PATH_CONFIG.new_assay_in_assays;
+      }
+
+      // Handle legacy paths without ARC name (for backward compatibility)
+      if (pathParts[0].toLowerCase() === 'studies') {
+        if (pathParts.length === 1) {
+          console.log('Selected: Legacy studies directory - new study');
+          return PATH_CONFIG.studies;
+        } else if (pathParts.length === 2) {
+          console.log('Selected: Legacy specific study - existing study');
+          return PATH_CONFIG.existing_study;
+        }
+      }
+
+      if (pathParts[0].toLowerCase() === 'assays') {
+        if (pathParts.length === 1) {
+          console.log('Selected: Legacy assays directory - new assay in assays');
+          return PATH_CONFIG.new_assay_in_assays;
+        } else if (pathParts.length === 2) {
+          console.log('Selected: Legacy specific assay - existing assay');
+          return PATH_CONFIG.existing_assay;
+        }
+      }
+
+      // Other paths - fallback to default (root assay)
+      console.warn('Non-standard path, falling back to default assay structure');
       return PATH_CONFIG.default;
     }
 
@@ -1765,15 +1973,30 @@ video {
 
       console.log("Git Root:", gitRoot, "| Git Subfolder:", gitSubfolder);
 
-      const { baseDir, baseDir2, subDirs, slash } = getDirectoryStructure(gitSubfolder);
+      const pathConfig = getDirectoryStructure(gitSubfolder);
+      const { baseDir, baseDir2, subDirs, slash, generateISA, useExistingStructure } = pathConfig;
 
-      const baseAssayPath = memfsPathJoin(arcDir, baseDir2, assayId);
-      const protocolPath = memfsPathJoin(baseAssayPath, subDirs.protocols);
-      const datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
+      let baseAssayPath, protocolPath, datasetPath;
+
+      if (useExistingStructure) {
+        // For existing structures, use the arcDir directly (it points to the existing study/assay)
+        baseAssayPath = arcDir;
+        protocolPath = memfsPathJoin(arcDir, subDirs.protocols);
+        datasetPath = memfsPathJoin(arcDir, subDirs.datasets || subDirs.resources);
+        console.log(`Using existing structure paths: base=${baseAssayPath}, protocols=${protocolPath}, data=${datasetPath}`);
+      } else {
+        // For new structures, create the full hierarchy
+        baseAssayPath = memfsPathJoin(arcDir, baseDir2, assayId);
+        protocolPath = memfsPathJoin(baseAssayPath, subDirs.protocols);
+        datasetPath = memfsPathJoin(baseAssayPath, subDirs.datasets || subDirs.resources);
+        console.log(`Creating new structure paths: base=${baseAssayPath}, protocols=${protocolPath}, data=${datasetPath}`);
+      }
 
       // Create required directories
       await createAssay(assayId, arcDir, gitSubfolder);
-      if (gitSubfolder == "") {
+
+      // Generate ISA file only if configured to do so
+      if (generateISA) {
         await fullAssay2(
           assayId,
           "new metadata table",
@@ -1787,9 +2010,27 @@ video {
         );
 
         updateInfo(`isa.assay.xlsx has been updated at <b>${assayId}</b>`, ratio * 35);
-        await git.add({ fs, dir: arcDir, filepath: `${baseDir}/${assayId}/isa.assay.xlsx` });
+
+        // Determine the correct path for git add based on structure type
+        let isaPath;
+        if (useExistingStructure) {
+          isaPath = `isa.assay.xlsx`; // ISA file in the existing structure
+        } else {
+          isaPath = `${baseDir}/${assayId}/isa.assay.xlsx`;
+        }
+
+        try {
+          await git.add({ fs, dir: arcDir, filepath: isaPath });
+          console.log(`Added ISA file to git: ${isaPath}`);
+        } catch (error) {
+          console.warn(`Could not add ISA file to git: ${isaPath}`, error);
+        }
       } else {
-        updateInfo(`no isa.assay.xlsx, because studies folder has been selected <b>${assayId}</b>`, ratio * 35);
+        if (useExistingStructure) {
+          updateInfo(`No isa.assay.xlsx generated - adding to existing ${pathConfig.baseDir === 'studies' ? 'study' : 'assay'}: <b>${gitSubfolder.split('/').pop()}</b>`, ratio * 35);
+        } else {
+          updateInfo(`No isa.assay.xlsx generated - creating new ${pathConfig.baseDir === 'studies' ? 'study' : 'assay'}: <b>${assayId}</b>`, ratio * 35);
+        }
       }
       // Write isa.assay.xlsx
 

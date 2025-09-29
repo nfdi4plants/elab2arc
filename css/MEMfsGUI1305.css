@@ -130,3 +130,49 @@
             padding: 2px 6px;
             font-size: 0.8em;
         }
+
+        /* ARC Structure Indicators */
+        .arc-indicator {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.8);
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            border: 1px solid currentColor;
+            opacity: 0.9;
+            transition: opacity 0.2s ease;
+        }
+
+        .tree-node:hover .arc-indicator {
+            opacity: 1;
+        }
+
+        .tree-node {
+            padding: 2px 4px;
+            margin: 1px 0;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .tree-node:hover {
+            background-color: #f0f8ff !important;
+        }
+
+        /* Path selection feedback styling */
+        #path-selection-feedback {
+            animation: fadeInSlide 0.3s ease-out;
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
