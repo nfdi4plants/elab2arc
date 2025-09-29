@@ -501,3 +501,91 @@ display: block;
 #up-to-top:hover {
   color: #8ad3d3;
 }
+
+/* eLabFTW Table Enhancements */
+.gene-name {
+    font-weight: bold;
+    color: #2c5282;
+    font-family: 'Courier New', monospace;
+    background-color: #edf2f7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: #e2e8f0;
+    color: #4a5568;
+    border: 1px solid #cbd5e0;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-active {
+    background-color: #c6f6d5;
+    color: #22543d;
+    border: 1px solid #9ae6b4;
+}
+
+.status-new {
+    background-color: #bee3f8;
+    color: #2b6cb0;
+    border: 1px solid #90cdf4;
+}
+
+.status-recent {
+    background-color: #fed7d7;
+    color: #c53030;
+    border: 1px solid #feb2b2;
+}
+
+.status-locked {
+    background-color: #fbb6ce;
+    color: #97266d;
+    border: 1px solid #f687b3;
+}
+
+.status-completed,
+.status-finished,
+.status-done {
+    background-color: #c6f6d5;
+    color: #22543d;
+    border: 1px solid #9ae6b4;
+}
+
+.status-in-progress,
+.status-running,
+.status-ongoing {
+    background-color: #feebc8;
+    color: #c05621;
+    border: 1px solid #f6ad55;
+}
+
+/* Table responsiveness improvements */
+.table th:nth-child(4), /* Gene Name */
+.table td:nth-child(4) {
+    min-width: 120px;
+}
+
+.table th:nth-child(5), /* Category */
+.table td:nth-child(5) {
+    min-width: 100px;
+}
+
+.table th:nth-child(6), /* Status */
+.table td:nth-child(6) {
+    min-width: 90px;
+}

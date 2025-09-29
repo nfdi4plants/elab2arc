@@ -24,12 +24,15 @@ function buildTree(parentElement, path) {
         childrenContainer.style.display = 'none';
         
         if (stat.isDirectory()) {
+            // Add visual indicators for ARC structure compliance
+            addARCStructureIndicators(node, fullPath);
+
             node.onclick = (e) => {
                 e.stopPropagation();
                 if (childrenContainer.style.display === 'none') {
                     if (childrenContainer.children.length === 0) {
                         buildTree(childrenContainer, fullPath);
-                        
+
                     }
                     childrenContainer.style.display = 'block';
                     selectPath(fullPath);
@@ -411,8 +414,481 @@ function selectPath(targetPath) {
 
 }
 
-function finalPath(targetPath){
-    document.getElementById("arcInfo").innerHTML = targetPath;
-    fileExplorer.hide();
+async function finalPath(targetPath){
+    // Validate and analyze the selected path
+    const validationResult = validateARCPath(targetPath);
+
+    if (validationResult.isValid) {
+        // Update the arcInfo to indicate ARC cloning is in progress
+        document.getElementById("arcInfo").innerHTML = `${targetPath} (preparing...)`;
+
+        // Show user feedback about what will happen
+        showPathSelectionFeedback(validationResult);
+
+        // Clone the ARC if it hasn't been cloned already
+        const cloneSuccess = await cloneARCIfNeeded(targetPath);
+
+        if (cloneSuccess) {
+            // Update arcInfo to show the selected path
+            document.getElementById("arcInfo").innerHTML = targetPath;
+
+            // Mark that ARC has been cloned via folder selector
+            window.arcClonedViaFolderSelector = true;
+
+            // Show success feedback
+            showARCCloneSuccessNotification(targetPath);
+        } else {
+            // Revert arcInfo on failure
+            document.getElementById("arcInfo").innerHTML = "Please select your ARC";
+        }
+
+        fileExplorer.hide();
+    } else {
+        // Show warning for invalid path
+        alert(validationResult.message);
+    }
 }
+
+/**
+ * Clone the ARC repository if it hasn't been cloned already
+ * @param {string} targetPath - The selected folder path
+ * @returns {boolean} Success status
+ */
+async function cloneARCIfNeeded(targetPath) {
+    try {
+        // Get GitLab URL from the UI
+        const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
+
+        if (!gitlabURL || gitlabURL.includes("Please select") || gitlabURL.includes("GitLab URL")) {
+            alert("Error: No GitLab repository URL found. Please select an ARC repository first.");
+            return false;
+        }
+
+        // Extract ARC name from the path or URL
+        const pathParts = targetPath.split('/').filter(p => p);
+        const arcName = pathParts.length > 0 ? pathParts[0] : gitlabURL.split("/").slice(-1)[0].replace(".git", "");
+
+        // Check if ARC is already cloned
+        if (window.fs && window.fs.existsSync(`./${arcName}`)) {
+            console.log(`ARC ${arcName} already exists, skipping clone`);
+            showARCExistsNotification(arcName);
+            return true;
+        }
+
+        // Show loading notification
+        showARCCloningNotification(arcName);
+
+        // Delete any existing files first
+        if (typeof deleteAll === 'function') {
+            deleteAll();
+        }
+
+        // Clone the ARC
+        if (typeof cloneARC === 'function') {
+            await cloneARC(gitlabURL, arcName);
+            console.log(`Successfully cloned ARC: ${arcName}`);
+
+            // Refresh the file tree to show the cloned ARC
+            if (typeof refreshTree === 'function') {
+                refreshTree(`./${arcName}`);
+            }
+
+            return true;
+        } else {
+            throw new Error("cloneARC function not available");
+        }
+    } catch (error) {
+        console.error("Failed to clone ARC:", error);
+        alert(`Failed to clone ARC: ${error.message || error}`);
+        return false;
+    }
+}
+
+/**
+ * Show notification that ARC is being cloned
+ */
+function showARCCloningNotification(arcName) {
+    showNotification(`🔄 Cloning ARC repository: ${arcName}...`, 'info', 0); // Don't auto-hide
+}
+
+/**
+ * Show notification that ARC already exists
+ */
+function showARCExistsNotification(arcName) {
+    showNotification(`✅ ARC repository ${arcName} already exists`, 'success', 3000);
+}
+
+/**
+ * Show notification that ARC has been successfully cloned and is ready
+ */
+function showARCCloneSuccessNotification(targetPath) {
+    const pathParts = targetPath.split('/').filter(p => p);
+    const arcName = pathParts.length > 0 ? pathParts[0] : 'ARC';
+    showNotification(`✅ ARC repository ${arcName} cloned successfully! Ready for conversion.`, 'success', 5000);
+}
+
+/**
+ * Generic notification function
+ */
+function showNotification(message, type = 'info', autoHideMs = 5000) {
+    // Remove any existing notification
+    const existingNotification = document.getElementById('arc-clone-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
+    const notification = document.createElement('div');
+    notification.id = 'arc-clone-notification';
+
+    const colors = {
+        info: { bg: '#d1ecf1', border: '#bee5eb', text: '#0c5460' },
+        success: { bg: '#d4edda', border: '#c3e6cb', text: '#155724' },
+        error: { bg: '#f8d7da', border: '#f5c6cb', text: '#721c24' }
+    };
+
+    const color = colors[type] || colors.info;
+
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: ${color.bg};
+        border: 1px solid ${color.border};
+        color: ${color.text};
+        border-radius: 5px;
+        padding: 15px 20px;
+        max-width: 400px;
+        z-index: 10000;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInFromRight 0.3s ease-out;
+    `;
+
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="flex: 1;">${message}</div>
+            <button onclick="this.parentElement.parentElement.remove()"
+                    style="background: none; border: none; color: ${color.text};
+                           font-size: 18px; cursor: pointer; padding: 0; opacity: 0.7;">×</button>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Auto-hide after specified time
+    if (autoHideMs > 0) {
+        setTimeout(() => {
+            if (notification && notification.parentNode) {
+                notification.style.animation = 'slideOutToRight 0.3s ease-in';
+                setTimeout(() => {
+                    if (notification && notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }
+        }, autoHideMs);
+    }
+
+    // Add CSS animations if not already present
+    if (!document.getElementById('notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            @keyframes slideInFromRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOutToRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+/**
+ * Validates if the selected path is appropriate for ARC conversion
+ * @param {string} path - The selected folder path
+ * @returns {Object} Validation result with isValid, type, and message
+ */
+function validateARCPath(path) {
+    // Clean and normalize the path
+    const normalizedPath = path.replace(/^\.\//, '').replace(/\/$/, '');
+    const pathParts = normalizedPath.split('/').filter(p => p);
+
+    if (pathParts.length === 0) {
+        // Root level - valid, will create new assay
+        return {
+            isValid: true,
+            type: 'new_assay',
+            message: 'Will create new assay in ARC root directory',
+            behavior: 'Creates new assay structure with isa.assay.xlsx'
+        };
+    }
+
+    if (pathParts.length === 1) {
+        // /arc_name/ - ARC root level, will create new assay
+        return {
+            isValid: true,
+            type: 'new_assay',
+            message: `Will create new assay in ARC root: ${pathParts[0]}`,
+            behavior: 'Creates new assay structure with isa.assay.xlsx'
+        };
+    }
+
+    if (pathParts.length === 2) {
+        const arcName = pathParts[0];
+        const secondLevel = pathParts[1];
+
+        if (secondLevel === 'studies') {
+            // /arc_name/studies/ - valid, will create new study
+            return {
+                isValid: true,
+                type: 'new_study',
+                message: `Will create new study in ${arcName}/studies/`,
+                behavior: 'Creates new study structure (no isa.assay.xlsx)'
+            };
+        } else if (secondLevel === 'assays') {
+            // /arc_name/assays/ - valid, will create new assay in assays directory
+            return {
+                isValid: true,
+                type: 'new_assay_in_assays',
+                message: `Will create new assay in ${arcName}/assays/`,
+                behavior: 'Creates new assay structure with isa.assay.xlsx'
+            };
+        } else {
+            // Other second-level directories
+            return {
+                isValid: false,
+                type: 'unmapped',
+                message: `Path "${normalizedPath}" is not a standard ARC structure. In ARC "${arcName}", please select:\n- /${arcName}/ for new assay in root\n- /${arcName}/studies/ for new study\n- /${arcName}/assays/ for new assay in assays\n- /${arcName}/studies/study-name/ for existing study\n- /${arcName}/assays/assay-name/ for existing assay`,
+                behavior: 'Requires standard ARC folder selection'
+            };
+        }
+    }
+
+    if (pathParts.length === 3) {
+        const arcName = pathParts[0];
+        const secondLevel = pathParts[1];
+        const thirdLevel = pathParts[2];
+
+        if (secondLevel === 'studies') {
+            // /arc_name/studies/specific-study/ - valid, will load into existing study
+            return {
+                isValid: true,
+                type: 'existing_study',
+                message: `Will add protocols and resources to existing study: ${arcName}/studies/${thirdLevel}`,
+                behavior: 'Adds content to existing study (no new structure created)'
+            };
+        } else if (secondLevel === 'assays') {
+            // /arc_name/assays/specific-assay/ - valid, will load into existing assay
+            return {
+                isValid: true,
+                type: 'existing_assay',
+                message: `Will add protocols and datasets to existing assay: ${arcName}/assays/${thirdLevel}`,
+                behavior: 'Adds content to existing assay (no new isa.assay.xlsx)'
+            };
+        } else {
+            // Invalid second level with third level
+            return {
+                isValid: false,
+                type: 'invalid',
+                message: `Invalid ARC structure. "${secondLevel}" is not a standard ARC folder. Please select studies or assays.`,
+                behavior: 'Cannot process this path'
+            };
+        }
+    }
+
+    if (pathParts.length > 3) {
+        const arcName = pathParts[0];
+        const secondLevel = pathParts[1];
+
+        if (secondLevel === 'studies') {
+            return {
+                isValid: false,
+                type: 'invalid',
+                message: `Too deep in studies hierarchy. Please select either /${arcName}/studies/ or /${arcName}/studies/study-name/`,
+                behavior: 'Cannot process this path'
+            };
+        } else if (secondLevel === 'assays') {
+            return {
+                isValid: false,
+                type: 'invalid',
+                message: `Too deep in assays hierarchy. Please select /${arcName}/assays/assay-name/`,
+                behavior: 'Cannot process this path'
+            };
+        }
+    }
+
+    // Fallback for any other cases
+    return {
+        isValid: false,
+        type: 'unmapped',
+        message: `Path "${normalizedPath}" is not a standard ARC structure. Please select:\n- /arc-name/ for new assay in root\n- /arc-name/studies/ for new study\n- /arc-name/studies/study-name/ for existing study\n- /arc-name/assays/assay-name/ for existing assay`,
+        behavior: 'Requires proper ARC folder selection'
+    };
+}
+
+/**
+ * Show user feedback about the selected path and its behavior
+ * @param {Object} validationResult - Result from validateARCPath
+ */
+function showPathSelectionFeedback(validationResult) {
+    // Create or update feedback display
+    let feedbackElement = document.getElementById('path-selection-feedback');
+    if (!feedbackElement) {
+        feedbackElement = document.createElement('div');
+        feedbackElement.id = 'path-selection-feedback';
+        feedbackElement.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 10px 15px;
+            max-width: 300px;
+            z-index: 9999;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        `;
+        document.body.appendChild(feedbackElement);
+    }
+
+    feedbackElement.innerHTML = `
+        <div style="font-weight: bold; color: #155724; margin-bottom: 5px;">
+            ✓ Valid ARC Path Selected
+        </div>
+        <div style="color: #155724;">
+            ${validationResult.behavior}
+        </div>
+    `;
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (feedbackElement && feedbackElement.parentNode) {
+            feedbackElement.parentNode.removeChild(feedbackElement);
+        }
+    }, 5000);
+}
+
+/**
+ * Add visual indicators to folder nodes based on ARC structure compliance
+ * @param {HTMLElement} node - The folder node element
+ * @param {string} fullPath - The full path to the folder
+ */
+function addARCStructureIndicators(node, fullPath) {
+    const pathValidation = validateARCPathForDisplay(fullPath);
+    const contentSpan = node.querySelector('.node-content');
+
+    if (!contentSpan) return;
+
+    // Remove any existing indicators
+    const existingIndicator = contentSpan.querySelector('.arc-indicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+
+    // Add new indicator based on validation result
+    const indicator = document.createElement('span');
+    indicator.className = 'arc-indicator';
+    indicator.style.marginLeft = '8px';
+    indicator.style.fontSize = '12px';
+    indicator.style.fontWeight = 'bold';
+
+    if (pathValidation.isValid) {
+        switch (pathValidation.type) {
+            case 'new_assay':
+                indicator.textContent = '🔬 New Assay';
+                indicator.style.color = '#28a745';
+                indicator.title = 'Will create new assay structure';
+                break;
+            case 'new_study':
+                indicator.textContent = '📊 New Study';
+                indicator.style.color = '#007bff';
+                indicator.title = 'Will create new study structure';
+                break;
+            case 'existing_study':
+                indicator.textContent = '📊+ Existing Study';
+                indicator.style.color = '#17a2b8';
+                indicator.title = 'Will add content to existing study';
+                break;
+            case 'existing_assay':
+                indicator.textContent = '🔬+ Existing Assay';
+                indicator.style.color = '#20c997';
+                indicator.title = 'Will add content to existing assay';
+                break;
+            case 'new_assay_in_assays':
+                indicator.textContent = '🔬 New Assay';
+                indicator.style.color = '#28a745';
+                indicator.title = 'Will create new assay in assays directory';
+                break;
+        }
+        node.style.backgroundColor = '#f8fff8';
+        node.style.border = '1px solid #d4edda';
+    } else {
+        indicator.textContent = '⚠️ Invalid';
+        indicator.style.color = '#dc3545';
+        indicator.title = pathValidation.message;
+        node.style.backgroundColor = '#fff8f8';
+        node.style.border = '1px solid #f5c6cb';
+    }
+
+    contentSpan.appendChild(indicator);
+}
+
+/**
+ * Simplified version of validateARCPath for display purposes
+ * @param {string} path - The folder path to validate
+ * @returns {Object} Validation result for display
+ */
+function validateARCPathForDisplay(path) {
+    const normalizedPath = path.replace(/^\.\//, '').replace(/\/$/, '');
+    const pathParts = normalizedPath.split('/').filter(p => p);
+
+    if (pathParts.length === 0) {
+        return { isValid: true, type: 'new_assay', message: 'Root level - will create new assay' };
+    }
+
+    if (pathParts.length === 1) {
+        return { isValid: true, type: 'new_assay', message: `ARC root (${pathParts[0]}) - will create new assay` };
+    }
+
+    if (pathParts.length === 2) {
+        const secondLevel = pathParts[1];
+        const arcName = pathParts[0];
+
+        if (secondLevel === 'studies') {
+            return { isValid: true, type: 'new_study', message: `${arcName}/studies - will create new study` };
+        } else if (secondLevel === 'assays') {
+            return { isValid: true, type: 'new_assay_in_assays', message: `${arcName}/assays - will create new assay` };
+        }
+        return { isValid: false, type: 'unmapped', message: `Non-standard folder in ${arcName}` };
+    }
+
+    if (pathParts.length === 3) {
+        const secondLevel = pathParts[1];
+        const thirdLevel = pathParts[2];
+
+        if (secondLevel === 'studies') {
+            return { isValid: true, type: 'existing_study', message: `Existing study (${thirdLevel}) - will add content` };
+        } else if (secondLevel === 'assays') {
+            return { isValid: true, type: 'existing_assay', message: `Existing assay (${thirdLevel}) - will add content` };
+        }
+        return { isValid: false, type: 'invalid', message: 'Invalid structure' };
+    }
+
+    // Too deep
+    if (pathParts.length > 3) {
+        const secondLevel = pathParts[1];
+        if (secondLevel === 'studies' || secondLevel === 'assays') {
+            return { isValid: false, type: 'invalid', message: `Too deep in ${secondLevel} hierarchy` };
+        }
+    }
+
+    return { isValid: false, type: 'unmapped', message: 'Non-standard ARC structure' };
+}
+
 // Existing buildTree and refreshTree functions remain but ensure they sync with main area
