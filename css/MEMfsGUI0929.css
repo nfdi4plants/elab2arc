@@ -1,0 +1,501 @@
+        /* Add to CSS */
+        #back-button {
+            padding: 4px 12px;
+            margin-right: 8px;
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #back-button:hover {
+            background: #006cbd;
+        }
+
+        #back-button:active {
+            background: #005da4;
+        }
+        
+        /* Improved CSS Layout */
+        .explorer-container {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            height: auto;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        #address-bar {
+            padding: 8px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+        }
+
+        #current-path {
+            flex-grow: 1;
+            padding: 4px 8px;
+            margin: 0 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            height: calc(80vh - 90px);
+        }
+
+        #sidebar {
+            border-right: 1px solid #ddd;
+            background: #f8f8f8;
+            overflow-y: auto;
+        }
+
+        #main-area {
+            padding: 12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 12px;
+            align-content: start;
+            overflow-y: auto;
+        }
+
+        .folder-item, .file-item {
+            padding: 6px;
+            text-align: center;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .folder-item .item-icon,
+        .file-item .item-icon {
+            font-size: 32px;
+            margin-bottom: 4px;
+            line-height: 1;
+        }
+
+        .folder-item .item-name,
+        .file-item .item-name {
+            font-size: 11px;
+            line-height: 1.2;
+            word-break: break-word;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            max-height: 24px;
+        }
+
+        .folder-item:hover, .file-item:hover {
+            background: #e5f3ff;
+        }
+
+        #select-button {
+            cursor: pointer;
+        }
+
+        /* Context Menu Styles */
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            z-index: 1099;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+
+        .context-menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        /* Existing Tree Styles Modified */
+        .tree-node {
+            padding: 4px 0px 0px 20px;
+        }
+
+        .tree-node {
+            border-left: 2px solid #0078d4;
+        }
+        .folder{
+            display: block;
+        }
+        .file{
+            display: block;
+        }
+        .folder:before{
+            content:"📁";
+        }
+        .file:before{
+            content:"📄";
+        }
+
+
+        .node-content {
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+
+        .add-btn, .delete-btn, .select-btn {
+            margin-left: 4px;
+            padding: 2px 6px;
+            font-size: 0.8em;
+        }
+
+        /* ARC Structure Indicators */
+        .arc-indicator {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.8);
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            border: 1px solid currentColor;
+            opacity: 0.9;
+            transition: opacity 0.2s ease;
+        }
+
+        .tree-node:hover .arc-indicator {
+            opacity: 1;
+        }
+
+        .tree-node {
+            padding: 2px 4px;
+            margin: 1px 0;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .tree-node:hover {
+            background-color: #f0f8ff !important;
+        }
+
+        /* Path selection feedback styling */
+        #path-selection-feedback {
+            animation: fadeInSlide 0.3s ease-out;
+        }
+
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* New Folder Button */
+        #new-folder-button {
+            margin-left: 8px;
+            padding: 4px 12px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        #new-folder-button:hover {
+            background: #218838;
+        }
+
+        #new-folder-button:active {
+            background: #1e7e34;
+        }
+
+        /* Enhanced Main Content Layout for Preview */
+        .main-content.with-preview {
+            grid-template-columns: 250px 1fr 400px;
+        }
+
+        /* Preview Panel Styles */
+        .preview-panel {
+            border-left: 1px solid #ddd;
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(80vh - 90px);
+        }
+
+        .preview-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #ddd;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-header h5 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .preview-header-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Offcanvas specific styles */
+        .offcanvas-content-wrapper {
+            height: 100%;
+        }
+
+        .preview-navigation .nav-tabs {
+            border-bottom: none;
+        }
+
+        .preview-navigation .nav-link {
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+
+        /* Excel sheet tabs */
+        .sheet-tabs {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .sheet-tab {
+            padding: 4px 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: #f8f9fa;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .sheet-tab:hover {
+            background: #e9ecef;
+        }
+
+        .sheet-tab.active {
+            background: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
+        }
+
+        /* Enhanced table styles for Excel */
+        .excel-preview {
+            overflow: auto;
+            height: 100%;
+        }
+
+        .excel-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            table-layout: fixed;
+        }
+
+        .excel-preview th,
+        .excel-preview td {
+            border: 1px solid #ddd;
+            padding: 4px 6px;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 80px;
+        }
+
+        .excel-preview th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .excel-preview tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        /* Pagination controls */
+        .excel-pagination {
+            padding: 12px;
+            border-top: 1px solid #ddd;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .excel-info {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .preview-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .preview-actions {
+            padding: 12px 16px;
+            border-top: 1px solid #ddd;
+            background: #f8f9fa;
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        /* Text Preview Styles */
+        .text-preview-editor {
+            width: 100%;
+            min-height: 300px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        /* Image Preview Styles */
+        .image-preview {
+            text-align: center;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Table Preview Styles */
+        .table-preview {
+            overflow-x: auto;
+        }
+
+        .table-preview table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .table-preview th,
+        .table-preview td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .table-preview th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .table-preview tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        /* Enhanced Context Menu */
+        .context-menu {
+            min-width: 150px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .context-menu-item {
+            font-size: 14px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .context-menu-item:first-child {
+            border-top: none;
+        }
+
+        .context-menu-separator {
+            height: 1px;
+            background: #eee;
+            margin: 4px 0;
+        }
+
+        /* File Type Icons Enhancement - Using JavaScript-generated icons only */
+
+        /* Loading Animation */
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #0078d4;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Button Loading States */
+        .btn-loading-state {
+            transition: all 0.3s ease;
+        }
+
+        .btn-loading-state:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .btn-loading-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: btn-spin 1s linear infinite;
+        }
+
+        @keyframes btn-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ARC Clone Button Specific */
+        .clone-arc-btn {
+            position: relative;
+            min-width: 200px;
+        }
+
+        .clone-arc-btn .btn-content,
+        .clone-arc-btn .btn-loading {
+            transition: opacity 0.2s ease;
+        }

@@ -1,3 +1,7 @@
+// =============================================================================
+// COOKIE & AUTHENTICATION UTILITIES
+// =============================================================================
+
 // Get instance from cookies
 function getCookie(name) {
     const value = `; ${document.cookie}`;
@@ -5,7 +9,47 @@ function getCookie(name) {
     return parts.length === 2 ? parts.pop().split(';').shift() : '';
 }
 
+// Extract cookie value (alternative implementation)
+function extractCookie(name) {
+    const cookie = document.cookie;
+    const values = cookie.split("; ");
+    let value = "";
+    values.forEach(e => { if (e.split("=")[0] === name) { value = e.split("=")[1] } });
+    return value;
+}
+
+// Initialize cookies from form inputs
+function initCookies() {
+    const maxAge = 60 * 60 * 24 * 31;
+
+    elabtoken = document.getElementById("elabToken").value;
+    datahubtoken = document.getElementById("datahubToken").value;
+    document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+    document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+}
+
+// Set cookies programmatically
+function setCookies(elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/") {
+    const maxAge = 60 * 60 * 24 * 31;
+
+    document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+    document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
+    window.localStorage.setItem("instance", instance);
+}
+
+// Redirect to reload with new instance
+function redirect() {
+    const instance = document.getElementById("elabURLInput1").value;
+    window.localStorage.setItem("instance", instance);
+    location.href = location.href.split('#')[0] + '#home'
+    location.reload();
+}
+
 const instance = window.localStorage.getItem('elabURL');
+
+// =============================================================================
+// ELAB EXPERIMENT DISPLAY
+// =============================================================================
 
 // Fetch and display data
 async function loadExperiment(instance, elabid, elabtoken, type) {
