@@ -11,8 +11,10 @@ function uniqueByContent(arr) {
 }
 
 BVconvert = async function () {
-    var mmm = ["Blueberry-Mapping","Blueberry-Mapping","Blueberry-Field","Blueberry-Mapping","Blueberry-Mapping","Blueberry-Field","Blueberry-Mapping","Strawberry-Consumer","Strawberry-Field","Strawberry-Field","Strawberry-Consumer","Strawberry-Field","Strawberry-Field","Blueberry-Consumer","Blueberry-Panel","Blueberry-Consumer","Blueberry-Panel","Blueberry-Consumer","Blueberry-Panel","Blueberry-Consumer","Blueberry-Panel","Raspberry-Panel","Raspberry-Panel","Strawberry-Panel","Strawberry-Panel","Strawberry-Consumer","Strawberry-Panel","Strawberry-Consumer","Strawberry-Panel","Strawberry-Panel","Strawberry-Disease","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Strawberry-Disease","Strawberry-ProtectedCultivation","Strawberry-ProtectedCultivation","Strawberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-ProtectedCultivation","Strawberry-ProtectedCultivation","Strawberry-ProtectedCultivation","Strawberry-ProtectedCultivation","Blueberry-ProtectedCultivation","Blueberry-ProtectedCultivation","Blueberry-Field","Blueberry-Field","Blueberry-Field","Blueberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-Field","Strawberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Raspberry-Field","Strawberry-ProtectedCultivation","Strawberry-Field","Strawberry-Disease","Strawberry-Disease","Blueberry-Disease","Blueberry-Disease","Strawberry-Panel","Strawberry-Panel","Blueberry-Panel","Blueberry-Panel","Raspberry-ProtectedCultivation","Blueberry-ProtectedCultivation","Blueberry-ProtectedCultivation","Raspberry-ProtectedCultivation","Blueberry-ProtectedCultivation","Strawberry-Field","Strawberry-Field","Strawberry-ProtectedCultivation","Strawberry-ProtectedCultivation"]
-    var nnn = [0,0,0,0,0,0,0,3,5,5,5,5,5,5,8,8,10,10,13,13,13,13,16,16,24,24,24,24,24,24,24,27,28,28,28,28,28,28,28,27,36,36,37,37,37,39,39,53,41,44,44,44,44,44,44,47,47,47,47,48,48,48,48,48,49,51,51,51,51,51,51,51,51,53,37,55,55,56,56,57,57,58,58,41,58,58,41,58,59,59,64,64]
+    var mmm = []
+    var nnn = [
+
+    ]
 
 var newStudies = [];
 for (ele of [... new Set(mmm)]){
@@ -31,16 +33,12 @@ for (ele of [... new Set(mmm)]){
     const template_ut8 = new Uint8Array(template_arrayBuffer);
     fs.writeFileSync('template.xlsx', template_ut8);
     const assay1 = await Xlsx.fromXlsxFile("/template.xlsx");
-    const inv1 = arctrl.ArcInvestigation.init("Breeding-Value-Public-Dataset");
-        inv1.Description = "Strawberries, raspberries and blueberries are considered the crème de la crème of the EU’s berry industry, which has significant economic impacts and potential. What is more, their genetic resources and pre-breeding material can be used for the creation of new breeding possibilities. The EU-funded BreedingValue project will investigate and provide the knowledge and tools to proceed with this endeavour. Specifically, the project will identify conserved and maintained germplasm of the main genera appropriate for sustainable berry production throughout the EU. Moreover, it will apply the latest genotyping and phenotyping tools for the characterisation of local varieties. Goals also include the application of life cycle analyses to evaluate the ecological benefits and communicate the results to breeders, health authorities and regulatory and legislative authorities."
-          inv1.Title = "BreedingValue, grant agreement ID: 101000747"
+    const inv1 = arctrl.ArcInvestigation.init("123");
+        inv1.Description = ""
+          inv1.Title = ""
     const files = document.getElementById("import").files;
     for (const [index, StudieGroup] of Object.entries(newStudies)) {
 
-
-        //const invXlsx = await Xlsx.fromXlsxFile("BreedingValue-Public-Dataset/isa.investigation.xlsx");
-
-        // const inv1 = await arctrl.XlsxController.Investigation.fromFsWorkbook(invXlsx);
         
         
 
@@ -68,12 +66,7 @@ for (ele of [... new Set(mmm)]){
         // studyTable.AddColumn(arctrl.CompositeHeader.output(arctrl.IOType.sample()), []);
 
 
-        // fs.mkdirSync("/BreedingValue-Public-Dataset/studies/" + studyName, { recursive: true });
-        // fs.mkdirSync("/BreedingValue-Public-Dataset/studies/" + studyName + "/protocols", { recursive: true });
-        // await fs.promises.writeFile("/BreedingValue-Public-Dataset/studies/" + studyName + "/protocols/.gitkeep", " ");
-        // fs.mkdirSync("/BreedingValue-Public-Dataset/studies/" + studyName + "/resources", { recursive: true });
-        // await fs.promises.writeFile("/BreedingValue-Public-Dataset/studies/" + studyName + "/resources/.gitkeep", " ");
-
+      
         let studyContacts = [];
         for (const [index1, assay] of Object.entries(StudieGroup.list)) {
             
@@ -95,12 +88,7 @@ for (ele of [... new Set(mmm)]){
              
             
 
-        //     fs.mkdirSync("/BreedingValue-Public-Dataset/assays/" + assayName, { recursive: true });
-        //     fs.mkdirSync("/BreedingValue-Public-Dataset/assays/" + assayName + "/protocols", { recursive: true });
-        //     await fs.promises.writeFile("/BreedingValue-Public-Dataset/assays/" + assayName + "/protocols/.gitkeep", " ");
-        //     fs.mkdirSync("/BreedingValue-Public-Dataset/assays/" + assayName + "/dataset", { recursive: true });
-        //     await fs.promises.writeFile("/BreedingValue-Public-Dataset/assays/" + assayName + "/dataset/.gitkeep", " ");
-
+   
            
         //     template1.Identifier = assayName;
         //     const PhenoMeasure = new arctrl.OntologyAnnotation("phenotype", "UPHENO", "UPHENO:0001001");
@@ -124,9 +112,7 @@ for (ele of [... new Set(mmm)]){
         //         arctrl.CompositeCell.createTerm(value_license),
         //         arctrl.CompositeCell.createFreeText( "./dataset/"+assayName + "-output.csv")]); 
         //             const output_ut8 = new Uint8Array(bv_arrayBuffer);
-        //     fs.writeFileSync("/BreedingValue-Public-Dataset/studies/" + studyName + "/resources/" + assayName + "-original.xlsx", output_ut8);
-
-
+   
         // }
             const collaborators = workbook.getWorksheet('COLLABORATORS');
             let collaboratorList = [];
@@ -171,8 +157,7 @@ for (ele of [... new Set(mmm)]){
             // const worksheet2 = workbook2.addWorksheet("Sheet 1");
             // dataSheet.eachRow(row => worksheet2.addRow(row));
             const assayCsv = await dataSheet._workbook.csv.writeBuffer({sheetName: "DATA"});
-            //fs.writeFileSync("/BreedingValue-Public-Dataset/assays/" + assayName + "/dataset/" + assayName + "-output.csv", assayCsv);
-            const dataHeader = dataSheet.getRow(1).values;
+          const dataHeader = dataSheet.getRow(1).values;
             const phenotypeRow = phenotypes.getColumn("A").values;
             const commonHeaders = dataHeader.filter(value => phenotypeRow.includes(value));
             const dataOnlyHeader = dataHeader.filter(value => !phenotypeRow.includes(value));
@@ -195,7 +180,7 @@ for (ele of [... new Set(mmm)]){
             
             // First row: sample name
             datamaptable.addRow([
-                `"/BreedingValue-Public-Dataset/assays/${assayName}/dataset/${assayName}-output.csv#col=1"`,
+                `"/git/assays/${assayName}/dataset/${assayName}-output.csv#col=1"`,
                 "text/csv",
                 "https://datatracker.ietf.org/doc/html/rfc7111",
                 "Sample Name",
@@ -219,7 +204,7 @@ for (ele of [... new Set(mmm)]){
 
 
             let Header = "Data, Data Format, Data Selector Format, Explication, Term Source REF, Term Accession Number, Unit, Term Source REF, Term Accession Number, Object Type, Term Source REF, Term Accession Number, Description, Generated By \n";
-            const c1 = "\"/BreedingValue-Public-Dataset/assays/" + assayName + "/dataset/" + assayName + "-output.csv#col=1\"";
+            const c1 = "\"/git/assays/" + assayName + "/dataset/" + assayName + "-output.csv#col=1\"";
                 const c2 = "text/csv";
                 const c3 = "https://datatracker.ietf.org/doc/html/rfc7111";
                 const createdBy = "\"" + collaboratorList + "\"";
@@ -228,7 +213,7 @@ for (ele of [... new Set(mmm)]){
 
             for (const [index, ele] of Object.entries(commonHeaders)) {
 
-                const c1 = "\"/BreedingValue-Public-Dataset/assays/" + assayName + "/dataset/" + assayName + "-output.csv#col=" + dataHeader.indexOf(ele) + "\"";
+                const c1 = "\"/git/assays/" + assayName + "/dataset/" + assayName + "-output.csv#col=" + dataHeader.indexOf(ele) + "\"";
                 const c2 = "text/csv";
                 const c3 = "https://datatracker.ietf.org/doc/html/rfc7111";
                 const c4 = "\"" + ele + "\"";
@@ -243,7 +228,7 @@ for (ele of [... new Set(mmm)]){
 
 
                 datamaptable.addRow([
-                `"/BreedingValue-Public-Dataset/assays/${assayName}/dataset/${assayName}-output.csv#col=${colIndex}"`,
+                `"git/assays/${assayName}/dataset/${assayName}-output.csv#col=${colIndex}"`,
                 "text/csv",
                 "https://datatracker.ietf.org/doc/html/rfc7111",
                 `"${ele}"`,
@@ -274,31 +259,31 @@ for (ele of [... new Set(mmm)]){
             // columns: datamapCol,
             // rows: datamapRow, // data rows only
             // })
-            fs.writeFileSync("/BreedingValue-Public-Dataset/assays/" + assayName + "/isa.datamap.csv", Header);
+            fs.writeFileSync("git/assays/" + assayName + "/isa.datamap.csv", Header);
             const datamapxlsx = await datamapworkbook.xlsx.writeBuffer();
-            fs.writeFileSync("/BreedingValue-Public-Dataset/assays/" + assayName + "/isa.datamap.xlsx", datamapxlsx);
+            fs.writeFileSync("git/assays/" + assayName + "/isa.datamap.xlsx", datamapxlsx);
 
             // const inputText = String(workbook.getWorksheet('DATA').getColumn("A").values.slice(2)).replaceAll(",", "\n");
-            // //fs.writeFileSync("/BreedingValue-Public-Dataset/assays/" + assayName + "/dataset/" + assayName + "-sample.csv", "sample\n" + inputText);
+            // //fs.writeFileSync("git/assays/" + assayName + "/dataset/" + assayName + "-sample.csv", "sample\n" + inputText);
             
             // inv1.AddAssay(template1);
             // inv1.RegisterAssay( studyName,assayName);
 
             // const xlsxObject1 = await arctrl.XlsxController.Assay.toFsWorkbook(template1);
             // //let xlsxBuffer = await Xlsx.toXlsxBytes(xlsxObject);
-            // await Xlsx.toFile("/BreedingValue-Public-Dataset/assays/" + assayName + "/isa.assay.xlsx", xlsxObject1);
+            // await Xlsx.toFile("git/assays/" + assayName + "/isa.assay.xlsx", xlsxObject1);
   
 
         }
         // study.Contacts = uniqueByContent(studyContacts); 
         // const xlsxObject2 = await arctrl.XlsxController.Study.toFsWorkbook(study);
         //     //let xlsxBuffer = await Xlsx.toXlsxBytes(xlsxObject);
-        // await Xlsx.toFile("/BreedingValue-Public-Dataset/studies/" + studyName + "/isa.study.xlsx", xlsxObject2);
+        // await Xlsx.toFile("git/studies/" + studyName + "/isa.study.xlsx", xlsxObject2);
 
 
         // //inv1.AddStudy(study);
         // inv1.RegisterStudy(studyName);
-        // fs.writeFileSync("/BreedingValue-Public-Dataset/studies/" + studyName + "/resources/" + studyName + "_" + index1 + "_source.csv", String(sourceList[index1]).replaceAll(",", "\n"))
+        // fs.writeFileSync("git/studies/" + studyName + "/resources/" + studyName + "_" + index1 + "_source.csv", String(sourceList[index1]).replaceAll(",", "\n"))
 
 
         
@@ -311,7 +296,7 @@ for (ele of [... new Set(mmm)]){
         //inv1.Contacts = uniqueByContent(invContacts);
         //const xlsxObject3 = await arctrl.XlsxController.Investigation.toFsWorkbook(inv1);
         //let xlsxBuffer = await Xlsx.toXlsxBytes(xlsxObject);
-        //await Xlsx.toFile("/BreedingValue-Public-Dataset/isa.investigation1.xlsx", xlsxObject3);
+        //await Xlsx.toFile("git/isa.investigation1.xlsx", xlsxObject3);
     console.log("finished")
 }
 
