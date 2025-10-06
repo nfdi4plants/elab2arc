@@ -132,9 +132,11 @@
         }
         .folder{
             display: block;
+            cursor: pointer;
         }
         .file{
             display: block;
+            cursor: pointer;
         }
         .folder:before{
             content:"📁";
@@ -249,6 +251,11 @@
             margin: 0;
             font-size: 16px;
             font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: calc(100% - 250px);
+            flex-shrink: 1;
         }
 
         .preview-header-actions {
@@ -498,4 +505,69 @@
         .clone-arc-btn .btn-content,
         .clone-arc-btn .btn-loading {
             transition: opacity 0.2s ease;
+        }
+
+        /* Convert Container Width Consistency */
+        .convert-container {
+            max-width: 100%;
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        /* Ensure col-lg-12 matches container width */
+        .col-12 .convert-container,
+        .col-lg-12 .convert-container {
+            width: 100%;
+        }
+
+        /* Fix Bootstrap row negative margins for convert-container */
+        .convert-container.row {
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        /* Consistent padding for convert containers */
+        .convert-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        /* Improve form control spacing */
+        .convert-container .form-control {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Better alignment for inline elements */
+        .convert-container .col-lg-3,
+        .convert-container .col-3 {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        /* Toggle switch styling improvement */
+        .form-check-switch {
+            padding-left: 2.5rem;
+        }
+
+        .form-check-switch .form-check-input {
+            width: 3rem;
+            height: 1.5rem;
+            margin-left: -2.5rem;
+        }
+
+        .form-check-switch .form-check-label {
+            font-size: 0.95rem;
+            color: #495057;
+        }
+
+        /* Button group spacing */
+        .convert-container .btn {
+            margin: 0.25rem;
+        }
+
+        /* Lead text consistency */
+        .convert-container .lead {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
         }

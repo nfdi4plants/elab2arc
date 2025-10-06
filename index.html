@@ -181,10 +181,6 @@ video {
           <button class="btn btn-primary w-100" type="button" onclick="showTab('arcTab')"><span> Confirm eLabFTW
               Selection</span></button>
 
-          <button class="btn btn-secondary my-3 w-100 d-none" id="statusModalBtn" data-bs-toggle="modal"
-            data-bs-target="#statusModal">
-            Check Status
-          </button>
           <div id="toolstatus" class="col-10 m-auto">
           </div>
         </div>
@@ -274,6 +270,23 @@ video {
           </div>
         </div>
       </div>
+
+      <div class="row justify-content-center align-items-end d-none" id="togetherAPIKeyContainer">
+        <div class="my-3 col-lg-8">
+          <label for="togetherAPIKey" class="form-label">
+            Together.AI API Key (for LLM Datamap Generation)
+          </label>
+          <div class="input-group mb-3">
+            <input type="password" name="togetherAPIKey" class="form-control" autocomplete="new-password"
+              id="togetherAPIKey" placeholder="Enter Together.AI API key" />
+            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="togetherAPIKey"
+              onclick="showPassword(this)">
+              👁️
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="row justify-content-center align-items-end">
         <div class="my-3 col-lg-8">
           <button class="btn btn-primary" onclick="initCookies();redirect();" type="button"> Save
@@ -354,6 +367,14 @@ video {
                 data-bs-target="#statusModal">
                 <span class="lead"> Check Status</span>
               </button>
+
+              &nbsp; &nbsp; &nbsp; &nbsp;
+              <div class="form-check form-switch d-inline-block">
+                <input class="form-check-input" type="checkbox" id="enableDatamapSwitch" onchange="toggleTogetherAPIKeyField()">
+                <label class="form-check-label" for="enableDatamapSwitch">
+                  Enable LLM Datamap Generation (Experimental)
+                </label>
+              </div>
             </div>
           </div>
 
@@ -533,18 +554,73 @@ video {
       </div>
     </div>
 
+    <!-- eLabFTW Preview Offcanvas -->
+    <div class="offcanvas offcanvas-start w-75" tabindex="-1" id="elabPreviewCanvas"
+      aria-labelledby="elabPreviewCanvasLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="elabPreviewCanvasLabel">eLabFTW Preview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <div class="container-fluid mt-3">
+          <div class="row g-4">
 
+            <!-- Main Content -->
+            <div class="col-md-9">
 
+              <section class="section title bg-light rounded p-3 mb-4">
+                <h1 id="expTitle" class="text-primary-emphasis"> Empty eLabFTW Preview</h1>
 
+              </section>
 
-    <!-- Button trigger modal -->
-    <button type="button" class="btn btn-primary d-none" id="statusModalBtn" data-bs-toggle="modal"
-      data-bs-target="#statusModal">
-      Launch Status modal
-    </button>
+              <section class="section content bg-light rounded p-3 mb-4" id="expContent">
+                <!-- HTML content will be injected here -->
+                <h5>No eLabFTW available. Use <a href="#home" data-bs-dismiss="offcanvas" aria-label="Close">home tab</a>
+                  to start a conversion</h5>
+              </section>
+
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-md-3 sidebar">
+              <button class="btn btn-success my-3" data-bs-dismiss="offcanvas" aria-label="Close">Save </button>
+
+              <!-- Conversion Section -->
+              <section class="section conversion rounded p-3 mb-4">
+                <h3>Conversion</h3>
+                <ul id="elabHeadLine"></ul>
+              </section>
+
+              <!-- Metadata Section -->
+              <section class="section metadata rounded p-3 mb-4">
+                <h3>Metadata</h3>
+                <ul id="metadataList"></ul>
+              </section>
+
+              <!-- Related Items Section -->
+              <section class="section related rounded p-3 mb-4">
+                <h3>Linked Resources and Experiments</h3>
+                <ul id="relatedItems"></ul>
+                <ul id="relatedExps"></ul>
+              </section>
+
+              <!-- Uploads / Gallery Section -->
+              <section class="section uploads rounded p-3 mb-4">
+                <h3>Attachments</h3>
+                <div class="gallery row g-2" id="uploadGallery">
+                  <!-- Gallery items will be injected as .col-sm-6 or .col-md-4 dynamically -->
+                </div>
+              </section>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- Modal -->
-    <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
       <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
         <div class="modal-content">
           <div class="modal-header">
@@ -612,6 +688,7 @@ video {
   <script src="./js/git.js"></script>
   <script src="./js/main-25-07-15.js" type="text/javascript"></script>
   <script src="./js/turndown.js" type="text/javascript"></script>
+  <script src="./js/exceljs.min.js"></script>
 
   <!-- Module import -->
   <script type="module">
@@ -620,9 +697,9 @@ video {
   </script>
 
   <!-- Application code (order matters - load after DOM and libraries) -->
-  <script src="./js/elabGUI1905.js" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/MEMfsGUI0929.js" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/elab2arc-core.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elabGUI1006.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/MEMfsGUI1006.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core1006.js" type="text/javascript" charset="utf-8"></script>
 
 </body>
 
