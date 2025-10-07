@@ -284,6 +284,101 @@ video {
               👁️
             </button>
           </div>
+
+          <label for="togetherAIModel" class="form-label mt-2">
+            Primary LLM Model
+          </label>
+          <select class="form-select" id="togetherAIModel" onchange="saveModelSelection()">
+            <optgroup label="Meta Llama Models">
+              <option value="meta-llama/Llama-3.2-3B-Instruct-Turbo">
+                Llama 3.2 3B Turbo (8K context)
+              </option>
+              <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" selected>
+                Llama 3.3 70B Turbo (131K context, recommended)
+              </option>
+            </optgroup>
+            <optgroup label="OpenAI Models">
+              <option value="openai/gpt-oss-20b">
+                OpenAI GPT OSS 20B (16K context)
+              </option>
+              <option value="openai/gpt-oss-120b">
+                OpenAI GPT OSS 120B (32K context)
+              </option>
+            </optgroup>
+            <optgroup label="Other Models">
+              <option value="Qwen/Qwen3-235B-A22B-Instruct-2507-tput">
+                Qwen 3 235B A22B (131K context)
+              </option>
+              <option value="google/gemma-3n-E4B-it">
+                Google Gemma 3n E4B (32K context)
+              </option>
+              <option value="lgai/exaone-deep-32b">
+                LG EXAONE Deep 32B (32K context)
+              </option>
+              <option value="ServiceNow-AI/Apriel-1.5-15b-Thinker">
+                ServiceNow Apriel 1.5 15B Thinker (32K context)
+              </option>
+              <option value="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free">
+                DeepSeek R1 Distill 70B (64K context)
+              </option>
+            </optgroup>
+          </select>
+          <small class="form-text text-muted">
+            Primary model for protocol analysis
+          </small>
+
+          <label for="togetherAIFallbackModels" class="form-label mt-3">
+            Fallback Models (for rate limits)
+          </label>
+          <select class="form-select" id="togetherAIFallbackModels" multiple size="8" onchange="saveFallbackModelSelection()">
+            <optgroup label="Meta Llama Models">
+              <option value="meta-llama/Llama-3.2-3B-Instruct-Turbo">
+                Llama 3.2 3B Turbo (8K context)
+              </option>
+              <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free">
+                Llama 3.3 70B Turbo (131K context)
+              </option>
+            </optgroup>
+            <optgroup label="OpenAI Models">
+              <option value="openai/gpt-oss-20b" selected>
+                OpenAI GPT OSS 20B (16K context)
+              </option>
+              <option value="openai/gpt-oss-120b" selected>
+                OpenAI GPT OSS 120B (32K context)
+              </option>
+            </optgroup>
+            <optgroup label="Other Models">
+              <option value="Qwen/Qwen3-235B-A22B-Instruct-2507-tput">
+                Qwen 3 235B A22B (131K context)
+              </option>
+              <option value="google/gemma-3n-E4B-it" selected>
+                Google Gemma 3n E4B (32K context)
+              </option>
+              <option value="lgai/exaone-deep-32b" selected>
+                LG EXAONE Deep 32B (32K context)
+              </option>
+              <option value="ServiceNow-AI/Apriel-1.5-15b-Thinker">
+                ServiceNow Apriel 1.5 15B Thinker (32K context)
+              </option>
+              <option value="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free">
+                DeepSeek R1 Distill 70B (64K context)
+              </option>
+            </optgroup>
+          </select>
+          <small class="form-text text-muted">
+            Hold Ctrl/Cmd to select multiple. These models will be tried if primary hits rate limit.
+          </small>
+
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" id="llmTestModeSwitch" onchange="saveLLMTestMode()">
+            <label class="form-check-label" for="llmTestModeSwitch">
+              <strong>Test Mode</strong> - Use sample data instead of API calls
+            </label>
+            <br>
+            <small class="form-text text-muted">
+              Enable this to test ISA generation without consuming API credits. Uses predefined E. coli sequencing workflow.
+            </small>
+          </div>
         </div>
       </div>
 
@@ -652,9 +747,25 @@ video {
                 </div>
               </div>
               <div class="accordion-item">
+                <h2 class="accordion-header" id="llmStreamHeading">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#llmStreamInfo" aria-expanded="false" aria-controls="llmStreamInfo">
+                    LLM Response Stream (Debug)
+                  </button>
+                </h2>
+                <div id="llmStreamInfo" class="accordion-collapse collapse" aria-labelledby="llmStreamHeading"
+                  data-bs-parent="#accordionUI">
+                  <div class="accordion-body">
+                    <div style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap;" id="llmStreamContent">
+                      <!-- LLM responses will be displayed here -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
                 <h2 class="accordion-header" id="elabHeading">
-                  <button class="accordion-button" type="button" data-bs-toggle="collapse" id="filesAcc"
-                    data-bs-target="#elabInfo" aria-expanded="true" aria-controls="elabInfo">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" id="filesAcc"
+                    data-bs-target="#elabInfo" aria-expanded="false" aria-controls="elabInfo">
                     Files Changed in ARC
 
                   </button>
@@ -699,6 +810,12 @@ video {
   <!-- Application code (order matters - load after DOM and libraries) -->
   <script src="./js/elabGUI1006.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/MEMfsGUI1006.js" type="text/javascript" charset="utf-8"></script>
+
+  <!-- Load modular components before core -->
+  <script src="./js/modules/isa-generation.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/llm-service.js" type="text/javascript" charset="utf-8"></script>
+
+  <!-- Main application core -->
   <script src="./js/elab2arc-core1006a.js" type="text/javascript" charset="utf-8"></script>
 
 </body>

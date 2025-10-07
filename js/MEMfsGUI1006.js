@@ -1526,25 +1526,49 @@ let currentWorkbook = null;
 let currentActiveSheet = 0;
 let currentExcelFilePath = null;
 let cellChanges = {}; // Track cell edits: {sheetIndex: {rowCol: newValue}}
+let currentIsaType = null; // Track ISA file type: 'assay', 'study', 'investigation', or null
+let currentArcObject = null; // Store parsed ARCtrl object (ArcAssay, ArcStudy, or ArcInvestigation)
+
+/**
+ * Detect if file is an ISA-Tab file
+ * @param {string} filePath - Full file path
+ * @returns {string|null} - 'assay', 'study', 'investigation', or null
+ */
+function detectIsaFileType(filePath) {
+    const fileName = filePath.split('/').pop().toLowerCase();
+
+    // Match both new format (isa.assay.xlsx) and backup format (isa.assay.backup.xlsx)
+    if ((fileName === 'isa.assay.xlsx' || fileName.includes('isa.assay.backup')) && fileName.endsWith('.xlsx')) {
+        return 'assay';
+    } else if ((fileName === 'isa.study.xlsx' || fileName.includes('isa.study.backup')) && fileName.endsWith('.xlsx')) {
+        return 'study';
+    } else if ((fileName === 'isa.investigation.xlsx' || fileName.includes('isa.investigation.backup')) && fileName.endsWith('.xlsx')) {
+        return 'investigation';
+    }
+
+    return null;
+}
 
 async function previewExcelFile(filePath, container) {
     try {
-        const content = fs.readFileSync(filePath);
-        const arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
-
-        // Use ExcelJS to load the Excel file
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(arrayBuffer);
-
-        if (!workbook.worksheets || workbook.worksheets.length === 0) {
-            throw new Error('No worksheets found in Excel file');
-        }
-
-        // Store workbook and file path for editing/saving
-        currentWorkbook = workbook;
+        // Detect if this is an ISA file
+        const isaType = detectIsaFileType(filePath);
+        currentIsaType = isaType;
         currentExcelFilePath = filePath;
 
-        renderExcelPreview(container, workbook);
+        console.log(`[Excel Preview] Loading ${isaType ? 'ISA-' + isaType : 'Excel'} file: ${filePath}`);
+
+        // Load file content
+        const content = fs.readFileSync(filePath);
+
+        if (isaType && window.arctrl && window.Xlsx) {
+            // Use ARCtrl for ISA files
+            await loadIsaFileWithArctrl(filePath, content, isaType, container);
+        } else {
+            // Fall back to ExcelJS for non-ISA files
+            await loadExcelFileWithExcelJS(content, container);
+        }
+
     } catch (error) {
         console.error('Excel preview error:', error);
         container.innerHTML = `
@@ -1560,6 +1584,257 @@ async function previewExcelFile(filePath, container) {
     // Hide text save button for Excel files
     document.getElementById('save-file').style.display = 'none';
     document.getElementById('offcanvas-save').style.display = 'none';
+}
+
+/**
+ * Load ISA file using ARCtrl library
+ */
+async function loadIsaFileWithArctrl(filePath, content, isaType, container) {
+    try {
+        console.log(`[ARCtrl] Loading ISA file: ${filePath}`);
+
+        // Convert content to FsWorkbook using ARCtrl
+        const arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+        const blob = new Blob([arrayBuffer]);
+        const file = new File([blob], filePath.split('/').pop());
+
+        // Use Xlsx.fromXlsxFile to load as FsWorkbook
+        const fsWorkbook = await window.Xlsx.fromXlsxFile(filePath);
+
+        console.log(`[ARCtrl] Loaded FsWorkbook:`, fsWorkbook);
+        console.log(`[ARCtrl] FsWorkbook type:`, typeof fsWorkbook);
+        console.log(`[ARCtrl] FsWorkbook properties:`, Object.keys(fsWorkbook));
+
+        // Check GetWorksheets method
+        if (typeof fsWorkbook.GetWorksheets === 'function') {
+            const worksheets = fsWorkbook.GetWorksheets();
+            console.log(`[ARCtrl] Worksheets count: ${worksheets.length}`);
+            console.log(`[ARCtrl] First worksheet:`, worksheets[0]);
+        } else {
+            console.error('[ARCtrl] GetWorksheets is not a function!');
+        }
+
+        // Parse based on ISA type
+        let arcObject = null;
+
+        if (isaType === 'assay') {
+            arcObject = window.arctrl.XlsxController.Assay.fromFsWorkbook(fsWorkbook);
+            console.log(`[ARCtrl] Parsed ArcAssay:`, arcObject);
+            console.log(`[ARCtrl] ArcAssay Identifier: ${arcObject.Identifier}`);
+        } else if (isaType === 'study') {
+            const result = window.arctrl.XlsxController.Study.fromFsWorkbook(fsWorkbook);
+            arcObject = result[0]; // First element is ArcStudy, second is assay identifiers
+            console.log(`[ARCtrl] Parsed ArcStudy:`, arcObject);
+            console.log(`[ARCtrl] ArcStudy Identifier: ${arcObject.Identifier}`);
+        } else if (isaType === 'investigation') {
+            arcObject = window.arctrl.XlsxController.Investigation.fromFsWorkbook(fsWorkbook);
+            console.log(`[ARCtrl] Parsed ArcInvestigation:`, arcObject);
+            console.log(`[ARCtrl] ArcInvestigation Identifier: ${arcObject.Identifier}`);
+        }
+
+        // Store the parsed ARCtrl object and FsWorkbook
+        currentArcObject = arcObject;
+        currentWorkbook = fsWorkbook;
+
+        // Render using ARCtrl-aware renderer
+        renderIsaPreview(container, fsWorkbook, arcObject, isaType);
+
+    } catch (error) {
+        console.error('[ARCtrl] Error loading ISA file:', error);
+        console.error('[ARCtrl] Error stack:', error.stack);
+        console.log('[ARCtrl] Falling back to ExcelJS');
+        // Fallback to ExcelJS if ARCtrl fails
+        await loadExcelFileWithExcelJS(content, container);
+    }
+}
+
+/**
+ * Load generic Excel file using ExcelJS
+ */
+async function loadExcelFileWithExcelJS(content, container) {
+    const arrayBuffer = content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength);
+
+    // Use ExcelJS to load the Excel file
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+
+    if (!workbook.worksheets || workbook.worksheets.length === 0) {
+        throw new Error('No worksheets found in Excel file');
+    }
+
+    // Store workbook and clear ARCtrl objects
+    currentWorkbook = workbook;
+    currentArcObject = null;
+    currentIsaType = null;
+
+    renderExcelPreview(container, workbook);
+}
+
+/**
+ * Render ISA file preview using ARCtrl FsWorkbook
+ */
+function renderIsaPreview(container, fsWorkbook, arcObject, isaType) {
+    const worksheets = fsWorkbook.GetWorksheets();
+
+    let html = '<div class="excel-preview isa-preview">';
+
+    // Add ISA file info banner
+    html += `
+        <div class="alert alert-info mb-3">
+            <strong>📋 ISA-Tab ${isaType.charAt(0).toUpperCase() + isaType.slice(1)} File</strong>
+            <br><small>Loaded with ARCtrl - ${arcObject?.Identifier || 'Unknown ID'}</small>
+        </div>
+    `;
+
+    // Add Save Excel button
+    html += '<div class="mb-3"><button class="btn btn-primary btn-sm" onclick="saveExcelFile()">💾 Save ISA File</button></div>';
+
+    // Add sheet tabs if multiple sheets
+    if (worksheets.length > 1) {
+        html += '<div class="sheet-tabs mb-3">';
+        worksheets.forEach((sheet, index) => {
+            const isActive = index === currentActiveSheet;
+            html += `
+                <button class="sheet-tab ${isActive ? 'active' : ''}"
+                        onclick="switchExcelSheet(${index})"
+                        data-sheet-index="${index}">
+                    ${sheet.Name || `Sheet ${index + 1}`}
+                </button>
+            `;
+        });
+        html += '</div>';
+    }
+
+    // Render current sheet from FsWorkbook
+    html += '<div class="excel-sheet-container">';
+    html += renderFsWorksheet(worksheets[currentActiveSheet]);
+    html += '</div>';
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+/**
+ * Render FsWorksheet from ARCtrl
+ * Based on FsSpreadsheet transpiled F# code structure
+ */
+function renderFsWorksheet(fsWorksheet) {
+    if (!fsWorksheet) {
+        return '<p>Empty worksheet</p>';
+    }
+
+    let html = '<div class="excel-sheet">';
+
+    try {
+        // Access Rows property (F# transpiled getter)
+        const rows = fsWorksheet.Rows;
+
+        if (!rows || rows.length === 0) {
+            return '<p>Empty worksheet - no data found</p>';
+        }
+
+        console.log(`[ARCtrl] Rendering ${rows.length} rows from FsWorksheet`);
+
+        // Calculate dimensions
+        const rowCount = Math.min(rows.length, 500);
+        let maxCols = 0;
+
+        // Find max column count by converting Cells iterable to array
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            try {
+                const cellsArray = Array.from(row.Cells);
+                if (cellsArray.length > maxCols) {
+                    maxCols = cellsArray.length;
+                }
+            } catch (e) {
+                console.warn(`[ARCtrl] Error accessing cells in row ${i}:`, e);
+            }
+        }
+
+        const colCount = Math.min(maxCols, 50);
+        console.log(`[ARCtrl] Table dimensions: ${rowCount} rows x ${colCount} cols`);
+
+        // Create table
+        html += '<table class="table table-bordered excel-table" id="excel-table-editable">';
+
+        // Generate column headers (A, B, C, etc.)
+        html += '<thead><tr><th style="width: 40px;">#</th>';
+        for (let col = 1; col <= colCount; col++) {
+            const colLetter = numberToExcelColumn(col);
+            html += `<th style="min-width: 100px;">${colLetter}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+
+        // Generate rows from FsWorksheet
+        for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            const row = rows[rowIdx];
+            html += `<tr><td class="row-header">${row.Index || rowIdx + 1}</td>`;
+
+            try {
+                // Get cells as array for indexing
+                const cellsArray = Array.from(row.Cells);
+
+                for (let col = 1; col <= colCount; col++) {
+                    let cellValue = '';
+                    const cellKey = `${rowIdx + 1}-${col}`;
+
+                    try {
+                        // Find cell at this column index (FsCell has ColumnNumber property)
+                        const cell = cellsArray.find(c => c.ColumnNumber === col);
+
+                        if (cell && cell.Value !== null && cell.Value !== undefined) {
+                            cellValue = String(cell.Value);
+                        }
+                    } catch (error) {
+                        // Silent fail for individual cell access
+                    }
+
+                    // Check if this cell has been edited
+                    const isModified = cellChanges[currentActiveSheet] && cellChanges[currentActiveSheet][cellKey];
+                    const modifiedStyle = isModified ? 'background-color: #fff3cd;' : '';
+
+                    html += `<td contenteditable="true"
+                                data-row="${rowIdx + 1}"
+                                data-col="${col}"
+                                style="${modifiedStyle}"
+                                onblur="handleCellEdit(this, ${rowIdx + 1}, ${col})"
+                                title="${cellValue}">${cellValue}</td>`;
+                }
+            } catch (rowError) {
+                console.error(`[ARCtrl] Error rendering row ${rowIdx}:`, rowError);
+                // Fill with empty cells if row fails
+                for (let col = 1; col <= colCount; col++) {
+                    html += `<td contenteditable="true"></td>`;
+                }
+            }
+
+            html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+
+        // Add info about truncation if applicable
+        if (rows.length > 500 || maxCols > 50) {
+            html += `
+                <div class="excel-info mt-2">
+                    <small class="text-muted">
+                        Showing ${Math.min(rowCount, 500)} of ${rows.length} rows,
+                        ${Math.min(colCount, 50)} of ${maxCols} columns
+                    </small>
+                </div>
+            `;
+        }
+
+    } catch (error) {
+        console.error('[ARCtrl] Error rendering FsWorksheet:', error);
+        console.error('[ARCtrl] Error stack:', error.stack);
+        html += `<p class="text-danger">Error rendering worksheet: ${error.message}</p>`;
+        html += `<pre class="text-muted">${error.stack}</pre>`;
+    }
+
+    html += '</div>';
+    return html;
 }
 
 function renderExcelPreview(container, workbook) {
@@ -1696,7 +1971,7 @@ function numberToExcelColumn(num) {
 }
 
 function switchExcelSheet(sheetIndex) {
-    if (!currentWorkbook || !currentWorkbook.worksheets) return;
+    if (!currentWorkbook) return;
 
     currentActiveSheet = sheetIndex;
 
@@ -1708,7 +1983,15 @@ function switchExcelSheet(sheetIndex) {
     // Re-render sheet content
     const sheetContainer = document.querySelector('.excel-sheet-container');
     if (sheetContainer) {
-        sheetContainer.innerHTML = renderExcelSheet(currentWorkbook.worksheets[sheetIndex]);
+        // Check if it's FsWorkbook (ARCtrl) or ExcelJS workbook
+        if (currentIsaType && currentWorkbook.GetWorksheets) {
+            // ARCtrl FsWorkbook
+            const worksheets = currentWorkbook.GetWorksheets();
+            sheetContainer.innerHTML = renderFsWorksheet(worksheets[sheetIndex]);
+        } else if (currentWorkbook.worksheets) {
+            // ExcelJS workbook
+            sheetContainer.innerHTML = renderExcelSheet(currentWorkbook.worksheets[sheetIndex]);
+        }
     }
 }
 
@@ -1735,29 +2018,21 @@ async function saveExcelFile() {
     }
 
     try {
-        // Apply all cell changes to the workbook
-        for (const [sheetIndex, changes] of Object.entries(cellChanges)) {
-            const worksheet = currentWorkbook.worksheets[parseInt(sheetIndex)];
-            if (!worksheet) continue;
+        console.log(`[Save] Saving ${currentIsaType ? 'ISA-' + currentIsaType : 'Excel'} file: ${currentExcelFilePath}`);
 
-            for (const [cellKey, change] of Object.entries(changes)) {
-                const cell = worksheet.getRow(change.row).getCell(change.col);
-                cell.value = change.value;
-            }
+        if (currentIsaType && currentArcObject && window.Xlsx) {
+            // Use ARCtrl to save ISA files
+            await saveIsaFileWithArctrl();
+        } else {
+            // Use ExcelJS to save generic Excel files
+            await saveExcelFileWithExcelJS();
         }
-
-        // Generate updated Excel file
-        const buffer = await currentWorkbook.xlsx.writeBuffer();
-        const uint8Array = new Uint8Array(buffer);
-
-        // Write back to memfs
-        fs.writeFileSync(currentExcelFilePath, uint8Array);
 
         // Clear changes tracking
         cellChanges = {};
 
         // Show success message
-        alert('Excel file saved successfully!');
+        alert(`${currentIsaType ? 'ISA file' : 'Excel file'} saved successfully!`);
 
         // Reload preview to show saved state
         const container = document.getElementById('preview-content');
@@ -1765,8 +2040,67 @@ async function saveExcelFile() {
 
     } catch (error) {
         console.error('Error saving Excel file:', error);
-        alert('Error saving Excel file: ' + error.message);
+        alert('Error saving file: ' + error.message);
     }
+}
+
+/**
+ * Save ISA file using ARCtrl - applies cell changes and preserves ISA structure
+ */
+async function saveIsaFileWithArctrl() {
+    console.log('[ARCtrl] Saving ISA file with ARCtrl');
+
+    // Apply all cell changes to the FsWorkbook
+    for (const [sheetIndex, changes] of Object.entries(cellChanges)) {
+        const worksheets = currentWorkbook.GetWorksheets();
+        const worksheet = worksheets[parseInt(sheetIndex)];
+        if (!worksheet) continue;
+
+        for (const [cellKey, change] of Object.entries(changes)) {
+            try {
+                const row = worksheet.Rows[change.row - 1];
+                if (row && row.Cells) {
+                    const cell = row.Cells[change.col - 1];
+                    if (cell) {
+                        cell.Value = change.value;
+                        console.log(`[ARCtrl] Updated cell ${cellKey} to: ${change.value}`);
+                    }
+                }
+            } catch (error) {
+                console.error(`[ARCtrl] Error updating cell ${cellKey}:`, error);
+            }
+        }
+    }
+
+    // Write FsWorkbook back to memfs using Xlsx.toFile
+    await window.Xlsx.toFile(currentExcelFilePath, currentWorkbook);
+    console.log(`[ARCtrl] Successfully saved ISA file to: ${currentExcelFilePath}`);
+}
+
+/**
+ * Save generic Excel file using ExcelJS
+ */
+async function saveExcelFileWithExcelJS() {
+    console.log('[ExcelJS] Saving Excel file with ExcelJS');
+
+    // Apply all cell changes to the ExcelJS workbook
+    for (const [sheetIndex, changes] of Object.entries(cellChanges)) {
+        const worksheet = currentWorkbook.worksheets[parseInt(sheetIndex)];
+        if (!worksheet) continue;
+
+        for (const [cellKey, change] of Object.entries(changes)) {
+            const cell = worksheet.getRow(change.row).getCell(change.col);
+            cell.value = change.value;
+        }
+    }
+
+    // Generate updated Excel file
+    const buffer = await currentWorkbook.xlsx.writeBuffer();
+    const uint8Array = new Uint8Array(buffer);
+
+    // Write back to memfs
+    fs.writeFileSync(currentExcelFilePath, uint8Array);
+    console.log(`[ExcelJS] Successfully saved Excel file to: ${currentExcelFilePath}`);
 }
 
 // Offcanvas Functions

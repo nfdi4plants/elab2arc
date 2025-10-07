@@ -746,12 +746,14 @@ var blobb = [];
     async function fetchElabFiles(elabToken, query = 'experiments/', elabURL, corsproxy = 'https://corsproxy.cplantbox.com/') {
       // Define the API endpoint
       const elabftwServerUrl = corsproxy + elabURL + query;
-      // Define the API key
-      const headers = { 'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with' };
+      // Define the API key - accept any content type for binary files
+      const headers = { 'accept': '*/*', 'Authorization': elabToken, 'Origin': 'x-requested-with' };
       // Make the fetch request
       try {
         var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET' });
-        return response.blob();
+        const blob = await response.blob();
+        console.log(`[fetchElabFiles] Fetched file with type: ${blob.type}, size: ${blob.size} bytes`);
+        return blob;
       } catch (error) {
         if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`)) {
           console.error(error);
@@ -1009,21 +1011,89 @@ Date: ${timestamp}`;
 
     }
 
-    // Toggle Together.AI API key field visibility
-    function toggleTogetherAPIKeyField() {
+    // Toggle Together.AI API key field visibility and validate API key
+    async function toggleTogetherAPIKeyField() {
       const enableSwitch = document.getElementById('enableDatamapSwitch');
       const apiKeyContainer = document.getElementById('togetherAPIKeyContainer');
 
       if (enableSwitch && apiKeyContainer) {
         if (enableSwitch.checked) {
           apiKeyContainer.classList.remove('d-none');
+
+          // Validate API key when switch is turned ON
+          const togetherAPIKey = window.localStorage.getItem('togetherAPIKey');
+
+          if (!togetherAPIKey || togetherAPIKey.trim() === '') {
+            alert("⚠️ Together.AI API Key Required!\n\nTo use LLM Datamap Generation, you need to provide a Together.AI API key.\n\nPlease enter your API key in the field below, or go to the Token page.\n\nThe API key field is now visible for you to enter your key.");
+            // Keep switch ON so user can enter key in the visible field
+            return;
+          }
+
+          // Validate API key with a test request
+          console.log('🔑 Validating Together.AI API key...');
+          const isValid = await validateTogetherAPIKey(togetherAPIKey);
+
+          if (!isValid) {
+            alert("⚠️ Together.AI API Key Invalid!\n\nThe API key you provided is not valid or has expired.\n\nPlease update your API key in the field below, or go to the Token page.\n\nYou can get a free API key at: https://api.together.xyz/\n\nThe API key field remains visible for you to update it.");
+            // Keep switch ON so user can fix the key in the visible field
+
+            // Navigate to token page if user wants
+            if (confirm("Would you like to go to the Token page now to update your API key?")) {
+              window.location.hash = '#home';
+            }
+          } else {
+            console.log('✅ Together.AI API key validated successfully');
+          }
         } else {
           apiKeyContainer.classList.add('d-none');
         }
       }
     }
 
-    // Load saved Together.AI API key on page load
+    // Validate Together.AI API key with a test request
+    async function validateTogetherAPIKey(apiKey) {
+      try {
+        const testResponse = await fetch('https://api.together.xyz/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
+            messages: [{
+              role: 'user',
+              content: 'test'
+            }],
+            max_tokens: 1  // Minimal request to test auth
+          })
+        });
+
+        // Accept both 200 (success) and other non-auth errors
+        // 401 = invalid key, anything else means key is valid but might be rate limited etc
+        if (testResponse.status === 401) {
+          console.error('❌ API key validation failed: 401 Unauthorized');
+          return false;
+        }
+
+        if (testResponse.ok) {
+          console.log('✅ API key validation successful');
+          return true;
+        }
+
+        // Other errors (rate limit, etc.) - assume key is valid
+        console.warn(`⚠️ API returned status ${testResponse.status}, assuming key is valid`);
+        return true;
+
+      } catch (error) {
+        console.error('❌ Error validating API key:', error);
+        // Network errors - assume key might be valid, let user proceed
+        console.warn('⚠️ Network error during validation, allowing user to proceed');
+        return true;
+      }
+    }
+
+    // Load saved Together.AI API key and model on page load
     window.addEventListener('DOMContentLoaded', function() {
       const savedAPIKey = window.localStorage.getItem('togetherAPIKey');
       const apiKeyInput = document.getElementById('togetherAPIKey');
@@ -1031,7 +1101,70 @@ Date: ${timestamp}`;
       if (savedAPIKey && apiKeyInput) {
         apiKeyInput.value = savedAPIKey;
       }
+
+      // Load saved model selection
+      const savedModel = window.localStorage.getItem('togetherAIModel');
+      const modelSelect = document.getElementById('togetherAIModel');
+
+      if (savedModel && modelSelect) {
+        modelSelect.value = savedModel;
+      }
+
+      // Load saved fallback models selection
+      const savedFallbackModels = window.localStorage.getItem('togetherAIFallbackModels');
+      const fallbackSelect = document.getElementById('togetherAIFallbackModels');
+
+      if (savedFallbackModels && fallbackSelect) {
+        try {
+          const fallbackModelsList = JSON.parse(savedFallbackModels);
+          // Select the saved options
+          Array.from(fallbackSelect.options).forEach(option => {
+            option.selected = fallbackModelsList.includes(option.value);
+          });
+        } catch (e) {
+          console.warn('[Config] Could not parse saved fallback models:', e);
+        }
+      }
+
+      // Load saved LLM test mode setting
+      const savedTestMode = window.localStorage.getItem('llmTestMode');
+      const testModeSwitch = document.getElementById('llmTestModeSwitch');
+
+      if (testModeSwitch) {
+        testModeSwitch.checked = (savedTestMode === 'true');
+        if (testModeSwitch.checked) {
+          console.log('[Config] LLM Test Mode is ENABLED - will use sample data');
+        }
+      }
     });
+
+    // Save model selection to localStorage
+    window.saveModelSelection = function() {
+      const modelSelect = document.getElementById('togetherAIModel');
+      if (modelSelect) {
+        window.localStorage.setItem('togetherAIModel', modelSelect.value);
+        console.log(`[Config] Saved model selection: ${modelSelect.value}`);
+      }
+    };
+
+    // Save fallback model selection to localStorage
+    window.saveFallbackModelSelection = function() {
+      const fallbackSelect = document.getElementById('togetherAIFallbackModels');
+      if (fallbackSelect) {
+        const selectedOptions = Array.from(fallbackSelect.selectedOptions).map(opt => opt.value);
+        window.localStorage.setItem('togetherAIFallbackModels', JSON.stringify(selectedOptions));
+        console.log(`[Config] Saved fallback models: ${selectedOptions.join(', ')}`);
+      }
+    };
+
+    // Save LLM test mode setting to localStorage
+    window.saveLLMTestMode = function() {
+      const testModeSwitch = document.getElementById('llmTestModeSwitch');
+      if (testModeSwitch) {
+        window.localStorage.setItem('llmTestMode', testModeSwitch.checked ? 'true' : 'false');
+        console.log(`[Config] LLM Test Mode: ${testModeSwitch.checked ? 'ENABLED' : 'DISABLED'}`);
+      }
+    };
 
     function setCookies(elabtoken, datahubtoken, instance = "https://elabftw.hhu.de/api/v2/") {
       const maxAge = 60 * 60 * 24 * 31;
@@ -1239,7 +1372,7 @@ Date: ${timestamp}`;
             affiliation: ''
           };
 
-          const invIsaPath = await generateIsaInvestigation(gitRoot, arcName, investigationMetadata);
+          const invIsaPath = await Elab2ArcISA.generateIsaInvestigation(gitRoot, arcName, investigationMetadata);
 
           if (invIsaPath) {
             try {
@@ -1252,7 +1385,7 @@ Date: ${timestamp}`;
           }
 
           // Analyze structure and generate study-level ISA files
-          const structure = analyzeArcStructure(gitRoot);
+          const structure = Elab2ArcISA.analyzeArcStructure(gitRoot);
 
           for (const study of structure.studies) {
             try {
@@ -1265,7 +1398,7 @@ Date: ${timestamp}`;
                 affiliation: ''
               };
 
-              const studyIsaPath = await generateIsaStudy(study.path, study.name, studyMetadata);
+              const studyIsaPath = await Elab2ArcISA.generateIsaStudy(study.path, study.name, studyMetadata);
 
               if (studyIsaPath) {
                 const relativeStudyPath = studyIsaPath.replace(gitRoot, '');
@@ -1339,53 +1472,11 @@ Date: ${timestamp}`;
         return;
       }
 
-      // 3. Check if LLM datamap generation is enabled and validate API key
+      // 3. Check if LLM datamap generation is enabled
+      // Note: API key validation happens when toggle is switched on
       const datamapSwitch = document.getElementById('enableDatamapSwitch');
       if (datamapSwitch && datamapSwitch.checked) {
-        const togetherAPIKeyInput = document.getElementById('togetherAPIKey');
-        const togetherAPIKey = togetherAPIKeyInput ? togetherAPIKeyInput.value.trim() : '';
-
-        if (!togetherAPIKey || togetherAPIKey === '') {
-          alert("⚠️ Together.AI API Key is required!\n\nYou have enabled LLM Datamap Generation but haven't provided an API key.\n\nPlease either:\n1. Enter your Together.AI API key, or\n2. Disable the LLM Datamap Generation option");
-          return;
-        }
-
-        // Validate API key format (Together.AI keys typically start with specific patterns)
-        if (!togetherAPIKey.startsWith('tgp_') && togetherAPIKey.length < 20) {
-          alert("⚠️ Invalid Together.AI API Key format!\n\nThe API key doesn't appear to be valid.\nTogether.AI keys typically start with 'tgp_' and are longer than 20 characters.");
-          return;
-        }
-
-        // Test API key by making a simple request
-        console.log('🔑 Testing Together.AI API key...');
-        try {
-          const testResponse = await fetch('https://api.together.xyz/v1/models', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${togetherAPIKey}`
-            }
-          });
-
-          if (!testResponse.ok) {
-            if (testResponse.status === 401) {
-              alert("⚠️ Together.AI API Key is invalid!\n\nThe API key was rejected (401 Unauthorized).\n\nPlease check your API key and try again.");
-              return;
-            } else if (testResponse.status === 403) {
-              alert("⚠️ Together.AI API Key access denied!\n\nThe API key doesn't have permission (403 Forbidden).\n\nPlease check your API key permissions.");
-              return;
-            } else {
-              console.warn('API key test returned status:', testResponse.status);
-            }
-          } else {
-            console.log('✅ Together.AI API key validated successfully');
-          }
-        } catch (error) {
-          console.error('❌ Error testing Together.AI API key:', error);
-          const proceed = confirm("⚠️ Could not validate Together.AI API key!\n\nNetwork error: " + error.message + "\n\nDo you want to proceed anyway?\n\nClick OK to continue or Cancel to stop.");
-          if (!proceed) {
-            return;
-          }
-        }
+        console.log('[Validation] LLM Datamap Generation enabled (API key validated on toggle)');
       }
 
       // 4. Validate DataHub token
@@ -2084,20 +2175,92 @@ ${res.uploads && res.uploads.length > 0 ?
       const relativeDatasetPath = `${baseAssayPath.replace(gitRoot, "")}/${dataFolderName}/README.md`;
       await git.add({ fs, dir: gitRoot, filepath: relativeDatasetPath });
 
-      // ========== EXPERIMENTAL: Generate ISA files ==========
+      // ========== EXPERIMENTAL: Generate ISA files with Multi-Protocol Support ==========
       try {
-        // Generate ISA assay file with metadata from current experiment
+        // Extract metadata info from assay folders
+        const protocolPath = memfsPathJoin(baseAssayPath, 'protocols');
+        const datasetPath = memfsPathJoin(baseAssayPath, 'dataset');
+        const protocolInfo = Elab2ArcISA.extractProtocolInfo(protocolPath);
+        const datasetInfo = Elab2ArcISA.extractDatasetInfo(datasetPath);
+
+        // Check if LLM datamap is enabled
+        let llmData = null;
+        const datamapSwitch = document.getElementById('enableDatamapSwitch');
+        if (datamapSwitch && datamapSwitch.checked) {
+          console.log('[ISA Gen] LLM datamap enabled, extracting protocols from markdown...');
+          updateInfo(`🤖 Analyzing protocol with AI for: <b>${assayId}</b>`, baseProgress + 0.3);
+
+          // Clear previous LLM stream content
+          if (window.Elab2ArcLLM && window.Elab2ArcLLM.clearLLMStream) {
+            window.Elab2ArcLLM.clearLLMStream();
+          }
+
+          llmData = await Elab2ArcLLM.callTogetherAI(markdown);  // Now returns multi-protocol structure
+
+          if (llmData) {
+            // Validate structure (backward compatibility with old format)
+            if (!llmData.protocols && llmData.inputs) {
+              // Old format - wrap in protocols array
+              console.log('[ISA Gen] Converting old LLM format to multi-protocol structure');
+              llmData = {
+                protocols: [{
+                  name: "Main Protocol",
+                  description: "",
+                  inputs: llmData.inputs || [],
+                  parameters: llmData.parameters || [],
+                  outputs: llmData.outputs || []
+                }]
+              };
+            }
+
+            console.log(`[ISA Gen] Extracted ${llmData.protocols?.length || 0} protocol(s) from LLM`);
+            updateInfo(`✓ Extracted ${llmData.protocols?.length || 0} protocol step(s) for: <b>${assayId}</b>`, baseProgress + 0.5);
+
+            // Save LLM JSON to protocols folder
+            try {
+              const protocolJsonFilename = protocolFilename.replace('.md', '.json');
+              const protocolJsonPath = memfsPathJoin(protocolPath, protocolJsonFilename);
+              const jsonContent = JSON.stringify(llmData, null, 2);
+              await fs.promises.writeFile(protocolJsonPath, jsonContent);
+              console.log(`[ISA Gen] Saved LLM JSON to: ${protocolJsonFilename}`);
+
+              // Add JSON file to git
+              const relativeJsonPath = protocolJsonPath.replace(gitRoot + '/', '');
+              await git.add({ fs, dir: gitRoot, filepath: relativeJsonPath });
+              console.log(`[ISA Gen] Added ${protocolJsonFilename} to git`);
+            } catch (jsonError) {
+              console.error('[ISA Gen] Error saving protocol JSON:', jsonError);
+            }
+          } else {
+            console.warn('[ISA Gen] LLM extraction returned no data');
+            updateInfo(`⚠️ LLM extraction failed, using default structure for: <b>${assayId}</b>`, baseProgress + 0.5);
+          }
+        } else {
+          console.log('[ISA Gen] LLM datamap generation disabled (toggle switch off)');
+        }
+
+        // Prepare ISA metadata
         const isaMetadata = {
           measurementType: 'eLabFTW experiment',
           technologyType: entryType === 'resource' ? 'database resource' : 'experiment',
           platform: 'eLabFTW',
           lastName: res.lastname || '',
           firstName: res.firstname || '',
+          familyName: res.lastname || '',
           email: email,
           affiliation: res.team_name || ''
         };
 
-        const isaFilePath = await generateIsaAssay(baseAssayPath, assayId, isaMetadata);
+        // Generate isa.assay.xlsx with metadata + multi-process sheets
+        updateInfo(`📝 Generating ISA assay file for: <b>${assayId}</b>`, baseProgress + 0.6);
+        const isaFilePath = await Elab2ArcISA.generateIsaAssayElab2arcWithDatamap(
+          baseAssayPath,
+          assayId,
+          isaMetadata,
+          protocolInfo,
+          datasetInfo,
+          llmData
+        );
 
         if (isaFilePath) {
           // Add ISA file to git
@@ -2105,50 +2268,18 @@ ${res.uploads && res.uploads.length > 0 ?
           try {
             await git.add({ fs, dir: gitRoot, filepath: relativeIsaPath });
             console.log(`[ISA Gen] Added to git: ${relativeIsaPath}`);
+            updateInfo(`✓ ISA assay file created for: <b>${assayId}</b>`, baseProgress + 0.8);
           } catch (gitError) {
             console.warn(`[ISA Gen] Could not add ISA file to git:`, gitError);
+            updateInfo(`⚠️ ISA file created but not added to git: <b>${assayId}</b>`, baseProgress + 0.8);
           }
+        } else {
+          updateInfo(`⚠️ ISA file generation failed for: <b>${assayId}</b>`, baseProgress + 0.8);
         }
       } catch (isaError) {
         // Log error but continue conversion
         console.error('[ISA Gen] ISA generation failed (experimental feature):', isaError);
-      }
-      // ========== END EXPERIMENTAL ==========
-
-      // ========== EXPERIMENTAL: Generate Datamap from Protocol ==========
-      try {
-        // Check if datamap generation is enabled via toggle switch
-        const datamapSwitch = document.getElementById('enableDatamapSwitch');
-        const isDatamapEnabled = datamapSwitch && datamapSwitch.checked;
-
-        if (isDatamapEnabled) {
-          console.log('[Datamap] LLM datamap generation enabled, processing protocol...');
-
-          // Update status
-          updateInfo(`🤖 Generating datamap with AI for: <b>${assayId}</b>`, baseProgress + 0.5);
-
-          const datamapPath = await parseProtocolToDatamap(markdown, assayId, baseAssayPath);
-
-          if (datamapPath) {
-            // Add datamap to git
-            const relativeDatamapPath = datamapPath.replace(gitRoot, '');
-            try {
-              await git.add({ fs, dir: gitRoot, filepath: relativeDatamapPath });
-              console.log(`[Datamap] Added to git: ${relativeDatamapPath}`);
-              updateInfo(`✓ Datamap generated for: <b>${assayId}</b>`, baseProgress + 0.7);
-            } catch (gitError) {
-              console.warn(`[Datamap] Could not add datamap to git:`, gitError);
-              updateInfo(`⚠️ Datamap generated but not added to git: <b>${assayId}</b>`, baseProgress + 0.7);
-            }
-          } else {
-            updateInfo(`⚠️ Datamap generation failed for: <b>${assayId}</b>`, baseProgress + 0.7);
-          }
-        } else {
-          console.log('[Datamap] LLM datamap generation disabled (toggle switch off)');
-        }
-      } catch (datamapError) {
-        // Log error but continue conversion
-        console.error('[Datamap] Datamap generation failed (experimental feature):', datamapError);
+        updateInfo(`⚠️ ISA generation error for: <b>${assayId}</b>`, baseProgress + 0.8);
       }
       // ========== END EXPERIMENTAL ==========
 
@@ -2232,6 +2363,7 @@ ${res.uploads && res.uploads.length > 0 ?
 
         // Write file
         console.log("fileName:", fileName, "| fullPath:", fullPath, "| relativeFilePath:", relativeFilePath);
+        console.log(`[Upload] File type: ${blob.type}, size: ${blob.size} bytes`);
         await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
 
         await git.add({ fs, dir: gitRoot, filepath: relativeFilePath });
@@ -2383,7 +2515,7 @@ ${res.uploads && res.uploads.length > 0 ?
             uploadGallery.innerHTML = "";
             const uploads = data.uploads;
             for (const [index, ele] of Object.entries(uploads)){
-                const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=´binary´",instance);
+                const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=binary",instance);
                 window.blobb.push(blobs);
                 let objectURL = URL.createObjectURL(blobs)
                 objectURL= objectURL.replace( /&storage=./g , "" );
@@ -2712,7 +2844,7 @@ ${res.uploads && res.uploads.length > 0 ?
       const inv1 = await Xlsx.fromXlsxFile(arcDir + "/isa.investigation.xlsx");
       let isa_inv = await arctrl.XlsxController.Investigation.fromFsWorkbook(inv1);
 
-      const roles = new arctrl.OntologyAnnotation("Researcher", "AGRO", "AGRO:00000373");
+      const roles = new arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
       const comment = "generated by elab2arc"
       let comments_p = arctrl.Comment$.create("generation log", comment);
       const newContact = arctrl.Person.create(void 0, firstname, familyName, void 0, void 0, void 0, void 0, void 0, void 0, void 0);
@@ -2755,7 +2887,7 @@ ${res.uploads && res.uploads.length > 0 ?
         //const mtype = new arctrl.OntologyAnnotation("measurement type", "1", "2");
         //const mtech = new arctrl.OntologyAnnotation("technology type", "1", "2");
         //const mplat = new arctrl.OntologyAnnotation("technology platform", "1", "2");
-        const roles = new arctrl.OntologyAnnotation("Researcher", "AGRO", "AGRO:00000373");
+        const roles = new arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
 
         let comments_p = arctrl.Comment$.create("generation log", comment);
         const person = arctrl.Person.create(void 0, firstName, familyName, void 0, email, void 0, void 0, void 0, affiliation, [roles], [comments_p]);
@@ -3043,296 +3175,22 @@ ${res.uploads && res.uploads.length > 0 ?
     /**
      * Analyze ARC directory structure to find studies and assays
      */
-    function analyzeArcStructure(gitRoot) {
-      try {
-        const structure = { studies: [], assays: [] };
-
-        // Check for studies folder
-        const studiesPath = memfsPathJoin(gitRoot, 'studies');
-        if (fs.existsSync(studiesPath)) {
-          const studyDirs = fs.readdirSync(studiesPath);
-          studyDirs.forEach(studyName => {
-            const studyPath = memfsPathJoin(studiesPath, studyName);
-            const stats = fs.statSync(studyPath);
-            if (stats.isDirectory() && !studyName.startsWith('.')) {
-              structure.studies.push({ name: studyName, path: studyPath });
-            }
-          });
-        }
-
-        // Check for assays folder
-        const assaysPath = memfsPathJoin(gitRoot, 'assays');
-        if (fs.existsSync(assaysPath)) {
-          const assayDirs = fs.readdirSync(assaysPath);
-          assayDirs.forEach(assayName => {
-            const assayPath = memfsPathJoin(assaysPath, assayName);
-            const stats = fs.statSync(assayPath);
-            if (stats.isDirectory() && !assayName.startsWith('.')) {
-              structure.assays.push({ name: assayName, path: assayPath });
-            }
-          });
-        }
-
-        return structure;
-      } catch (error) {
-        console.error('Error analyzing ARC structure:', error);
-        return { studies: [], assays: [] };
-      }
-    }
-
-    /**
-     * Extract sample names and dataset info from assay dataset folder
-     */
-    function extractDatasetInfo(datasetPath) {
-      try {
-        const info = { samples: [], files: [] };
-
-        if (!fs.existsSync(datasetPath)) {
-          return info;
-        }
-
-        const files = fs.readdirSync(datasetPath);
-        files.forEach(file => {
-          if (file.endsWith('.csv') || file.endsWith('.tsv') || file.endsWith('.txt')) {
-            info.files.push(file);
-          }
-        });
-
-        // Try to read README.md for sample information
-        const readmePath = memfsPathJoin(datasetPath, 'README.md');
-        if (fs.existsSync(readmePath)) {
-          const readmeContent = fs.readFileSync(readmePath, 'utf8');
-          // Extract sample names from README (simple pattern matching)
-          const sampleMatches = readmeContent.match(/sample[:\s]+([^\n]+)/gi);
-          if (sampleMatches) {
-            info.samples = sampleMatches.map(m => m.replace(/sample[:\s]+/i, '').trim());
-          }
-        }
-
-        return info;
-      } catch (error) {
-        console.error('Error extracting dataset info:', error);
-        return { samples: [], files: [] };
-      }
-    }
-
-    /**
-     * Extract protocol information from protocol markdown files
-     */
-    function extractProtocolInfo(protocolPath) {
-      try {
-        const info = { title: '', description: '', files: [] };
-
-        if (!fs.existsSync(protocolPath)) {
-          return info;
-        }
-
-        const files = fs.readdirSync(protocolPath);
-        files.forEach(file => {
-          if (file.endsWith('.md')) {
-            info.files.push(file);
-            // Read first protocol file for title/description
-            if (!info.title) {
-              const filePath = memfsPathJoin(protocolPath, file);
-              const content = fs.readFileSync(filePath, 'utf8');
-              const lines = content.split('\n');
-              info.title = file.replace('.md', '');
-              info.description = lines.slice(0, 3).join(' ').substring(0, 200);
-            }
-          }
-        });
-
-        return info;
-      } catch (error) {
-        console.error('Error extracting protocol info:', error);
-        return { title: '', description: '', files: [] };
-      }
-    }
-
-    /**
-     * Merge and deduplicate contacts list
-     */
-    function mergeContactsUnique(contactsList) {
-      const seen = new Set();
-      return contactsList.filter(contact => {
-        const key = JSON.stringify({ firstName: contact.firstName, lastName: contact.lastName, email: contact.email });
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    }
-
-    /**
-     * Generate isa.assay.elab2arc.xlsx for an assay
-     * Uses ExcelJS to create a simple ISA assay file
-     */
-    async function generateIsaAssay(assayPath, assayName, metadata = {}) {
-      try {
-        console.log(`[ISA Gen] Generating ISA assay for: ${assayName}`);
-
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('isa_assay');
-
-        // Extract dataset and protocol information
-        const datasetPath = memfsPathJoin(assayPath, 'dataset');
-        const protocolPath = memfsPathJoin(assayPath, 'protocols');
-        const datasetInfo = extractDatasetInfo(datasetPath);
-        const protocolInfo = extractProtocolInfo(protocolPath);
-
-        // Build basic assay metadata table
-        const metadataRows = [
-          ['ASSAY'],
-          ['Assay Measurement Type', metadata.measurementType || ''],
-          ['Assay Measurement Type Term Accession Number', ''],
-          ['Assay Measurement Type Term Source REF', ''],
-          ['Assay Technology Type', metadata.technologyType || ''],
-          ['Assay Technology Type Term Accession Number', ''],
-          ['Assay Technology Type Term Source REF', ''],
-          ['Assay Technology Platform', metadata.platform || ''],
-          ['Assay File Name', `isa.assay.elab2arc.xlsx`],
-          [],
-          ['ASSAY PERFORMERS'],
-          ['Assay Performer Last Name', metadata.lastName || ''],
-          ['Assay Performer First Name', metadata.firstName || ''],
-          ['Assay Performer Email', metadata.email || ''],
-          ['Assay Performer Affiliation', metadata.affiliation || ''],
-          [],
-          ['ASSAY PROTOCOL'],
-          ['Protocol Name', protocolInfo.title || assayName],
-          ['Protocol Description', protocolInfo.description || ''],
-          ['Protocol Files', protocolInfo.files.join(', ')],
-          [],
-          ['ASSAY DATA'],
-          ['Dataset Files', datasetInfo.files.join(', ')],
-          ['Number of Samples', datasetInfo.samples.length.toString()],
-        ];
-
-        metadataRows.forEach(row => worksheet.addRow(row));
-
-        // Write the file
-        const buffer = await workbook.xlsx.writeBuffer();
-        const uint8Array = new Uint8Array(buffer);
-        const isaPath = memfsPathJoin(assayPath, 'isa.assay.elab2arc.xlsx');
-        fs.writeFileSync(isaPath, uint8Array);
-
-        console.log(`[ISA Gen] Created: ${isaPath}`);
-        return isaPath;
-
-      } catch (error) {
-        console.error(`[ISA Gen] Error generating ISA assay for ${assayName}:`, error);
-        return null;
-      }
-    }
-
-    /**
-     * Generate isa.study.elab2arc.xlsx for a study
-     */
-    async function generateIsaStudy(studyPath, studyName, metadata = {}) {
-      try {
-        console.log(`[ISA Gen] Generating ISA study for: ${studyName}`);
-
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('isa_study');
-
-        // Build basic study metadata
-        const metadataRows = [
-          ['STUDY'],
-          ['Study Identifier', studyName],
-          ['Study Title', metadata.title || studyName],
-          ['Study Description', metadata.description || ''],
-          ['Study Submission Date', new Date().toISOString().split('T')[0]],
-          ['Study Public Release Date', ''],
-          [],
-          ['STUDY CONTACTS'],
-          ['Study Person Last Name', metadata.lastName || ''],
-          ['Study Person First Name', metadata.firstName || ''],
-          ['Study Person Email', metadata.email || ''],
-          ['Study Person Affiliation', metadata.affiliation || ''],
-          [],
-          ['STUDY FILE NAME'],
-          ['Study File Name', 'isa.study.elab2arc.xlsx'],
-        ];
-
-        metadataRows.forEach(row => worksheet.addRow(row));
-
-        // Write the file
-        const buffer = await workbook.xlsx.writeBuffer();
-        const uint8Array = new Uint8Array(buffer);
-        const isaPath = memfsPathJoin(studyPath, 'isa.study.elab2arc.xlsx');
-        fs.writeFileSync(isaPath, uint8Array);
-
-        console.log(`[ISA Gen] Created: ${isaPath}`);
-        return isaPath;
-
-      } catch (error) {
-        console.error(`[ISA Gen] Error generating ISA study for ${studyName}:`, error);
-        return null;
-      }
-    }
-
-    /**
-     * Generate isa.investigation.elab2arc.xlsx for the investigation (root)
-     */
-    async function generateIsaInvestigation(gitRoot, arcName, metadata = {}) {
-      try {
-        console.log(`[ISA Gen] Generating ISA investigation for: ${arcName}`);
-
-        // Analyze directory structure
-        const structure = analyzeArcStructure(gitRoot);
-
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('isa_investigation');
-
-        // Build investigation metadata
-        const metadataRows = [
-          ['ONTOLOGY SOURCE REFERENCE'],
-          ['Term Source Name', ''],
-          ['Term Source File', ''],
-          ['Term Source Version', ''],
-          ['Term Source Description', ''],
-          [],
-          ['INVESTIGATION'],
-          ['Investigation Identifier', arcName],
-          ['Investigation Title', metadata.title || arcName],
-          ['Investigation Description', metadata.description || `elab2arc generated investigation for ${arcName}`],
-          ['Investigation Submission Date', new Date().toISOString().split('T')[0]],
-          ['Investigation Public Release Date', ''],
-          [],
-          ['INVESTIGATION CONTACTS'],
-          ['Investigation Person Last Name', metadata.lastName || ''],
-          ['Investigation Person First Name', metadata.firstName || ''],
-          ['Investigation Person Email', metadata.email || ''],
-          ['Investigation Person Affiliation', metadata.affiliation || ''],
-          [],
-          ['INVESTIGATION STUDIES'],
-          ['Study Identifier', structure.studies.map(s => s.name).join(', ')],
-          ['Number of Studies', structure.studies.length.toString()],
-          [],
-          ['INVESTIGATION ASSAYS'],
-          ['Assay Identifier', structure.assays.map(a => a.name).join(', ')],
-          ['Number of Assays', structure.assays.length.toString()],
-          [],
-          ['GENERATED BY'],
-          ['Tool', `elab2ARC v${version}`],
-          ['Date', new Date().toISOString()],
-        ];
-
-        metadataRows.forEach(row => worksheet.addRow(row));
-
-        // Write the file
-        const buffer = await workbook.xlsx.writeBuffer();
-        const uint8Array = new Uint8Array(buffer);
-        const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.elab2arc.xlsx');
-        fs.writeFileSync(isaPath, uint8Array);
-
-        console.log(`[ISA Gen] Created: ${isaPath}`);
-        return isaPath;
-
-      } catch (error) {
-        console.error(`[ISA Gen] Error generating ISA investigation:`, error);
-        return null;
-      }
-    }
+    // =============================================================================
+    // ISA GENERATION - Now in separate module (js/modules/isa-generation.js)
+    // Functions are accessed via Elab2ArcISA.* namespace
+    // =============================================================================
+    // Moved functions:
+    // - analyzeArcStructure() → Elab2ArcISA.analyzeArcStructure()
+    // - extractDatasetInfo() → Elab2ArcISA.extractDatasetInfo()
+    // - extractProtocolInfo() → Elab2ArcISA.extractProtocolInfo()
+    // - mergeContactsUnique() → Elab2ArcISA.mergeContactsUnique()
+    // - generateIsaAssay() → Elab2ArcISA.generateIsaAssay()
+    // - createSampleTable() → Elab2ArcISA.createSampleTable()
+    // - createDefaultProcessTable() → Elab2ArcISA.createDefaultProcessTable()
+    // - createProcessTable() → Elab2ArcISA.createProcessTable()
+    // - generateIsaAssayElab2arcWithDatamap() → Elab2ArcISA.generateIsaAssayElab2arcWithDatamap()
+    // - generateIsaStudy() → Elab2ArcISA.generateIsaStudy()
+    // - generateIsaInvestigation() → Elab2ArcISA.generateIsaInvestigation()
 
     // =============================================================================
     // MANUAL GIT COMMIT & PUSH FUNCTION
@@ -3425,268 +3283,20 @@ ${res.uploads && res.uploads.length > 0 ?
     };
 
     // =============================================================================
-    // LLM-BASED DATAMAP GENERATION
+    // LLM-BASED DATAMAP GENERATION - Now in separate module (js/modules/llm-service.js)
+    // Functions are accessed via Elab2ArcLLM.* namespace
     // =============================================================================
-
-    /**
-     * Call Together.AI API to extract structured data from protocol text
-     * @param {string} protocolText - Protocol markdown text
-     * @returns {Promise<Object>} - Extracted parameters, inputs, outputs
-     */
-    async function callClaudeAPI(protocolText) {
-      try {
-        // Get Together.AI API key from localStorage
-        let togetherAPIKey = window.localStorage.getItem('togetherAPIKey');
-
-        if (!togetherAPIKey) {
-          console.warn('[Datamap LLM] No Together.AI API key found in localStorage');
-          return null;
-        }
-
-        const prompt = `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.
-
-Protocol Text:
-"""
-${protocolText}
-"""
-
-Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
-{
-  "inputs": ["array of input sample/material names mentioned"],
-  "parameters": [
-    {
-      "name": "parameter name (e.g., temperature, pH, concentration)",
-      "unit": "measurement unit (e.g., °C, mL, hours) or empty string if none",
-      "type": "data type: number, text, or categorical",
-      "description": "brief description of what this parameter measures"
-    }
-  ],
-  "outputs": ["array of expected output file names or data types"]
-}
-
-Focus on extracting measurable parameters, experimental conditions, and data that would typically be recorded in a dataset.`;
-
-        console.log('[Datamap LLM] Calling Together.AI API...');
-
-        const response = await fetch('https://api.together.xyz/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${togetherAPIKey}`
-          },
-          body: JSON.stringify({
-            model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free',
-            messages: [{
-              role: 'user',
-              content: prompt
-            }]
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Together.AI API error: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        const content = result.choices[0].message.content;
-
-        console.log('[Datamap LLM] Raw response:', content);
-
-        // Parse JSON from response
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error('Could not extract JSON from LLM response');
-        }
-
-        const extractedData = JSON.parse(jsonMatch[0]);
-        console.log('[Datamap LLM] Extracted data:', extractedData);
-
-        return extractedData;
-
-      } catch (error) {
-        console.error('[Datamap LLM] Error calling Together.AI API:', error);
-        return null;
-      }
-    }
-
-    /**
-     * Generate isa.datamap.xlsx from LLM-extracted data
-     * @param {Object} llmData - Extracted data from Claude API
-     * @param {string} assayName - Assay identifier
-     * @param {string} assayPath - Full path to assay folder
-     * @param {string} collaborators - Comma-separated collaborator names
-     * @returns {Promise<string>} - Path to generated datamap file
-     */
-    async function generateDatamapFromLLM(llmData, assayName, assayPath, collaborators) {
-      try {
-        console.log('[Datamap Gen] Generating datamap from LLM data...');
-
-        // Load datamap template
-        const response = await fetch('templates/isa.datamap.xlsx');
-        if (!response.ok) {
-          throw new Error('Could not load datamap template');
-        }
-
-        const templateBuffer = await response.arrayBuffer();
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(templateBuffer);
-
-        const worksheet = workbook.getWorksheet('isa_datamap');
-        if (!worksheet) {
-          throw new Error('Template missing isa_datamap worksheet');
-        }
-
-        const datasetPath = `./dataset/${assayName}-data.csv`;
-        let colIndex = 1;
-
-        // Add sample name row (always first)
-        worksheet.addRow([
-          `"${datasetPath}#col=${colIndex}"`,
-          'text/csv',
-          'https://datatracker.ietf.org/doc/html/rfc7111',
-          'Sample Name',
-          'DPBO',
-          'DPBO:0000180',
-          ' ',
-          ' ',
-          ' ',
-          'text',
-          ' ',
-          ' ',
-          'Samples are a kind of material and represent major outputs resulting from a protocol application.',
-          `"${collaborators}"`
-        ]);
-        colIndex++;
-
-        // Add input columns
-        if (llmData.inputs && llmData.inputs.length > 0) {
-          for (const input of llmData.inputs) {
-            worksheet.addRow([
-              `"${datasetPath}#col=${colIndex}"`,
-              'text/csv',
-              'https://datatracker.ietf.org/doc/html/rfc7111',
-              input,
-              ' ',
-              ' ',
-              ' ',
-              ' ',
-              ' ',
-              'text',
-              ' ',
-              ' ',
-              `Input: ${input}`,
-              `"${collaborators}"`
-            ]);
-            colIndex++;
-          }
-        }
-
-        // Add parameter columns from LLM extraction
-        if (llmData.parameters && llmData.parameters.length > 0) {
-          for (const param of llmData.parameters) {
-            worksheet.addRow([
-              `"${datasetPath}#col=${colIndex}"`,
-              'text/csv',
-              'https://datatracker.ietf.org/doc/html/rfc7111',
-              param.name || 'Unknown Parameter',
-              ' ',
-              ' ',
-              param.unit || ' ',
-              ' ',
-              ' ',
-              param.type || 'text',
-              ' ',
-              ' ',
-              param.description || '',
-              `"${collaborators}"`
-            ]);
-            colIndex++;
-          }
-        }
-
-        // Add output columns
-        if (llmData.outputs && llmData.outputs.length > 0) {
-          for (const output of llmData.outputs) {
-            worksheet.addRow([
-              `"${datasetPath}#col=${colIndex}"`,
-              'text/csv',
-              'https://datatracker.ietf.org/doc/html/rfc7111',
-              output,
-              ' ',
-              ' ',
-              ' ',
-              ' ',
-              ' ',
-              'text',
-              ' ',
-              ' ',
-              `Output: ${output}`,
-              `"${collaborators}"`
-            ]);
-            colIndex++;
-          }
-        }
-
-        // Write datamap file
-        const buffer = await workbook.xlsx.writeBuffer();
-        const datamapPath = memfsPathJoin(assayPath, 'dataset', 'isa.datamap.xlsx');
-
-        // Ensure dataset directory exists
-        const datasetDir = memfsPathJoin(assayPath, 'dataset');
-        if (!fs.existsSync(datasetDir)) {
-          fs.mkdirSync(datasetDir, { recursive: true });
-        }
-
-        fs.writeFileSync(datamapPath, new Uint8Array(buffer));
-        console.log(`[Datamap Gen] Created: ${datamapPath}`);
-
-        return datamapPath;
-
-      } catch (error) {
-        console.error('[Datamap Gen] Error generating datamap:', error);
-        return null;
-      }
-    }
-
-    /**
-     * Main coordinator function: Parse protocol and generate datamap
-     * @param {string} protocolMarkdown - Protocol text in markdown format
-     * @param {string} assayName - Assay identifier
-     * @param {string} assayPath - Full path to assay folder
-     * @returns {Promise<string|null>} - Path to generated datamap or null if failed
-     */
-    async function parseProtocolToDatamap(protocolMarkdown, assayName, assayPath) {
-      try {
-        console.log('[Datamap] Starting protocol-to-datamap conversion...');
-
-        // Call LLM to extract structured data
-        const llmData = await callClaudeAPI(protocolMarkdown);
-
-        if (!llmData) {
-          console.warn('[Datamap] LLM extraction failed or returned no data');
-          return null;
-        }
-
-        // Get collaborator info from GitLab user
-        const collaborators = window.userId?.name || 'elab2arc';
-
-        // Generate datamap from extracted data
-        const datamapPath = await generateDatamapFromLLM(llmData, assayName, assayPath, collaborators);
-
-        if (datamapPath) {
-          console.log('[Datamap] Successfully created datamap:', datamapPath);
-        } else {
-          console.warn('[Datamap] Failed to generate datamap file');
-        }
-
-        return datamapPath;
-
-      } catch (error) {
-        console.error('[Datamap] Error in parseProtocolToDatamap:', error);
-        return null;
-      }
-    }
+    // Moved functions:
+    // - getSelectedModel() → Elab2ArcLLM.getSelectedModel()
+    // - getModelContextWindow() → Elab2ArcLLM.getModelContextWindow()
+    // - estimateTokens() → Elab2ArcLLM.estimateTokens()
+    // - chunkProtocolText() → Elab2ArcLLM.chunkProtocolText()
+    // - splitByParagraphs() → Elab2ArcLLM.splitByParagraphs()
+    // - splitBySentences() → Elab2ArcLLM.splitBySentences()
+    // - mergeChunkResults() → Elab2ArcLLM.mergeChunkResults()
+    // - callTogetherAI() → Elab2ArcLLM.callTogetherAI()
+    // - generateDatamapFromLLM() → Elab2ArcLLM.generateDatamapFromLLM()
+    // - parseProtocolToDatamap() → Elab2ArcLLM.parseProtocolToDatamap()
 
     addEventListener("hashchange", (event) => {
       if (true) {
