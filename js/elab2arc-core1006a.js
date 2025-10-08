@@ -2195,7 +2195,14 @@ ${res.uploads && res.uploads.length > 0 ?
             window.Elab2ArcLLM.clearLLMStream();
           }
 
-          llmData = await Elab2ArcLLM.callTogetherAI(markdown);  // Now returns multi-protocol structure
+          // Pass protocol metadata to LLM for better context
+          const protocolMetadata = {
+            protocolFilename: protocolFilename,
+            protocolPath: `${baseAssayPath.replace(gitRoot + '/', '')}/protocols/${protocolFilename}`,
+            assayId: assayId
+          };
+
+          llmData = await Elab2ArcLLM.callTogetherAI(markdown, false, protocolMetadata);  // Now returns multi-protocol structure
 
           if (llmData) {
             // Validate structure (backward compatibility with old format)
@@ -2224,10 +2231,20 @@ ${res.uploads && res.uploads.length > 0 ?
               await fs.promises.writeFile(protocolJsonPath, jsonContent);
               console.log(`[ISA Gen] Saved LLM JSON to: ${protocolJsonFilename}`);
 
-              // Add JSON file to git
-              const relativeJsonPath = protocolJsonPath.replace(gitRoot + '/', '');
-              await git.add({ fs, dir: gitRoot, filepath: relativeJsonPath });
-              console.log(`[ISA Gen] Added ${protocolJsonFilename} to git`);
+              // Verify file was written before adding to git
+              try {
+                await fs.promises.access(protocolJsonPath);
+                console.log(`[ISA Gen] Verified JSON file exists: ${protocolJsonFilename}`);
+
+                // Add JSON file to git
+                const relativeJsonPath = protocolJsonPath.replace(gitRoot + '/', '');
+                await git.add({ fs, dir: gitRoot, filepath: relativeJsonPath });
+                console.log(`[ISA Gen] Added ${protocolJsonFilename} to git`);
+              } catch (gitError) {
+                console.error('[ISA Gen] Error adding protocol JSON to git:', gitError);
+                console.error('[ISA Gen] File path:', protocolJsonPath);
+                console.error('[ISA Gen] Relative path:', protocolJsonPath.replace(gitRoot + '/', ''));
+              }
             } catch (jsonError) {
               console.error('[ISA Gen] Error saving protocol JSON:', jsonError);
             }
