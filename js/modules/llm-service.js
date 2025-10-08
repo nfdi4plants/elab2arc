@@ -9,83 +9,19 @@
   // Test data for ISA assay generation (bypasses API calls)
   const TEST_PROTOCOL_DATA = {
     "samples": [
-      {
-        "name": "Sample_1",
-        "organism": "E. coli",
-        "characteristics": [
-          {
-            "category": "strain",
-            "value": "K-12",
-            "unit": "",
-            "termSource": "NCBI",
-            "termAccession": ""
-          }
-        ]
-      }
+      {"name": "CAM 76-1", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-16", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "1", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.4", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
+      {"name": "CAM 76-2", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-16", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "1", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.55", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
+      {"name": "CAM 31", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "2", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.57", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
+      {"name": "CAM 37", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "1", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.52", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
+      {"name": "CAM 78", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "2", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.59", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
+      {"name": "CAM 269", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "2", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.55", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]}
     ],
     "protocols": [
-      {
-        "name": "Quality Control",
-        "description": "Quality control of sequencing reads.",
-        "inputs": ["Raw sequencing data from Sample_1"],
-        "parameters": [
-          {
-            "name": "FastQC version",
-            "value": "0.11.9",
-            "unit": "",
-            "description": "Quality control tool version"
-          },
-          {
-            "name": "MultiQC version",
-            "value": "1.9",
-            "unit": "",
-            "description": "MultiQC tool version"
-          }
-        ],
-        "outputs": ["QC Reports"]
-      },
-      {
-        "name": "Trimming",
-        "description": "Trimming of sequencing reads.",
-        "inputs": ["Raw sequencing data from Sample_1"],
-        "parameters": [
-          {
-            "name": "Trimmomatic version",
-            "value": "0.39",
-            "unit": "",
-            "description": "Trimming tool version"
-          }
-        ],
-        "outputs": ["Trimmed reads"]
-      },
-      {
-        "name": "Assembly",
-        "description": "Assembly of trimmed reads.",
-        "inputs": ["Trimmed reads"],
-        "parameters": [
-          {
-            "name": "SPAdes version",
-            "value": "3.15.3",
-            "unit": "",
-            "description": "Assembler tool version"
-          }
-        ],
-        "outputs": ["Assembled contigs"]
-      },
-      {
-        "name": "Annotation",
-        "description": "Annotation of assembled contigs.",
-        "inputs": ["Assembled contigs"],
-        "parameters": [
-          {
-            "name": "Prokka version",
-            "value": "1.14.6",
-            "unit": "",
-            "description": "Annotation tool version"
-          }
-        ],
-        "outputs": ["Annotated genomes"]
-      }
+      {"name": "DNA Extraction", "description": "DNA extraction using Macherey & Nagel HMW NucleoBond kit with extended lysis time. Elution in HE buffer.", "inputs": ["CAM 76-1", "CAM 76-2", "CAM 31", "CAM 37", "CAM 78", "CAM 269"], "parameters": [{"name": "Kit", "value": "Macherey & Nagel, HMW NucleoBond", "unit": "", "description": "Extraction kit used"}, {"name": "Artikelnummer", "value": "740160.20", "unit": "", "description": "Kit catalog number"}, {"name": "Lysis time", "value": "60", "unit": "min", "description": "Extended lysis duration"}, {"name": "Elution buffer", "value": "HE Buffer", "unit": "", "description": "Buffer used for DNA elution"}, {"name": "Elution volume", "value": "33", "unit": "µl", "description": "Volume of elution buffer used for initial extractions"}], "outputs": ["DNA_CAM76-1", "DNA_CAM76-2", "DNA_CAM31", "DNA_CAM37", "DNA_CAM78", "DNA_CAM269"], "dataFiles": ["5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg"]},
+      {"name": "Size Selection", "description": "Size selection using Circulomics Short Read Eliminator Kit followed by sodium acetate precipitation.", "inputs": ["DNA_CAM76-1", "DNA_CAM76-2", "DNA_CAM31", "DNA_CAM37", "DNA_CAM78", "DNA_CAM269"], "parameters": [{"name": "Method", "value": "MTH0004", "unit": "", "description": "Circulomics Short Read Eliminator Kit protocol"}, {"name": "Precipitation method", "value": "MTH0017", "unit": "", "description": "Sodium acetate precipitation protocol"}, {"name": "Input volume", "value": "21", "unit": "µl", "description": "Volume used per size selection reaction for CAM76"}, {"name": "EB volume added", "value": "45", "unit": "µl", "description": "Volume of elution buffer added to samples"}, {"name": "LTE volume", "value": "33", "unit": "µl", "description": "Volume of LTE buffer added to supernatants"}], "outputs": ["SizeSelected_CAM76", "SizeSelected_CAM76", "SizeSelected_CAM31", "SizeSelected_CAM37", "SizeSelected_CAM78", "SizeSelected_CAM269"], "dataFiles": ["6_12_grafik.png", "6_12_grafik.png", "8_11_grafik.png", "8_11_grafik.png", "8_11_grafik.png", "8_11_grafik.png"]},
+      {"name": "FFPE Repair and A-tailing", "description": "DNA repair and end preparation using NEBNext FFPE DNA Repair Mix.", "inputs": ["SizeSelected_CAM76", "SizeSelected_CAM76", "SizeSelected_CAM31", "SizeSelected_CAM37", "SizeSelected_CAM78", "SizeSelected_CAM269"], "parameters": [{"name": "Method", "value": "MTH0005", "unit": "", "description": "NEBNext FFPE DNA Repair Mix protocol"}, {"name": "Target DNA amount", "value": "1500", "unit": "ng", "description": "Approximate amount of DNA used per reaction"}, {"name": "Reaction volume", "value": "60", "unit": "µl", "description": "Final volume of repair reaction"}], "outputs": ["FFPE_Repaired_CAM76_A", "FFPE_Repaired_CAM76_B", "FFPE_Repaired_CAM31", "FFPE_Repaired_CAM37", "FFPE_Repaired_CAM78", "FFPE_Repaired_CAM269"], "dataFiles": ["", "", "", "", "", ""]},
+      {"name": "Adapter Ligation", "description": "Adapter ligation using Oxford Nanopore SQK-LSK114XL Kit.", "inputs": ["FFPE_Repaired_CAM76_A", "FFPE_Repaired_CAM76_B", "FFPE_Repaired_CAM31", "FFPE_Repaired_CAM37", "FFPE_Repaired_CAM78", "FFPE_Repaired_CAM269"], "parameters": [{"name": "Kit", "value": "SQK-LSK114XL", "unit": "", "description": "ONT ligation kit used"}, {"name": "Kit manufacturer", "value": "ONT", "unit": "", "description": "Oxford Nanopore Technologies"}, {"name": "Elution buffer added", "value": "20", "unit": "µl", "description": "Volume of EB added after ligation"}], "outputs": ["Ligated_CAM76_A", "Ligated_CAM76_B", "Ligated_CAM31", "Ligated_CAM37", "Ligated_CAM78", "Ligated_CAM269"], "dataFiles": ["", "", "", "", "", ""]},
+      {"name": "Sequencing", "description": "ONT sequencing on PromethION platform with specified run parameters.", "inputs": ["Ligated_CAM76_A", "Ligated_CAM76_B", "Ligated_CAM31", "Ligated_CAM37", "Ligated_CAM78", "Ligated_CAM269"], "parameters": [{"name": "Sequencing platform", "value": "PromethION", "unit": "", "description": "Sequencing instrument used"}, {"name": "Run time", "value": "100", "unit": "h", "description": "Duration of sequencing run"}, {"name": "Pore count", "value": "various", "unit": "", "description": "Number of active pores per flow cell"}], "outputs": ["Sequencing_CAM76_run1", "Sequencing_CAM76_run2", "Sequencing_CAM31_run1", "Sequencing_CAM37_run1", "Sequencing_CAM78_run1", "Sequencing_CAM269_run1"], "dataFiles": ["20250528_CAM76_prom", "20250602_CAM76_run2_prom", "20250602_CAM31_run1_prom", "20250602_CAM37_run1_prom", "20250602_CAM78_run1_prom", "20250602_CAM269_run1_prom"]}
     ]
   };
 
@@ -587,7 +523,7 @@
    * @param {string} protocolText - Protocol markdown text
    * @returns {Promise<Object>} - Extracted parameters, inputs, outputs
    */
-  async function callTogetherAI(protocolText, useTestData = false) {
+  async function callTogetherAI(protocolText, useTestData = false, metadata = {}) {
     try {
       // TEST MODE: Return test data directly without API call
       if (useTestData || window.localStorage.getItem('llmTestMode') === 'true') {
@@ -639,8 +575,20 @@
         const chunkInfo = chunks.length > 1 ? ` (chunk ${i + 1}/${chunks.length})` : '';
         console.log(`[Datamap LLM] Processing${chunkInfo}...`);
 
-        const promptTemplate = `You are a scientific data extraction assistant. Analyze this experimental protocol${chunks.length > 1 ? ' section' : ''} and extract structured information.
+        // Build context information if metadata provided
+        let contextInfo = '';
+        if (metadata.protocolFilename) {
+          contextInfo += `\nProtocol File: ${metadata.protocolFilename}`;
+        }
+        if (metadata.protocolPath) {
+          contextInfo += `\nProtocol Path: ${metadata.protocolPath}`;
+        }
+        if (metadata.assayId) {
+          contextInfo += `\nAssay/Experiment ID: ${metadata.assayId}`;
+        }
 
+        const promptTemplate = `You are a scientific data extraction assistant. Analyze this experimental protocol${chunks.length > 1 ? ' section' : ''} and extract structured information.
+${contextInfo}
 Protocol Text${chunkInfo}:
 """
 ${chunk}
@@ -667,7 +615,7 @@ Extract and return ONLY a JSON object (no markdown, no explanation) with this st
     {
       "name": "Protocol step name (e.g., Sample Preparation, Measurement, Analysis)",
       "description": "Brief description of this protocol step",
-      "inputs": ["array of input sample/material names"],
+      "inputs": ["array of input sample/material names - ONE VALUE PER ROW. For 3 samples, use 3 entries: ['Sample_1', 'Sample_2', 'Sample_3']"],
       "parameters": [
         {
           "name": "parameter name (e.g., temperature, incubation time, buffer concentration)",
@@ -676,7 +624,8 @@ Extract and return ONLY a JSON object (no markdown, no explanation) with this st
           "description": "what this parameter represents"
         }
       ],
-      "outputs": ["array of output sample/material names"]
+      "outputs": ["array of output sample/material names - ONE VALUE PER ROW. Length MUST match inputs. For 3 input samples, use 3 output entries: ['Output_1', 'Output_2', 'Output_3']"],
+      "dataFiles": ["array of data file names - ONE VALUE PER ROW. MUST match length of inputs/outputs. Can repeat filenames if multiple samples share the same file. Use empty string for rows with no data files. Examples: 'results.csv', '*.fastq', 'plot.png'"]
     }
   ]
 }
@@ -722,6 +671,33 @@ IMPORTANT - PROTOCOL LINKING:
    - Should reference sample names from the samples array
    - Or use specific material names (e.g., "Raw sequencing data from Sample_1")
 4. **Tools/software are parameters**, NOT outputs
+5. **Protocol REF (Reference)**:
+   - Each protocol should reference the source protocol file${metadata.protocolPath ? ` (${metadata.protocolPath})` : ''}
+   - The "description" field can include: "See detailed protocol in: [protocol file path]"
+   - This helps link the extracted data back to the original documentation
+
+IMPORTANT - DATA FILE LINKING:
+1. **Array length rule** - CRITICAL:
+   - dataFiles array MUST have SAME LENGTH as inputs/outputs arrays
+   - If 3 inputs → 3 dataFiles entries (one per row/sample)
+   - If 2 outputs → 2 dataFiles entries
+2. **Duplication for shared files**:
+   - Multiple samples in ONE file → REPEAT the filename
+   - Example: 3 samples in "measurements.xlsx" → ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+3. **Individual files per sample**:
+   - Each sample has its own file → list each filename
+   - Example: ["sample1.csv", "sample2.csv", "sample3.csv"]
+4. **Mixed scenarios**:
+   - Some samples share a file, others don't → repeat as needed
+   - Example: ["batch1.csv", "batch1.csv", "sample3_only.csv"]
+5. **File name extraction**:
+   - Explicit names: "saved as results.csv" → "results.csv"
+   - Patterns: "FASTQ files for each sample" → ["*.fastq", "*.fastq", "*.fastq"]
+   - Images: "Figure 1 (plot.png)" → "plot.png"
+   - Formats: "exported to CSV" → "results.csv" or "*.csv"
+6. **No data files**:
+   - If no files mentioned → use empty strings: ["", "", ""]
+   - Or omit dataFiles field entirely (backward compatible)
 
 ${chunks.length > 1 ? 'NOTE: This is part of a larger protocol, extract what you can from this section\n\n' : ''}EXAMPLES:
 **Good parameter extraction with values and units**:
@@ -749,6 +725,36 @@ Sample with treatment:
     {"category": "age", "value": "8", "unit": "weeks", "termSource": "UO", "termAccession": "UO:0000034"},
     {"category": "treatment", "value": "Drug X", "unit": "mg/kg", "termSource": "", "termAccession": ""}
   ]}
+
+**Good data file linking**:
+Example 1 - Shared measurement file (3 samples, 1 file):
+- Protocol: "All samples measured together in measurements.xlsx"
+- inputs: ["Plant_A", "Plant_B", "Plant_C"]
+- outputs: ["Measurement_A", "Measurement_B", "Measurement_C"]
+- dataFiles: ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+
+Example 2 - Individual sequencing files (2 samples, 2 files):
+- Protocol: "Each sample sequenced separately: sample1.fastq, sample2.fastq"
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Reads_1", "Reads_2"]
+- dataFiles: ["sample1.fastq", "sample2.fastq"]
+
+Example 3 - Mixed scenario (some shared, some individual):
+- Protocol: "Samples 1-2 analyzed together in batch1.csv, sample 3 processed separately as sample3.csv"
+- inputs: ["S1", "S2", "S3"]
+- outputs: ["Result_1", "Result_2", "Result_3"]
+- dataFiles: ["batch1.csv", "batch1.csv", "sample3.csv"]
+
+Example 4 - Wildcard pattern for multiple files:
+- Protocol: "FASTQ files generated for each sample"
+- inputs: ["Sample_A", "Sample_B"]
+- outputs: ["Sequencing_A", "Sequencing_B"]
+- dataFiles: ["*.fastq", "*.fastq"]
+
+Example 5 - No data files mentioned:
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Processed_1", "Processed_2"]
+- dataFiles: ["", ""]
 
 Return ONLY valid JSON, no additional text.`;
 

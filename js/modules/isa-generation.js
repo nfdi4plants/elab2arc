@@ -474,25 +474,52 @@
         }
       }
 
-      // Add Output column(s)
-      if (protocol.outputs && protocol.outputs.length > 0) {
-        const outputHeader = window.arctrl.CompositeHeader.output(window.arctrl.IOType.sample());
-        // Outputs should match the number of rows (usually they do from LLM)
-        const outputCells = protocol.outputs.map(out =>
-          window.arctrl.CompositeCell.createFreeText(out)
-        );
-        processTable.AddColumn(outputHeader, outputCells);
-        console.log(`  - Added ${protocol.outputs.length} output(s)`);
+      // Determine output type: Data if dataFiles exist, otherwise Sample
+      // ARCtrl only allows ONE output column per table
+      const hasDataFiles = protocol.dataFiles && protocol.dataFiles.length > 0 && protocol.dataFiles.some(f => f && f.trim() !== '');
+
+      if (hasDataFiles) {
+        // Output as Data (with file references)
+        const dataHeader = window.arctrl.CompositeHeader.output(window.arctrl.IOType.data());
+
+        const dataCells = protocol.dataFiles.map(file => {
+          // Handle empty strings or null/undefined
+          if (!file || file.trim() === '') {
+            return window.arctrl.CompositeCell.createFreeText('');
+          }
+
+          // Add dataset/ prefix if not already prefixed and not a wildcard pattern
+          let filePath = file;
+          if (!file.startsWith('dataset/') && !file.startsWith('*/')) {
+            filePath = `dataset/${file}`;
+          }
+
+          return window.arctrl.CompositeCell.createFreeText(filePath);
+        });
+
+        processTable.AddColumn(dataHeader, dataCells);
+        const nonEmptyCount = protocol.dataFiles.filter(f => f && f.trim() !== '').length;
+        console.log(`  - Added Output [Data] column with ${nonEmptyCount} file(s) (${protocol.dataFiles.length} row(s) total)`);
+
       } else {
-        // Default output if none specified - match row count
-        const defaultOutputCells = Array(rowCount).fill(null).map(() =>
-          window.arctrl.CompositeCell.createFreeText("Result")
-        );
-        processTable.AddColumn(
-          window.arctrl.CompositeHeader.output(window.arctrl.IOType.sample()),
-          defaultOutputCells
-        );
-        console.log(`  - Added default output (${rowCount} row(s))`);
+        // Output as Sample (named outputs or default)
+        const outputHeader = window.arctrl.CompositeHeader.output(window.arctrl.IOType.sample());
+
+        let outputCells;
+        if (protocol.outputs && protocol.outputs.length > 0) {
+          outputCells = protocol.outputs.map(out =>
+            window.arctrl.CompositeCell.createFreeText(out)
+          );
+          console.log(`  - Added Output [Sample] column with ${protocol.outputs.length} output(s)`);
+        } else {
+          // Default output if none specified
+          outputCells = Array(rowCount).fill(null).map(() =>
+            window.arctrl.CompositeCell.createFreeText("Result")
+          );
+          console.log(`  - Added Output [Sample] column with default values (${rowCount} row(s))`);
+        }
+
+        processTable.AddColumn(outputHeader, outputCells);
       }
 
       return processTable;

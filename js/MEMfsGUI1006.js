@@ -1974,25 +1974,30 @@ function switchExcelSheet(sheetIndex) {
     if (!currentWorkbook) return;
 
     currentActiveSheet = sheetIndex;
+    console.log(`[Excel Preview] Switching to sheet ${sheetIndex}`);
 
     // Update active tab
     document.querySelectorAll('.sheet-tab').forEach((tab, index) => {
         tab.classList.toggle('active', index === sheetIndex);
     });
 
-    // Re-render sheet content
-    const sheetContainer = document.querySelector('.excel-sheet-container');
-    if (sheetContainer) {
+    // Re-render sheet content in all containers
+    const sheetContainers = document.querySelectorAll('.excel-sheet-container');
+    console.log(`[Excel Preview] Found ${sheetContainers.length} sheet container(s)`);
+
+    sheetContainers.forEach(sheetContainer => {
         // Check if it's FsWorkbook (ARCtrl) or ExcelJS workbook
         if (currentIsaType && currentWorkbook.GetWorksheets) {
             // ARCtrl FsWorkbook
             const worksheets = currentWorkbook.GetWorksheets();
+            console.log(`[Excel Preview] Rendering ARCtrl worksheet ${sheetIndex} with ${worksheets[sheetIndex].Rows.length} rows`);
             sheetContainer.innerHTML = renderFsWorksheet(worksheets[sheetIndex]);
         } else if (currentWorkbook.worksheets) {
             // ExcelJS workbook
+            console.log(`[Excel Preview] Rendering ExcelJS worksheet ${sheetIndex}`);
             sheetContainer.innerHTML = renderExcelSheet(currentWorkbook.worksheets[sheetIndex]);
         }
-    }
+    });
 }
 
 function handleCellEdit(cell, row, col) {
