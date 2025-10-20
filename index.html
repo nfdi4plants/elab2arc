@@ -21,6 +21,9 @@ video {
   <link href="./css/MEMfsGUI0929.css" rel="stylesheet" />
   <link href="./css/elabGUI1305.css" rel="stylesheet" />
 
+  <!-- Diff2html for version comparison -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
+
 </head>
 
 <body>
@@ -454,22 +457,23 @@ video {
          
             &nbsp; &nbsp; &nbsp; &nbsp;
             <div class="lead col-4">
-              <button type="button" class="btn btn-primary" onclick="multiConvert()"> <span class="lead"> Start
+              <button type="button" class="btn btn-primary btn-sm" onclick="multiConvert()"> <span class="lead"> Start
                   Conversion</span></button>
-
-              &nbsp; &nbsp; &nbsp; &nbsp;
-              <button type="button" class="btn btn-secondary " id="statusModalBtn" data-bs-toggle="modal"
+              <button type="button" class="btn btn-secondary btn-sm" id="statusModalBtn" data-bs-toggle="modal"
                 data-bs-target="#statusModal">
                 <span class="lead"> Check Status</span>
               </button>
 
-              &nbsp; &nbsp; &nbsp; &nbsp;
+
               <div class="form-check form-switch d-inline-block">
                 <input class="form-check-input" type="checkbox" id="enableDatamapSwitch" onchange="toggleTogetherAPIKeyField()">
                 <label class="form-check-label" for="enableDatamapSwitch">
                   Enable LLM Annotation Table
                 </label>
               </div>
+              <button type="button" class="btn btn-info btn-sm d-none" id="editPromptBtn" data-bs-toggle="modal" data-bs-target="#promptEditorModal">
+                <span class="lead">✏️ Edit Prompt</span>
+              </button>
             </div>
           </div>
 
@@ -780,11 +784,187 @@ video {
                   </div>
                 </div>
               </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="metadataHeading">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#conversionMetadata" aria-expanded="false" aria-controls="conversionMetadata">
+                    Conversion Metadata (Troubleshooting)
+                  </button>
+                </h2>
+                <div id="conversionMetadata" class="accordion-collapse collapse" aria-labelledby="metadataHeading"
+                  data-bs-parent="#accordionUI">
+                  <div class="accordion-body">
+                    <div class="alert alert-info" role="alert">
+                      <strong>Conversion Metadata:</strong> Detailed information about LLM prompts, models, timing, and results for troubleshooting.
+                    </div>
+                    <div id="metadataContent" style="max-height: 500px; overflow-y: auto;">
+                      <p class="text-muted">No conversion metadata available yet. Metadata is saved after each conversion when LLM is enabled.</p>
+                    </div>
+                    <div class="mt-3" id="metadataActions" style="display: none;">
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="downloadMetadataBtn">
+                        Download Metadata JSON
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" id="viewTroubleshootingReportBtn">
+                        View Troubleshooting Report
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary d-none" data-bs-dismiss="modal">Close</button>
             <button type="button" class="btn btn-primary d-none">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt Editor Modal -->
+    <div class="modal fade" id="promptEditorModal" tabindex="-1" aria-labelledby="promptEditorModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+          <div class="modal-header bg-info text-white">
+            <h1 class="modal-title fs-5" id="promptEditorModalLabel">AI Prompt Editor</h1>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Alert for user guidance -->
+            <div class="alert alert-info" role="alert">
+              <strong>Welcome to the AI Prompt Editor!</strong> Here you can customize the LLM prompt used for protocol analysis.
+              Changes are saved locally and will be used for future conversions. Click <strong>Reset to Default</strong> to restore the original prompt.
+            </div>
+
+            <!-- Tabbed Interface -->
+            <ul class="nav nav-tabs" id="promptEditorTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="systemRole-tab" data-bs-toggle="tab" data-bs-target="#systemRole" type="button" role="tab" aria-controls="systemRole" aria-selected="true">
+                  System Role
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="jsonSchema-tab" data-bs-toggle="tab" data-bs-target="#jsonSchema" type="button" role="tab" aria-controls="jsonSchema" aria-selected="false">
+                  JSON Schema
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="extractionRules-tab" data-bs-toggle="tab" data-bs-target="#extractionRules" type="button" role="tab" aria-controls="extractionRules" aria-selected="false">
+                  Extraction Rules
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="examples-tab" data-bs-toggle="tab" data-bs-target="#examples" type="button" role="tab" aria-controls="examples" aria-selected="false">
+                  Examples
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="fullPrompt-tab" data-bs-toggle="tab" data-bs-target="#fullPrompt" type="button" role="tab" aria-controls="fullPrompt" aria-selected="false">
+                  Full Prompt Preview
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="versionHistory-tab" data-bs-toggle="tab" data-bs-target="#versionHistory" type="button" role="tab" aria-controls="versionHistory" aria-selected="false">
+                  Version History
+                </button>
+              </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content mt-3" id="promptEditorTabContent">
+              <!-- System Role Tab -->
+              <div class="tab-pane fade show active" id="systemRole" role="tabpanel" aria-labelledby="systemRole-tab">
+                <div class="alert alert-secondary" role="alert">
+                  <strong>System Role:</strong> This defines the AI's role and sets the context for analysis. Be clear and specific.
+                </div>
+                <label for="systemRoleInput" class="form-label">System Role and Context</label>
+                <textarea class="form-control font-monospace" id="systemRoleInput" rows="6" placeholder="You are a scientific data extraction assistant..."></textarea>
+              </div>
+
+              <!-- JSON Schema Tab -->
+              <div class="tab-pane fade" id="jsonSchema" role="tabpanel" aria-labelledby="jsonSchema-tab">
+                <div class="alert alert-secondary" role="alert">
+                  <strong>JSON Schema:</strong> This defines the expected structure of the JSON output. Only modify if you understand ISA-Tab format.
+                </div>
+                <label for="jsonSchemaInput" class="form-label">Expected JSON Output Structure</label>
+                <textarea class="form-control font-monospace" id="jsonSchemaInput" rows="20" placeholder='{"samples": [...], "protocols": [...]}'></textarea>
+              </div>
+
+              <!-- Extraction Rules Tab -->
+              <div class="tab-pane fade" id="extractionRules" role="tabpanel" aria-labelledby="extractionRules-tab">
+                <div class="alert alert-secondary" role="alert">
+                  <strong>Extraction Rules:</strong> These are critical instructions for parameter extraction, sample handling, protocol linking, and data file mapping.
+                </div>
+                <label for="extractionRulesInput" class="form-label">Extraction Rules</label>
+                <textarea class="form-control font-monospace" id="extractionRulesInput" rows="20" placeholder="CRITICAL - PARAMETER EXTRACTION RULES: ..."></textarea>
+              </div>
+
+              <!-- Examples Tab -->
+              <div class="tab-pane fade" id="examples" role="tabpanel" aria-labelledby="examples-tab">
+                <div class="alert alert-secondary" role="alert">
+                  <strong>Examples:</strong> Provide concrete examples to guide the AI's output format. Good examples improve extraction accuracy.
+                </div>
+                <label for="examplesInput" class="form-label">Examples of Good Extraction</label>
+                <textarea class="form-control font-monospace" id="examplesInput" rows="20" placeholder="EXAMPLES: **Good parameter extraction**..."></textarea>
+              </div>
+
+              <!-- Full Prompt Preview Tab -->
+              <div class="tab-pane fade" id="fullPrompt" role="tabpanel" aria-labelledby="fullPrompt-tab">
+                <div class="alert alert-warning" role="alert">
+                  <strong>Read-Only Preview:</strong> This shows how your sections combine into the final prompt sent to the AI.
+                </div>
+                <label for="fullPromptPreview" class="form-label">Assembled Prompt (Read-Only)</label>
+                <textarea class="form-control font-monospace bg-light" id="fullPromptPreview" rows="25" readonly></textarea>
+              </div>
+
+              <!-- Version History Tab -->
+              <div class="tab-pane fade" id="versionHistory" role="tabpanel" aria-labelledby="versionHistory-tab">
+                <div class="alert alert-info" role="alert">
+                  <strong>Version History:</strong> Your last 20 prompt versions are saved automatically. Compare, restore, or export previous versions.
+                </div>
+
+                <!-- Version List -->
+                <div class="row">
+                  <div class="col-md-12">
+                    <h6>Saved Versions</h6>
+                    <div class="list-group" id="promptVersionList" style="max-height: 400px; overflow-y: auto;">
+                      <!-- Version items will be dynamically inserted here -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Diff Viewer -->
+                <div class="row mt-4" id="diffViewerSection" style="display: none;">
+                  <div class="col-md-12">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <h6>Version Comparison</h6>
+                      <button type="button" class="btn btn-sm btn-secondary" id="closeDiffBtn">Close Diff</button>
+                    </div>
+                    <div id="diffOutputContainer" style="max-height: 500px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px;">
+                      <!-- Diff2html output will be rendered here -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Empty State -->
+                <div class="text-center text-muted mt-4" id="emptyVersionState" style="display: none;">
+                  <p>No version history available yet.</p>
+                  <p><small>Versions are saved automatically when you click "Save Prompt".</small></p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="resetPromptBtn">
+              Reset to Default
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-info btn-sm" id="savePromptBtn">
+              Save Prompt
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="saveAndConvertBtn">
+              Save &amp; Start Conversion
+            </button>
           </div>
         </div>
       </div>
@@ -801,6 +981,10 @@ video {
   <script src="./js/turndown.js" type="text/javascript"></script>
   <script src="./js/exceljs.min.js"></script>
 
+  <!-- Diff libraries for version comparison -->
+  <script src="https://cdn.jsdelivr.net/npm/diff/dist/diff.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+
   <!-- Module import -->
   <script type="module">
     import http from './js/http.js'
@@ -812,11 +996,12 @@ video {
   <script src="./js/MEMfsGUI1006.js?v=20251008101314" type="text/javascript" charset="utf-8"></script>
 
   <!-- Load modular components before core -->
+  <script src="./js/modules/conversion-metadata.js?v=20251020150000" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/isa-generation.js?v=20251008120855" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/llm-service.js?v=20251008120855" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core1006a.js?v=20251008103122" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core1006b.js?v=20251020150000" type="text/javascript" charset="utf-8"></script>
 
 </body>
 
