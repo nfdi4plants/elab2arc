@@ -812,8 +812,11 @@ var blobb = [];
         });
         mainOrMaster = "main";
       } catch (error) {
-        console.error(error);
-        console.log("Clone branch main failed, now trying to clone branch master")
+        // Branch "main" not found - trying "master" (common for older repositories)
+        console.log("[DataHub Clone] Branch 'main' not found, trying 'master' branch...");
+        if (error.message && !error.message.includes('Could not find')) {
+          console.warn("[DataHub Clone] Unexpected error:", error);
+        }
         const cloneResponse = await git.clone({
           fs,
           http,
@@ -967,8 +970,12 @@ Date: ${timestamp}`;
         updateInfo("PLANTDataHUB has been updated.  <br>", pushProgressEnd);
         //
       } catch (error) {
-        console.error(error);
-        updateInfo(error + " Push to main failed, now try to push to branch master", pushProgressStart);
+        // Branch "main" not found - trying "master" (common for older repositories)
+        console.log("[DataHub Push] Branch 'main' not found, trying 'master' branch...");
+        if (error.message && !error.message.includes('Could not find')) {
+          console.warn("[DataHub Push] Unexpected error:", error);
+        }
+        updateInfo("Pushing to PLANTDataHUB (master branch)...", pushProgressStart);
         let pushResult = await git.push({
           fs,
           http,
@@ -2199,6 +2206,12 @@ ${res.uploads && res.uploads.length > 0 ?
       const relativeDatasetPath = `${baseAssayPath.replace(gitRoot, "")}/${dataFolderName}/README.md`;
       await git.add({ fs, dir: gitRoot, filepath: relativeDatasetPath });
 
+      // ========== METADATA TRACKING: Initialize conversion metadata (BEFORE try block for scope) ==========
+      const conversionStartTime = Date.now();
+      let conversionMetadata = null;
+      let llmData = null;
+      const datamapSwitch = document.getElementById('enableDatamapSwitch');
+
       // ========== EXPERIMENTAL: Generate ISA files with Multi-Protocol Support ==========
       try {
         // Extract metadata info from assay folders
@@ -2207,13 +2220,7 @@ ${res.uploads && res.uploads.length > 0 ?
         const protocolInfo = Elab2ArcISA.extractProtocolInfo(protocolPath);
         const datasetInfo = Elab2ArcISA.extractDatasetInfo(datasetPath);
 
-        // ========== METADATA TRACKING: Initialize conversion metadata ==========
-        const conversionStartTime = Date.now();
-        let conversionMetadata = null;
-
         // Check if LLM datamap is enabled
-        let llmData = null;
-        const datamapSwitch = document.getElementById('enableDatamapSwitch');
         if (datamapSwitch && datamapSwitch.checked) {
           console.log('[ISA Gen] LLM datamap enabled, extracting protocols from markdown...');
           updateInfo(`🤖 Analyzing protocol with AI for: <b>${assayId}</b>`, baseProgress + 0.3);
