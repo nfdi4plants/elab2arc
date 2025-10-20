@@ -269,7 +269,7 @@
           // Characteristic columns require Term cells (OntologyAnnotation), not FreeText
           const organismValue = s.organism || "";
           if (organismValue.trim() === '') {
-            return window.arctrl.CompositeCell.emptyTerm();
+            return window.arctrl.CompositeCell.createTerm(new window.arctrl.OntologyAnnotation("", "", ""));
           }
           return window.arctrl.CompositeCell.createTerm(new window.arctrl.OntologyAnnotation(organismValue, "", ""));
         });
@@ -305,7 +305,7 @@
           const char = sample.characteristics?.find(c => c.category === category);
 
           if (!char || !char.value || char.value.trim() === '') {
-            return window.arctrl.CompositeCell.emptyTerm();
+            return window.arctrl.CompositeCell.createTerm(new window.arctrl.OntologyAnnotation("", "", ""));
           }
 
           // Characteristic columns are term columns - values must be OntologyAnnotations
@@ -449,7 +449,7 @@
             const paramCells = Array(rowCount).fill(null).map(() => {
               if (!paramValue || paramValue.trim() === '') {
                 // No value provided - empty term cell
-                return window.arctrl.CompositeCell.emptyTerm();
+                return window.arctrl.CompositeCell.createTerm(new window.arctrl.OntologyAnnotation("", "", ""));
               }
 
               if (paramUnit && paramUnit.trim() !== '') {
