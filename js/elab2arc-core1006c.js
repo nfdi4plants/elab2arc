@@ -57,6 +57,161 @@ var blobb = [];
 
     }
 
+    // =============================================================================
+    // SECURITY UTILITIES
+    // =============================================================================
+
+    /**
+     * Sanitizes URLs by masking embedded credentials for safe logging
+     * @param {string} url - URL that may contain credentials
+     * @returns {string} - Sanitized URL with credentials masked
+     */
+    function sanitizeURLForLogging(url) {
+      if (!url || typeof url !== 'string') return url;
+
+      // Match pattern: //username:password@domain or //oauth2:token@domain
+      // Replace with: //***:***@domain
+      return url.replace(/\/\/([^:/@]+):([^@/]+)@/g, '//***:***@');
+    }
+
+    /**
+     * Safe console logging that masks credentials in URLs
+     * @param {string} message - Log message
+     * @param {...any} args - Additional arguments (URLs will be sanitized)
+     */
+    function safeLog(message, ...args) {
+      const sanitizedArgs = args.map(arg => {
+        if (typeof arg === 'string' && (arg.includes('://') || arg.includes('@'))) {
+          return sanitizeURLForLogging(arg);
+        }
+        return arg;
+      });
+      console.log(message, ...sanitizedArgs);
+    }
+
+    // =============================================================================
+    // TOKEN VALIDATION UTILITIES
+    // =============================================================================
+
+    /**
+     * Validates eLabFTW API token format
+     * Expected format: {teamId}-{40 hex characters}
+     * Example: "20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320"
+     * @param {string} token - eLabFTW API token to validate
+     * @returns {Object} - { valid: boolean, warning: string }
+     */
+    function validateElabToken(token) {
+      if (!token || typeof token !== 'string') {
+        return { valid: false, warning: 'eLabFTW token is required' };
+      }
+
+      token = token.trim();
+
+      // Check minimum length
+      if (token.length < 10) {
+        return { valid: false, warning: 'eLabFTW token is too short' };
+      }
+
+      // Check for expected format: number-hexstring
+      const elabTokenPattern = /^\d+-[a-f0-9]{40,}$/i;
+      if (!elabTokenPattern.test(token)) {
+        return { valid: false, warning: 'eLabFTW token format appears invalid (expected: teamId-hexstring)' };
+      }
+
+      return { valid: true, warning: '' };
+    }
+
+    /**
+     * Validates DataHub (GitLab) personal access token format
+     * GitLab tokens are typically 20-26 alphanumeric characters with dashes/underscores
+     * @param {string} token - DataHub token to validate
+     * @returns {Object} - { valid: boolean, warning: string }
+     */
+    function validateDataHubToken(token) {
+      if (!token || typeof token !== 'string') {
+        return { valid: false, warning: 'DataHub token is required' };
+      }
+
+      token = token.trim();
+
+      // Check minimum length
+      if (token.length < 10) {
+        return { valid: false, warning: 'DataHub token is too short' };
+      }
+
+      // Check for suspicious characters (should be alphanumeric + dash/underscore)
+      const gitlabTokenPattern = /^[a-zA-Z0-9_-]+$/;
+      if (!gitlabTokenPattern.test(token)) {
+        return { valid: false, warning: 'DataHub token contains invalid characters' };
+      }
+
+      // Typical GitLab token length is 20-26 characters, warn if unusual
+      if (token.length < 15) {
+        return { valid: true, warning: 'DataHub token seems short (verify it is correct)' };
+      }
+
+      return { valid: true, warning: '' };
+    }
+
+    /**
+     * Validates Together.AI API key format
+     * Together.AI keys typically start with specific prefix and have specific length
+     * @param {string} key - Together.AI API key to validate
+     * @returns {Object} - { valid: boolean, warning: string }
+     */
+    function validateTogetherAPIKey(key) {
+      if (!key || typeof key !== 'string') {
+        return { valid: false, warning: 'Together.AI API key is required' };
+      }
+
+      key = key.trim();
+
+      // Check minimum length (API keys are typically 40+ characters)
+      if (key.length < 20) {
+        return { valid: false, warning: 'Together.AI API key is too short' };
+      }
+
+      // Check for alphanumeric characters (API keys shouldn't have spaces or special chars)
+      const apiKeyPattern = /^[a-zA-Z0-9_-]+$/;
+      if (!apiKeyPattern.test(key)) {
+        return { valid: false, warning: 'Together.AI API key contains invalid characters' };
+      }
+
+      return { valid: true, warning: '' };
+    }
+
+    /**
+     * Display inline warning message for a form field
+     * @param {string} fieldId - ID of the input field
+     * @param {string} message - Warning message to display
+     * @param {string} type - 'warning' or 'error' (default: 'warning')
+     */
+    function showTokenWarning(fieldId, message, type = 'warning') {
+      const inputElement = document.getElementById(fieldId);
+      if (!inputElement) return;
+
+      // Remove existing warning
+      const existingWarning = inputElement.parentElement.querySelector('.token-validation-warning');
+      if (existingWarning) {
+        existingWarning.remove();
+      }
+
+      if (!message) return;  // No message, just clear warnings
+
+      // Create warning element
+      const warningDiv = document.createElement('div');
+      warningDiv.className = `token-validation-warning alert alert-${type === 'error' ? 'danger' : 'warning'} alert-dismissible fade show mt-2`;
+      warningDiv.role = 'alert';
+      warningDiv.style.fontSize = '0.875rem';
+      warningDiv.innerHTML = `
+        <small><strong>${type === 'error' ? '⚠️ Error:' : '⚠️ Warning:'}</strong> ${message}</small>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+
+      // Insert after the input's parent container
+      inputElement.parentElement.appendChild(warningDiv);
+    }
+
 
     /**
      * Syncs experiment and resource IDs between input fields and localStorage.
@@ -775,11 +930,11 @@ var blobb = [];
         console.log("DataHub URL is not correct, automatic patches are being applied");
         if (!url.endsWith(".git")) {
           url = url + ".git";
-          console.log("Added '.git' at the end, current url is " + url);
+          safeLog("Added '.git' at the end, current url is", url);
         }
         if (!url.startsWith("https://")) {
           url = "https://" + url;
-          console.log("Added 'https://' at the start, current url is " + url);
+          safeLog("Added 'https://' at the start, current url is", url);
         }
         return url;
       }
@@ -787,20 +942,20 @@ var blobb = [];
     }
 
     async function datahubClone(datahubURL, dir, datahubtoken) {
-      const [begin, end] = datahubURL.split("//");
-      url = begin + "//oath2:" + datahubtoken + "@" + end;
-      console.log(url);
+      // Use clean URL without embedded credentials (more secure)
+      console.log('[DataHub Clone] Cloning from:', datahubURL);
       try {
         const cloneResponse = await git.clone({
           fs,
           http,
           dir,
           corsProxy: 'https://gitcors.cplantbox.com',
-          url: url,
+          url: datahubURL,  // Clean URL without credentials
           ref: 'main',
           singleBranch: true,
           depth: 1,
           force: true,
+          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),  // OAuth2 authentication via callback
           // onProgress: event => {
           //   updateLabel(event.phase)
           //   if (event.total) {
@@ -822,11 +977,12 @@ var blobb = [];
           http,
           dir,
           corsProxy: 'https://gitcors.cplantbox.com',
-          url: url,
+          url: datahubURL,  // Clean URL without credentials
           ref: 'master',
           singleBranch: true,
           depth: 1,
           force: true,
+          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),  // OAuth2 authentication via callback
           // onProgress: event => {
           //   updateLabel(event.phase)
           //   if (event.total) {
@@ -964,7 +1120,7 @@ Date: ${timestamp}`;
           remote: 'origin',
           force: true,
           ref: 'main',
-          onAuth: () => ({ username: datahubtoken }),
+          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
         console.log(pushResult);
         updateInfo("PLANTDataHUB has been updated.  <br>", pushProgressEnd);
@@ -983,7 +1139,7 @@ Date: ${timestamp}`;
           force: true,
           remote: 'origin',
           ref: 'master',
-          onAuth: () => ({ username: datahubtoken }),
+          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
         console.log(pushResult);
         updateInfo("PLANTDataHUB has been updated (master branch).  <br>", pushProgressEnd);
@@ -1000,12 +1156,51 @@ Date: ${timestamp}`;
 
       elabtoken = document.getElementById("elabToken").value;
       datahubtoken = document.getElementById("datahubToken").value;
+
+      // Validate eLabFTW token
+      const elabValidation = validateElabToken(elabtoken);
+      if (!elabValidation.valid) {
+        showTokenWarning('elabToken', elabValidation.warning, 'error');
+        console.warn('[Token Validation] eLabFTW token validation failed:', elabValidation.warning);
+      } else {
+        showTokenWarning('elabToken', '');  // Clear any existing warnings
+        if (elabValidation.warning) {
+          console.info('[Token Validation] eLabFTW token warning:', elabValidation.warning);
+        }
+      }
+
+      // Validate DataHub token
+      const datahubValidation = validateDataHubToken(datahubtoken);
+      if (!datahubValidation.valid) {
+        showTokenWarning('datahubToken', datahubValidation.warning, 'error');
+        console.warn('[Token Validation] DataHub token validation failed:', datahubValidation.warning);
+      } else {
+        showTokenWarning('datahubToken', '');  // Clear any existing warnings
+        if (datahubValidation.warning) {
+          showTokenWarning('datahubToken', datahubValidation.warning, 'warning');
+          console.info('[Token Validation] DataHub token warning:', datahubValidation.warning);
+        }
+      }
+
+      // Save to cookies (even if validation warnings exist, user might have special format)
       document.cookie = `elabtoken=${encodeURIComponent(elabtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
       document.cookie = `datahubtoken=${encodeURIComponent(datahubtoken)}; SameSite=lax; max-age=${maxAge}; Secure`;
 
       // Save Together.AI API key to localStorage if provided
       const togetherAPIKeyInput = document.getElementById("togetherAPIKey");
       if (togetherAPIKeyInput && togetherAPIKeyInput.value) {
+        // Validate Together.AI API key
+        const apiKeyValidation = validateTogetherAPIKey(togetherAPIKeyInput.value);
+        if (!apiKeyValidation.valid) {
+          showTokenWarning('togetherAPIKey', apiKeyValidation.warning, 'error');
+          console.warn('[Token Validation] Together.AI API key validation failed:', apiKeyValidation.warning);
+        } else {
+          showTokenWarning('togetherAPIKey', '');  // Clear any existing warnings
+          if (apiKeyValidation.warning) {
+            console.info('[Token Validation] Together.AI API key warning:', apiKeyValidation.warning);
+          }
+        }
+
         window.localStorage.setItem('togetherAPIKey', togetherAPIKeyInput.value);
       }
     }
@@ -2414,20 +2609,56 @@ ${res.uploads && res.uploads.length > 0 ?
 
             // Add metadata files to git
             try {
-              const relativeMetadataPath = metadataPath.replace(gitRoot, '');
+              // Ensure paths are relative to gitRoot and don't start with /
+              const normalizeGitPath = (fullPath) => {
+                let relative = fullPath.replace(gitRoot, '');
+                // Remove leading slash if present
+                if (relative.startsWith('/')) {
+                  relative = relative.substring(1);
+                }
+                return relative;
+              };
+
+              // Helper to wait for file to exist (with retry)
+              const waitForFile = async (filePath, maxRetries = 5, delayMs = 100) => {
+                for (let i = 0; i < maxRetries; i++) {
+                  if (fs.existsSync(filePath)) {
+                    return true;
+                  }
+                  console.log(`[Metadata] Waiting for file to be written: ${filePath} (attempt ${i + 1}/${maxRetries})`);
+                  await new Promise(resolve => setTimeout(resolve, delayMs));
+                }
+                return false;
+              };
+
+              // Wait for primary metadata file to exist
+              const fileExists = await waitForFile(metadataPath);
+              if (!fileExists) {
+                console.error(`[Metadata] File does not exist after retries: ${metadataPath}`);
+                throw new Error(`Metadata file not found: ${metadataPath}`);
+              }
+
+              const relativeMetadataPath = normalizeGitPath(metadataPath);
+              console.log(`[Metadata] Adding to git: ${relativeMetadataPath}`);
               await git.add({ fs, dir: gitRoot, filepath: relativeMetadataPath });
 
               // Also add latest.json
-              const latestPath = `${baseAssayPath}/.elab2arc/latest.json`.replace(gitRoot, '');
-              await git.add({ fs, dir: gitRoot, filepath: latestPath });
+              const latestFullPath = `${baseAssayPath}/elab2arc-metadata/latest.json`;
+              if (await waitForFile(latestFullPath)) {
+                const latestPath = normalizeGitPath(latestFullPath);
+                console.log(`[Metadata] Adding to git: ${latestPath}`);
+                await git.add({ fs, dir: gitRoot, filepath: latestPath });
+              }
 
               // Add backup metadata if it exists
-              const backupPath = `${baseAssayPath}/dataset/.elab2arc-metadata.json`.replace(gitRoot, '');
-              if (fs.existsSync(`${gitRoot}${backupPath}`)) {
+              const backupFullPath = `${baseAssayPath}/dataset/elab2arc-metadata.json`;
+              if (fs.existsSync(backupFullPath)) {
+                const backupPath = normalizeGitPath(backupFullPath);
+                console.log(`[Metadata] Adding to git: ${backupPath}`);
                 await git.add({ fs, dir: gitRoot, filepath: backupPath });
               }
 
-              console.log('[Metadata] Added metadata files to git');
+              console.log('[Metadata] Successfully added metadata files to git');
             } catch (gitError) {
               console.warn('[Metadata] Could not add metadata to git:', gitError);
             }
@@ -3203,7 +3434,8 @@ ${res.uploads && res.uploads.length > 0 ?
 
       try {
         if (url1) {
-          console.log("submission url is " + url1);
+          // Note: url1 contains tokens in URL parameters, sanitize before logging
+          console.log("[Submission] Processing URL parameters (credentials masked)");
           const submitData = url1.split("&");
           let submitJSON = {};
           submitData.forEach(e => { submitJSON[e.split("=")[0]] = e.split("=")[1] }
@@ -3212,7 +3444,7 @@ ${res.uploads && res.uploads.length > 0 ?
           //updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
 
         } else {
-          console.log("submission url is " + url1 + ". If url is undefined, switch tab to token tab");
+          console.log("[Submission] No URL parameters found. If url is undefined, switch tab to token tab");
           showTab("tokenTab");
         }
         try {
@@ -3511,7 +3743,7 @@ ${res.uploads && res.uploads.length > 0 ?
           remote: 'origin',
           force: false,
           ref: 'main',
-          onAuth: () => ({ username: datahubtoken }),
+          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
 
         console.log('[Manual Git] Push successful!', pushResult);

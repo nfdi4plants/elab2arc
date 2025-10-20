@@ -132,22 +132,22 @@
 
   /**
    * Save metadata to ARC filesystem
-   * Creates .elab2arc folder and saves metadata JSON
+   * Creates elab2arc-metadata folder and saves metadata JSON
    * @param {Object} metadata - Metadata object
    * @param {string} assayPath - Path to assay folder
    * @returns {Promise<string>} - Path to saved metadata file
    */
   async function saveMetadataToARC(metadata, assayPath) {
     try {
-      if (!window.FS || !window.FS.fs) {
+      if (!window.FS || !FS || !FS.fs) {
         console.warn('[Metadata] memfs not available, cannot save metadata');
         return null;
       }
 
-      const fs = window.FS.fs;
+      const fs = FS.fs;  // Use global FS (same as elab2arc-core line 10)
 
-      // Create .elab2arc directory if it doesn't exist
-      const metadataDir = `${assayPath}/.elab2arc`;
+      // Create elab2arc-metadata directory if it doesn't exist (visible, not hidden)
+      const metadataDir = `${assayPath}/elab2arc-metadata`;
       if (!fs.existsSync(metadataDir)) {
         fs.mkdirSync(metadataDir, { recursive: true });
         console.log(`[Metadata] Created directory: ${metadataDir}`);
@@ -158,20 +158,37 @@
       const metadataPath = `${metadataDir}/${metadataFilename}`;
       const metadataJSON = JSON.stringify(metadata, null, 2);
 
-      fs.writeFileSync(metadataPath, metadataJSON);
+      fs.writeFileSync(metadataPath, metadataJSON, 'utf8');
+
+      // Verify file was written successfully
+      if (!fs.existsSync(metadataPath)) {
+        throw new Error(`Failed to write metadata file: ${metadataPath}`);
+      }
       console.log(`[Metadata] Saved metadata to: ${metadataPath}`);
 
       // Also save as latest.json for easy access
       const latestPath = `${metadataDir}/latest.json`;
-      fs.writeFileSync(latestPath, metadataJSON);
-      console.log(`[Metadata] Saved latest metadata to: ${latestPath}`);
+      fs.writeFileSync(latestPath, metadataJSON, 'utf8');
 
-      // Create backup in dataset folder for visibility
+      // Verify latest.json was written
+      if (!fs.existsSync(latestPath)) {
+        console.warn(`[Metadata] Warning: latest.json not found after write: ${latestPath}`);
+      } else {
+        console.log(`[Metadata] Saved latest metadata to: ${latestPath}`);
+      }
+
+      // Create backup in dataset folder for visibility (visible filename)
       const datasetDir = `${assayPath}/dataset`;
       if (fs.existsSync(datasetDir)) {
-        const backupPath = `${datasetDir}/.elab2arc-metadata.json`;
-        fs.writeFileSync(backupPath, metadataJSON);
-        console.log(`[Metadata] Saved backup metadata to: ${backupPath}`);
+        const backupPath = `${datasetDir}/elab2arc-metadata.json`;
+        fs.writeFileSync(backupPath, metadataJSON, 'utf8');
+
+        // Verify backup was written
+        if (!fs.existsSync(backupPath)) {
+          console.warn(`[Metadata] Warning: backup not found after write: ${backupPath}`);
+        } else {
+          console.log(`[Metadata] Saved backup metadata to: ${backupPath}`);
+        }
       }
 
       return metadataPath;
@@ -189,13 +206,13 @@
    */
   function loadConversionHistory(assayPath) {
     try {
-      if (!window.FS || !window.FS.fs) {
+      if (!window.FS || !FS || !FS.fs) {
         console.warn('[Metadata] memfs not available');
         return [];
       }
 
-      const fs = window.FS.fs;
-      const metadataDir = `${assayPath}/.elab2arc`;
+      const fs = FS.fs;  // Use global FS
+      const metadataDir = `${assayPath}/elab2arc-metadata`;
 
       if (!fs.existsSync(metadataDir)) {
         return [];
@@ -233,12 +250,12 @@
    */
   function loadLatestMetadata(assayPath) {
     try {
-      if (!window.FS || !window.FS.fs) {
+      if (!window.FS || !FS || !FS.fs) {
         return null;
       }
 
-      const fs = window.FS.fs;
-      const latestPath = `${assayPath}/.elab2arc/latest.json`;
+      const fs = FS.fs;  // Use global FS
+      const latestPath = `${assayPath}/elab2arc-metadata/latest.json`;
 
       if (!fs.existsSync(latestPath)) {
         return null;
@@ -278,14 +295,14 @@
    */
   function findConversionByExperimentId(elabId, arcRoot) {
     try {
-      if (!window.FS || !window.FS.fs) {
+      if (!window.FS || !FS || !FS.fs) {
         return [];
       }
 
-      const fs = window.FS.fs;
+      const fs = FS.fs;  // Use global FS
       const results = [];
 
-      // Recursively search for .elab2arc folders
+      // Recursively search for elab2arc-metadata folders
       function searchDirectory(dirPath) {
         try {
           if (!fs.existsSync(dirPath)) return;
@@ -297,7 +314,7 @@
             const stat = fs.statSync(fullPath);
 
             if (stat.isDirectory()) {
-              if (entry === '.elab2arc') {
+              if (entry === 'elab2arc-metadata') {
                 // Found metadata directory, check files
                 const metadataFiles = fs.readdirSync(fullPath);
                 for (const file of metadataFiles) {
@@ -314,7 +331,7 @@
                   }
                 }
               } else if (!entry.startsWith('.')) {
-                // Recurse into subdirectories (skip hidden folders except .elab2arc)
+                // Recurse into subdirectories (skip hidden folders)
                 searchDirectory(fullPath);
               }
             }
