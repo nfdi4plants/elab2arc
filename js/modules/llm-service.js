@@ -587,7 +587,37 @@
           contextInfo += `\nAssay/Experiment ID: ${metadata.assayId}`;
         }
 
-        const promptTemplate = `You are a scientific data extraction assistant. Analyze this experimental protocol${chunks.length > 1 ? ' section' : ''} and extract structured information.
+        // Check for custom prompt from localStorage (set via Prompt Editor)
+        let customPrompt = null;
+        try {
+          const savedPrompt = window.localStorage.getItem('customLLMPrompt');
+          if (savedPrompt) {
+            customPrompt = JSON.parse(savedPrompt);
+            console.log('[Datamap LLM] Using custom prompt from localStorage');
+          }
+        } catch (e) {
+          console.warn('[Datamap LLM] Could not parse custom prompt, using default');
+        }
+
+        // Build prompt template (use custom if available, otherwise use default)
+        let promptTemplate;
+        if (customPrompt) {
+          // Assemble custom prompt
+          promptTemplate = `${customPrompt.systemRole}${chunks.length > 1 ? ' Analyze this experimental protocol section and extract structured information.' : ''}
+${contextInfo}
+Protocol Text${chunkInfo}:
+"""
+${chunk}
+"""
+
+${customPrompt.jsonSchema}
+
+${customPrompt.extractionRules}
+
+${chunks.length > 1 ? 'NOTE: This is part of a larger protocol, extract what you can from this section\n\n' : ''}${customPrompt.examples}`;
+        } else {
+          // Use default prompt
+          promptTemplate = `You are a scientific data extraction assistant. Analyze this experimental protocol${chunks.length > 1 ? ' section' : ''} and extract structured information.
 ${contextInfo}
 Protocol Text${chunkInfo}:
 """
@@ -757,6 +787,7 @@ Example 5 - No data files mentioned:
 - dataFiles: ["", ""]
 
 Return ONLY valid JSON, no additional text.`;
+        }
 
         // Use retry with exponential backoff and model fallback for resilience
         const { response, model: usedModel } = await retryWithBackoff(async (model) => {

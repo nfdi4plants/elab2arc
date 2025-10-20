@@ -1015,10 +1015,16 @@ Date: ${timestamp}`;
     async function toggleTogetherAPIKeyField() {
       const enableSwitch = document.getElementById('enableDatamapSwitch');
       const apiKeyContainer = document.getElementById('togetherAPIKeyContainer');
+      const editPromptBtn = document.getElementById('editPromptBtn');
 
       if (enableSwitch && apiKeyContainer) {
         if (enableSwitch.checked) {
           apiKeyContainer.classList.remove('d-none');
+
+          // Show Edit Prompt button when LLM is enabled
+          if (editPromptBtn) {
+            editPromptBtn.classList.remove('d-none');
+          }
 
           // Validate API key when switch is turned ON
           const togetherAPIKey = window.localStorage.getItem('togetherAPIKey');
@@ -1046,6 +1052,11 @@ Date: ${timestamp}`;
           }
         } else {
           apiKeyContainer.classList.add('d-none');
+
+          // Hide Edit Prompt button when LLM is disabled
+          if (editPromptBtn) {
+            editPromptBtn.classList.add('d-none');
+          }
         }
       }
     }
@@ -1134,6 +1145,19 @@ Date: ${timestamp}`;
         testModeSwitch.checked = (savedTestMode === 'true');
         if (testModeSwitch.checked) {
           console.log('[Config] LLM Test Mode is ENABLED - will use sample data');
+        }
+      }
+
+      // Initialize Edit Prompt button visibility based on LLM checkbox state
+      const enableDatamapSwitch = document.getElementById('enableDatamapSwitch');
+      const editPromptBtn = document.getElementById('editPromptBtn');
+
+      if (enableDatamapSwitch && editPromptBtn) {
+        // Set button visibility based on checkbox state
+        if (enableDatamapSwitch.checked) {
+          editPromptBtn.classList.remove('d-none');
+        } else {
+          editPromptBtn.classList.add('d-none');
         }
       }
     });
@@ -2183,6 +2207,10 @@ ${res.uploads && res.uploads.length > 0 ?
         const protocolInfo = Elab2ArcISA.extractProtocolInfo(protocolPath);
         const datasetInfo = Elab2ArcISA.extractDatasetInfo(datasetPath);
 
+        // ========== METADATA TRACKING: Initialize conversion metadata ==========
+        const conversionStartTime = Date.now();
+        let conversionMetadata = null;
+
         // Check if LLM datamap is enabled
         let llmData = null;
         const datamapSwitch = document.getElementById('enableDatamapSwitch');
@@ -2299,6 +2327,110 @@ ${res.uploads && res.uploads.length > 0 ?
         updateInfo(`⚠️ ISA generation error for: <b>${assayId}</b>`, baseProgress + 0.8);
       }
       // ========== END EXPERIMENTAL ==========
+
+      // ========== METADATA TRACKING: Save conversion metadata ==========
+      if (window.Elab2ArcMetadata) {
+        try {
+          const conversionEndTime = Date.now();
+
+          // Get custom prompt if LLM was used
+          let promptData = null;
+          let llmModel = null;
+          let llmModelUsed = null;
+
+          if (datamapSwitch && datamapSwitch.checked) {
+            promptData = window.getCustomPromptSections ? window.getCustomPromptSections() : null;
+            llmModel = window.Elab2ArcLLM?.getSelectedModel ? window.Elab2ArcLLM.getSelectedModel() : 'unknown';
+            llmModelUsed = window.Elab2ArcLLM?.lastUsedModel || llmModel;
+          }
+
+          // Assemble full prompt for metadata
+          const fullPrompt = promptData ?
+            `${promptData.systemRole}\n\n${promptData.jsonSchema}\n\n${promptData.extractionRules}\n\n${promptData.examples}` :
+            '';
+
+          // Create metadata
+          conversionMetadata = window.Elab2ArcMetadata.createConversionMetadata({
+            elabftw: {
+              experimentId: elabid,
+              title: res.title,
+              author: res.fullname,
+              team: res.team_name || '',
+              instance: params.instance,
+              type: entryType
+            },
+            llmEnabled: datamapSwitch && datamapSwitch.checked,
+            llmModel: llmModel,
+            llmModelUsed: llmModelUsed,
+            promptSections: promptData,
+            fullPrompt: fullPrompt,
+            apiParams: {
+              temperature: 0.1,
+              max_tokens: 8192,
+              stream: true
+            },
+            chunkInfo: {
+              required: false,
+              chunkCount: 1,
+              chunkSizes: []
+            },
+            tokenInfo: {
+              estimated: 0,
+              actual: 0
+            },
+            results: {
+              status: llmData ? 'success' : (datamapSwitch && datamapSwitch.checked ? 'failed' : 'llm_disabled'),
+              samplesExtracted: llmData?.samples?.length || 0,
+              protocolsExtracted: llmData?.protocols?.length || 0,
+              errors: [],
+              warnings: []
+            },
+            files: {
+              protocolPath: `protocols/${protocolFilename}`,
+              isaPath: 'isa.assay.xlsx',
+              dataFiles: (res.uploads || []).map(u => `dataset/${u.real_name}`)
+            },
+            startTime: conversionStartTime,
+            endTime: conversionEndTime
+          });
+
+          // Save metadata to ARC
+          const metadataPath = await window.Elab2ArcMetadata.saveMetadataToARC(conversionMetadata, baseAssayPath);
+
+          if (metadataPath) {
+            console.log('[Metadata] Saved conversion metadata:', metadataPath);
+
+            // Display metadata in Status Modal
+            if (window.displayConversionMetadata) {
+              window.displayConversionMetadata(conversionMetadata);
+            }
+
+            // Add metadata files to git
+            try {
+              const relativeMetadataPath = metadataPath.replace(gitRoot, '');
+              await git.add({ fs, dir: gitRoot, filepath: relativeMetadataPath });
+
+              // Also add latest.json
+              const latestPath = `${baseAssayPath}/.elab2arc/latest.json`.replace(gitRoot, '');
+              await git.add({ fs, dir: gitRoot, filepath: latestPath });
+
+              // Add backup metadata if it exists
+              const backupPath = `${baseAssayPath}/dataset/.elab2arc-metadata.json`.replace(gitRoot, '');
+              if (fs.existsSync(`${gitRoot}${backupPath}`)) {
+                await git.add({ fs, dir: gitRoot, filepath: backupPath });
+              }
+
+              console.log('[Metadata] Added metadata files to git');
+            } catch (gitError) {
+              console.warn('[Metadata] Could not add metadata to git:', gitError);
+            }
+          }
+        } catch (metadataError) {
+          console.error('[Metadata] Error saving conversion metadata:', metadataError);
+          // Don't fail the conversion if metadata saving fails
+        }
+      }
+      // ========== END METADATA TRACKING ==========
 
       finalizeExperimentDisplay(baseProgress, totalEntries);
       await commitPush(
@@ -2529,37 +2661,133 @@ ${res.uploads && res.uploads.length > 0 ?
                 console.warn('uploadGallery element not found in DOM');
                 return;
             }
-            uploadGallery.innerHTML = "";
+
             const uploads = data.uploads;
-            for (const [index, ele] of Object.entries(uploads)){
-                const blobs = await fetchElabFiles( elabtoken, "experiments/"+ elabid+ "/uploads/"+ ele.id +"?format=binary",instance);
-                window.blobb.push(blobs);
-                let objectURL = URL.createObjectURL(blobs)
-                objectURL= objectURL.replace( /&storage=./g , "" );
-                let dataArray = new Uint8Array(await blobs.arrayBuffer());
-                const realname =  ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-                const longname= ele.long_name;
-                const longname2= encodeURIComponent(ele.long_name);
-
-                if (blobs.type.includes("image")) {
-                    uploadGallery.innerHTML += `
-                        Image:<img src="${objectURL}"></td>
-
-                    `;
-                } else {
-                    uploadGallery.innerHTML += `
-
-                        File:${realname}</td>
-
-                    `;
-                }
-
-                protocol = protocol.replace( /app\/download\.php(.*)f=/g, "" );
-                protocol = protocol.replaceAll( longname , objectURL );
-                protocol = protocol.replaceAll( longname2 , objectURL );
-                protocol = protocol.replaceAll( "&amp;storage=1" , "" );
-                protocol = protocol.replaceAll( "&amp;storage=2" , "" );
+            if (!uploads || uploads.length === 0) {
+                uploadGallery.innerHTML = "<p class='text-muted'>No attachments</p>";
+                return;
             }
+
+            // Create placeholders immediately for fast rendering
+            uploadGallery.innerHTML = "";
+            const uploadPromises = [];
+            const uploadElements = [];
+
+            // First pass: Create placeholders and prepare metadata
+            for (const [index, ele] of Object.entries(uploads)) {
+                const realname = ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+                const isImage = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(ele.real_name);
+                const uploadId = `upload-${index}`;
+
+                // Create placeholder element
+                const placeholderHTML = isImage
+                    ? `<div class="col-6 col-md-4 mb-2" id="${uploadId}">
+                         <div class="card h-100">
+                           <div class="card-body text-center p-2">
+                             <div class="spinner-border spinner-border-sm text-primary mb-2" role="status">
+                               <span class="visually-hidden">Loading...</span>
+                             </div>
+                             <small class="d-block text-truncate">${realname}</small>
+                             <small class="text-muted">${(ele.filesize / 1024).toFixed(1)} KB</small>
+                           </div>
+                         </div>
+                       </div>`
+                    : `<div class="col-12 mb-2" id="${uploadId}">
+                         <div class="card">
+                           <div class="card-body p-2">
+                             <small>📄 File: ${realname}</small>
+                           </div>
+                         </div>
+                       </div>`;
+
+                uploadGallery.insertAdjacentHTML('beforeend', placeholderHTML);
+
+                // Store element reference and metadata
+                uploadElements.push({
+                    id: uploadId,
+                    ele: ele,
+                    index: index,
+                    realname: realname,
+                    isImage: isImage,
+                    longname: ele.long_name,
+                    longname2: encodeURIComponent(ele.long_name)
+                });
+            }
+
+            // Second pass: Load files progressively with limited concurrency
+            const loadFile = async (uploadMeta) => {
+                try {
+                    const blobs = await fetchElabFiles(
+                        elabtoken,
+                        `experiments/${elabid}/uploads/${uploadMeta.ele.id}?format=binary`,
+                        instance
+                    );
+
+                    window.blobb.push(blobs);
+                    let objectURL = URL.createObjectURL(blobs);
+                    objectURL = objectURL.replace(/&storage=./g, "");
+
+                    // Update protocol text replacements
+                    protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
+                    protocol = protocol.replaceAll(uploadMeta.longname, objectURL);
+                    protocol = protocol.replaceAll(uploadMeta.longname2, objectURL);
+                    protocol = protocol.replaceAll("&amp;storage=1", "");
+                    protocol = protocol.replaceAll("&amp;storage=2", "");
+
+                    // Update the experiment content with new image URLs
+                    const expContentEl = document.getElementById('expContent');
+                    if (expContentEl) {
+                        expContentEl.innerHTML = protocol;
+                    }
+
+                    // Update placeholder with actual content
+                    const placeholder = document.getElementById(uploadMeta.id);
+                    if (placeholder) {
+                        if (uploadMeta.isImage) {
+                            placeholder.innerHTML = `
+                                <div class="card h-100">
+                                  <img src="${objectURL}" class="card-img-top" alt="${uploadMeta.realname}"
+                                       loading="lazy" style="max-height: 200px; object-fit: cover;">
+                                  <div class="card-body p-1">
+                                    <small class="text-truncate d-block">${uploadMeta.realname}</small>
+                                  </div>
+                                </div>`;
+                        } else {
+                            placeholder.innerHTML = `
+                                <div class="card">
+                                  <div class="card-body p-2">
+                                    <small>📄 <a href="${objectURL}" download="${uploadMeta.realname}">${uploadMeta.realname}</a></small>
+                                  </div>
+                                </div>`;
+                        }
+                    }
+
+                    return { success: true, uploadMeta };
+                } catch (error) {
+                    console.error(`Failed to load upload ${uploadMeta.realname}:`, error);
+                    const placeholder = document.getElementById(uploadMeta.id);
+                    if (placeholder) {
+                        placeholder.innerHTML = `
+                            <div class="card border-danger">
+                              <div class="card-body p-2 text-danger">
+                                <small>❌ Failed to load: ${uploadMeta.realname}</small>
+                              </div>
+                            </div>`;
+                    }
+                    return { success: false, uploadMeta, error };
+                }
+            };
+
+            // Load files with concurrency limit (5 at a time) - NON-BLOCKING
+            // This runs in background so UI can be shown immediately with placeholders
+            const concurrencyLimit = 5;
+            (async () => {
+                for (let i = 0; i < uploadElements.length; i += concurrencyLimit) {
+                    const batch = uploadElements.slice(i, i + concurrencyLimit);
+                    await Promise.all(batch.map(loadFile));
+                }
+                console.log('[eLabFTW Preview] All uploads loaded');
+            })();
 
             // Related items
             const relatedItems = document.getElementById('relatedItems');
@@ -3314,6 +3542,872 @@ ${res.uploads && res.uploads.length > 0 ?
     // - callTogetherAI() → Elab2ArcLLM.callTogetherAI()
     // - generateDatamapFromLLM() → Elab2ArcLLM.generateDatamapFromLLM()
     // - parseProtocolToDatamap() → Elab2ArcLLM.parseProtocolToDatamap()
+
+    // =============================================================================
+    // PROMPT EDITOR FUNCTIONALITY
+    // =============================================================================
+
+    // Default prompt template (matches llm-service.js structure)
+    const DEFAULT_PROMPT = {
+      systemRole: `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.`,
+
+      jsonSchema: `Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
+{
+  "samples": [
+    {
+      "name": "Sample identifier or name (e.g., Sample_1, Blood_Sample_A, Patient_001)",
+      "organism": "Organism or source (e.g., Homo sapiens, E. coli, Arabidopsis)",
+      "characteristics": [
+        {
+          "category": "Characteristic category (e.g., age, tissue type, genotype, treatment, location, collection date)",
+          "value": "Characteristic value (actual value, not a description)",
+          "unit": "Unit if applicable (e.g., years, °C, mg/L) or empty string",
+          "termSource": "Ontology source (e.g., NCIT, OBI, EFO) or empty string if unknown",
+          "termAccession": "Ontology term ID or empty string if unknown"
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "name": "Protocol step name (e.g., Sample Preparation, Measurement, Analysis)",
+      "description": "Brief description of this protocol step",
+      "inputs": ["array of input sample/material names - ONE VALUE PER ROW. For 3 samples, use 3 entries: ['Sample_1', 'Sample_2', 'Sample_3']"],
+      "parameters": [
+        {
+          "name": "parameter name (e.g., temperature, incubation time, buffer concentration)",
+          "value": "actual value if specified in protocol (e.g., '37', '60', '100'), empty string if not specified",
+          "unit": "measurement unit (e.g., °C, min, mM, µL) or empty string",
+          "description": "what this parameter represents"
+        }
+      ],
+      "outputs": ["array of output sample/material names - ONE VALUE PER ROW. Length MUST match inputs. For 3 input samples, use 3 output entries: ['Output_1', 'Output_2', 'Output_3']"],
+      "dataFiles": ["array of data file names - ONE VALUE PER ROW. MUST match length of inputs/outputs. Can repeat filenames if multiple samples share the same file. Use empty string for rows with no data files. Examples: 'results.csv', '*.fastq', 'plot.png'"]
+    }
+  ]
+}`,
+
+      extractionRules: `CRITICAL - PARAMETER EXTRACTION RULES:
+1. **Extract ALL parameters mentioned in the protocol**, including:
+   - Software/tool names and versions (e.g., "FastQC version", "SPAdes assembler version")
+   - Command-line arguments and flags (e.g., "SLIDINGWINDOW parameter", "k-mer size")
+   - File paths and directories (e.g., "output directory", "reference database path")
+   - Thresholds and cutoffs (e.g., "quality score threshold", "coverage cutoff")
+   - Settings and configurations (e.g., "thread count", "memory allocation")
+   - Physical measurements (e.g., "temperature", "incubation time", "volume")
+   - Chemical concentrations (e.g., "NaCl concentration", "DNA concentration")
+   - Equipment settings (e.g., "centrifuge speed", "voltage")
+
+2. **For bioinformatics/computational protocols**, extract:
+   - Software tool names (e.g., "Trimmomatic", "FastQC", "SPAdes")
+   - Version numbers (even if not specified, include as parameter)
+   - Algorithm parameters (e.g., "minimum read length", "quality threshold")
+   - Reference databases (e.g., "NCBI RefSeq", "UniProt database")
+   - File format specifications (e.g., "FASTQ format", "GFF3 format")
+
+3. **If a parameter value is mentioned**, include it in the description field
+4. **If a parameter is implied but not detailed**, still include it with empty unit
+5. **Even if parameters array would be empty**, try to infer at least 2-3 key parameters from context
+
+IMPORTANT - SAMPLE EXTRACTION:
+1. **Extract sample information** from protocol:
+   - Sample names/identifiers mentioned in the protocol
+   - Organism or source material (human, bacteria, plant, cell line, etc.)
+   - Sample characteristics (age, tissue type, genotype, treatment, condition, etc.)
+   - If no specific samples mentioned, create generic samples (e.g., "Sample_1", "Sample_2")
+
+IMPORTANT - PROTOCOL LINKING:
+1. **Link protocols sequentially** - CRITICAL:
+   - The OUTPUT of one protocol MUST EXACTLY MATCH the INPUT of the next protocol
+   - Example: Protocol 1 outputs "Trimmed reads" → Protocol 2 inputs "Trimmed reads" (exact match!)
+   - DO NOT use generic terms like "data" or "result" - be specific
+2. **Protocol naming**:
+   - Use clear names (e.g., "Quality Control", "Trimming", "Assembly", "Annotation")
+   - If multiple steps, create separate protocol objects
+3. **First protocol inputs**:
+   - Should reference sample names from the samples array
+   - Or use specific material names (e.g., "Raw sequencing data from Sample_1")
+4. **Tools/software are parameters**, NOT outputs
+
+IMPORTANT - DATA FILE LINKING:
+1. **Array length rule** - CRITICAL:
+   - dataFiles array MUST have SAME LENGTH as inputs/outputs arrays
+   - If 3 inputs → 3 dataFiles entries (one per row/sample)
+   - If 2 outputs → 2 dataFiles entries
+2. **Duplication for shared files**:
+   - Multiple samples in ONE file → REPEAT the filename
+   - Example: 3 samples in "measurements.xlsx" → ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+3. **Individual files per sample**:
+   - Each sample has its own file → list each filename
+   - Example: ["sample1.csv", "sample2.csv", "sample3.csv"]
+4. **Mixed scenarios**:
+   - Some samples share a file, others don't → repeat as needed
+   - Example: ["batch1.csv", "batch1.csv", "sample3_only.csv"]
+5. **File name extraction**:
+   - Explicit names: "saved as results.csv" → "results.csv"
+   - Patterns: "FASTQ files for each sample" → ["*.fastq", "*.fastq", "*.fastq"]
+   - Images: "Figure 1 (plot.png)" → "plot.png"
+   - Formats: "exported to CSV" → "results.csv" or "*.csv"
+6. **No data files**:
+   - If no files mentioned → use empty strings: ["", "", ""]
+   - Or omit dataFiles field entirely (backward compatible)`,
+
+      examples: `EXAMPLES:
+**Good parameter extraction with values and units**:
+- {"name": "Temperature", "value": "37", "unit": "°C", "description": "Incubation temperature"}
+- {"name": "FastQC version", "value": "0.11.9", "unit": "", "description": "Quality control tool version"}
+- {"name": "Minimum read length", "value": "50", "unit": "bp", "description": "Threshold for read trimming"}
+
+Note: Parameters are stored as free text with units combined (e.g., "37 °C"), not as ontology terms.
+
+**Good protocol linking**:
+- Protocol 1: inputs: ["Raw sequencing data"], outputs: ["Quality report", "Trimmed reads"]
+- Protocol 2: inputs: ["Trimmed reads"], outputs: ["Assembled contigs"]
+- Protocol 3: inputs: ["Assembled contigs"], outputs: ["Annotated genomes"]
+
+**Good sample extraction with characteristics**:
+Sample with location and collection date:
+- {"name": "Sample_1", "organism": "E. coli", "characteristics": [
+    {"category": "strain", "value": "K-12", "unit": "", "termSource": "NCBI", "termAccession": ""},
+    {"category": "Location", "value": "Lab A", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C25341"},
+    {"category": "Collection Date", "value": "2024-01-15", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}
+  ]}
+
+Sample with treatment:
+- {"name": "Sample_2", "organism": "Mus musculus", "characteristics": [
+    {"category": "age", "value": "8", "unit": "weeks", "termSource": "UO", "termAccession": "UO:0000034"},
+    {"category": "treatment", "value": "Drug X", "unit": "mg/kg", "termSource": "", "termAccession": ""}
+  ]}
+
+**Good data file linking**:
+Example 1 - Shared measurement file (3 samples, 1 file):
+- Protocol: "All samples measured together in measurements.xlsx"
+- inputs: ["Plant_A", "Plant_B", "Plant_C"]
+- outputs: ["Measurement_A", "Measurement_B", "Measurement_C"]
+- dataFiles: ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+
+Example 2 - Individual sequencing files (2 samples, 2 files):
+- Protocol: "Each sample sequenced separately: sample1.fastq, sample2.fastq"
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Reads_1", "Reads_2"]
+- dataFiles: ["sample1.fastq", "sample2.fastq"]
+
+Example 3 - Mixed scenario (some shared, some individual):
+- Protocol: "Samples 1-2 analyzed together in batch1.csv, sample 3 processed separately as sample3.csv"
+- inputs: ["S1", "S2", "S3"]
+- outputs: ["Result_1", "Result_2", "Result_3"]
+- dataFiles: ["batch1.csv", "batch1.csv", "sample3.csv"]
+
+Example 4 - Wildcard pattern for multiple files:
+- Protocol: "FASTQ files generated for each sample"
+- inputs: ["Sample_A", "Sample_B"]
+- outputs: ["Sequencing_A", "Sequencing_B"]
+- dataFiles: ["*.fastq", "*.fastq"]
+
+Example 5 - No data files mentioned:
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Processed_1", "Processed_2"]
+- dataFiles: ["", ""]
+
+Return ONLY valid JSON, no additional text.`
+    };
+
+    // Load custom prompt from localStorage or use default
+    function loadPromptFromStorage() {
+      const saved = localStorage.getItem('customLLMPrompt');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('[Prompt Editor] Could not parse saved prompt, using default');
+          return DEFAULT_PROMPT;
+        }
+      }
+      return DEFAULT_PROMPT;
+    }
+
+    // Save custom prompt to localStorage
+    function savePromptToStorage(promptSections) {
+      localStorage.setItem('customLLMPrompt', JSON.stringify(promptSections));
+      console.log('[Prompt Editor] Saved custom prompt to localStorage');
+
+      // Also save to version history
+      savePromptVersion(promptSections);
+    }
+
+    // Assemble full prompt from sections
+    function assembleFullPrompt(sections) {
+      return sections.systemRole + '\n\n' +
+             sections.jsonSchema + '\n\n' +
+             sections.extractionRules + '\n\n' +
+             sections.examples;
+    }
+
+    // ========== PROMPT VERSION HISTORY ==========
+
+    /**
+     * Save a prompt version to history
+     * @param {Object} promptSections - Prompt sections object
+     * @param {string} description - Optional description
+     */
+    function savePromptVersion(promptSections, description = '') {
+      try {
+        const promptId = window.Elab2ArcMetadata?.generateUUID() || Date.now().toString();
+        const timestamp = new Date().toISOString();
+        const fullPrompt = assembleFullPrompt(promptSections);
+
+        const version = {
+          promptId: promptId,
+          timestamp: timestamp,
+          sections: promptSections,
+          fullPrompt: fullPrompt,
+          description: description || `Saved on ${new Date(timestamp).toLocaleString()}`
+        };
+
+        // Load existing history
+        let history = loadPromptHistory();
+
+        // Add new version at the beginning
+        history.unshift(version);
+
+        // Keep only last 20 versions
+        history = history.slice(0, 20);
+
+        // Save back to localStorage
+        localStorage.setItem('promptHistory', JSON.stringify(history));
+        console.log('[Prompt History] Saved version:', promptId);
+
+        return promptId;
+      } catch (error) {
+        console.error('[Prompt History] Error saving version:', error);
+        return null;
+      }
+    }
+
+    /**
+     * Load prompt history from localStorage
+     * @returns {Array} - Array of prompt versions
+     */
+    function loadPromptHistory() {
+      try {
+        const saved = localStorage.getItem('promptHistory');
+        if (saved) {
+          return JSON.parse(saved);
+        }
+        return [];
+      } catch (error) {
+        console.error('[Prompt History] Error loading history:', error);
+        return [];
+      }
+    }
+
+    /**
+     * Restore a specific prompt version
+     * @param {string} promptId - ID of the prompt to restore
+     */
+    function restorePromptVersion(promptId) {
+      try {
+        const history = loadPromptHistory();
+        const version = history.find(v => v.promptId === promptId);
+
+        if (version) {
+          // Update current prompt
+          savePromptToStorage(version.sections);
+
+          // Update UI if modal is open
+          document.getElementById('systemRoleInput').value = version.sections.systemRole;
+          document.getElementById('jsonSchemaInput').value = version.sections.jsonSchema;
+          document.getElementById('extractionRulesInput').value = version.sections.extractionRules;
+          document.getElementById('examplesInput').value = version.sections.examples;
+
+          updateFullPromptPreview();
+
+          console.log('[Prompt History] Restored version:', promptId);
+          return true;
+        } else {
+          console.warn('[Prompt History] Version not found:', promptId);
+          return false;
+        }
+      } catch (error) {
+        console.error('[Prompt History] Error restoring version:', error);
+        return false;
+      }
+    }
+
+    /**
+     * Delete a specific prompt version
+     * @param {string} promptId - ID of the prompt to delete
+     */
+    function deletePromptVersion(promptId) {
+      try {
+        let history = loadPromptHistory();
+        history = history.filter(v => v.promptId !== promptId);
+        localStorage.setItem('promptHistory', JSON.stringify(history));
+        console.log('[Prompt History] Deleted version:', promptId);
+        return true;
+      } catch (error) {
+        console.error('[Prompt History] Error deleting version:', error);
+        return false;
+      }
+    }
+
+    /**
+     * Compare two prompt versions
+     * @param {string} promptId1 - First prompt ID
+     * @param {string} promptId2 - Second prompt ID (or 'current')
+     * @returns {Object} - Diff object with changes
+     */
+    function comparePrompts(promptId1, promptId2) {
+      try {
+        const history = loadPromptHistory();
+
+        let version1, version2;
+
+        if (promptId2 === 'current') {
+          version1 = history.find(v => v.promptId === promptId1);
+          version2 = {
+            promptId: 'current',
+            sections: loadPromptFromStorage(),
+            fullPrompt: assembleFullPrompt(loadPromptFromStorage())
+          };
+        } else {
+          version1 = history.find(v => v.promptId === promptId1);
+          version2 = history.find(v => v.promptId === promptId2);
+        }
+
+        if (!version1 || !version2) {
+          console.warn('[Prompt History] One or both versions not found');
+          return null;
+        }
+
+        // Create simple diff object
+        const diff = {
+          version1: version1,
+          version2: version2,
+          sections: {
+            systemRole: {
+              changed: version1.sections.systemRole !== version2.sections.systemRole,
+              v1: version1.sections.systemRole,
+              v2: version2.sections.systemRole
+            },
+            jsonSchema: {
+              changed: version1.sections.jsonSchema !== version2.sections.jsonSchema,
+              v1: version1.sections.jsonSchema,
+              v2: version2.sections.jsonSchema
+            },
+            extractionRules: {
+              changed: version1.sections.extractionRules !== version2.sections.extractionRules,
+              v1: version1.sections.extractionRules,
+              v2: version2.sections.extractionRules
+            },
+            examples: {
+              changed: version1.sections.examples !== version2.sections.examples,
+              v1: version1.sections.examples,
+              v2: version2.sections.examples
+            }
+          }
+        };
+
+        return diff;
+      } catch (error) {
+        console.error('[Prompt History] Error comparing prompts:', error);
+        return null;
+      }
+    }
+
+    /**
+     * Export prompt version as JSON
+     * @param {string} promptId - ID of the prompt to export
+     */
+    function exportPromptVersion(promptId) {
+      try {
+        const history = loadPromptHistory();
+        const version = history.find(v => v.promptId === promptId);
+
+        if (version) {
+          const json = JSON.stringify(version, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `prompt-${promptId}.json`;
+          a.click();
+
+          URL.revokeObjectURL(url);
+          console.log('[Prompt History] Exported version:', promptId);
+          return true;
+        } else {
+          console.warn('[Prompt History] Version not found:', promptId);
+          return false;
+        }
+      } catch (error) {
+        console.error('[Prompt History] Error exporting version:', error);
+        return false;
+      }
+    }
+
+    // Make functions available globally for UI
+    window.PromptVersionHistory = {
+      save: savePromptVersion,
+      load: loadPromptHistory,
+      restore: restorePromptVersion,
+      delete: deletePromptVersion,
+      compare: comparePrompts,
+      export: exportPromptVersion
+    };
+
+    // ========== END PROMPT VERSION HISTORY ==========
+
+    // Initialize prompt editor when modal is shown
+    document.getElementById('promptEditorModal')?.addEventListener('show.bs.modal', function() {
+      const currentPrompt = loadPromptFromStorage();
+
+      // Populate textareas
+      document.getElementById('systemRoleInput').value = currentPrompt.systemRole;
+      document.getElementById('jsonSchemaInput').value = currentPrompt.jsonSchema;
+      document.getElementById('extractionRulesInput').value = currentPrompt.extractionRules;
+      document.getElementById('examplesInput').value = currentPrompt.examples;
+
+      // Update preview
+      updateFullPromptPreview();
+    });
+
+    // Update full prompt preview when any tab is changed
+    function updateFullPromptPreview() {
+      const sections = {
+        systemRole: document.getElementById('systemRoleInput').value,
+        jsonSchema: document.getElementById('jsonSchemaInput').value,
+        extractionRules: document.getElementById('extractionRulesInput').value,
+        examples: document.getElementById('examplesInput').value
+      };
+
+      const fullPrompt = assembleFullPrompt(sections);
+      document.getElementById('fullPromptPreview').value = fullPrompt;
+    }
+
+    // Update preview when switching to Full Prompt tab
+    document.getElementById('fullPrompt-tab')?.addEventListener('shown.bs.tab', updateFullPromptPreview);
+
+    // Also update preview when typing in any textarea (with debounce)
+    let previewUpdateTimeout;
+    ['systemRoleInput', 'jsonSchemaInput', 'extractionRulesInput', 'examplesInput'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', function() {
+        clearTimeout(previewUpdateTimeout);
+        previewUpdateTimeout = setTimeout(updateFullPromptPreview, 500);
+      });
+    });
+
+    // Save prompt button
+    document.getElementById('savePromptBtn')?.addEventListener('click', function() {
+      const sections = {
+        systemRole: document.getElementById('systemRoleInput').value,
+        jsonSchema: document.getElementById('jsonSchemaInput').value,
+        extractionRules: document.getElementById('extractionRulesInput').value,
+        examples: document.getElementById('examplesInput').value
+      };
+
+      savePromptToStorage(sections);
+
+      // Show success feedback
+      const btn = this;
+      const originalText = btn.textContent;
+      btn.textContent = 'Saved!';
+      btn.classList.remove('btn-info');
+      btn.classList.add('btn-success');
+
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-info');
+      }, 2000);
+    });
+
+    // Save and convert button
+    document.getElementById('saveAndConvertBtn')?.addEventListener('click', function() {
+      const sections = {
+        systemRole: document.getElementById('systemRoleInput').value,
+        jsonSchema: document.getElementById('jsonSchemaInput').value,
+        extractionRules: document.getElementById('extractionRulesInput').value,
+        examples: document.getElementById('examplesInput').value
+      };
+
+      savePromptToStorage(sections);
+
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('promptEditorModal'));
+      modal?.hide();
+
+      // Trigger conversion
+      multiConvert();
+    });
+
+    // Reset to default button
+    document.getElementById('resetPromptBtn')?.addEventListener('click', function() {
+      if (confirm('Are you sure you want to reset the prompt to default? This will overwrite your custom prompt.')) {
+        document.getElementById('systemRoleInput').value = DEFAULT_PROMPT.systemRole;
+        document.getElementById('jsonSchemaInput').value = DEFAULT_PROMPT.jsonSchema;
+        document.getElementById('extractionRulesInput').value = DEFAULT_PROMPT.extractionRules;
+        document.getElementById('examplesInput').value = DEFAULT_PROMPT.examples;
+
+        savePromptToStorage(DEFAULT_PROMPT);
+        updateFullPromptPreview();
+
+        // Show feedback
+        const btn = this;
+        const originalText = btn.textContent;
+        btn.textContent = 'Reset Complete!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      }
+    });
+
+    // Export function to get custom prompt for use in llm-service.js
+    window.getCustomPromptSections = function() {
+      return loadPromptFromStorage();
+    };
+
+    // ========== VERSION HISTORY UI HANDLERS ==========
+
+    /**
+     * Render version history list
+     */
+    function renderVersionHistoryList() {
+      const versionList = document.getElementById('promptVersionList');
+      const emptyState = document.getElementById('emptyVersionState');
+
+      if (!versionList) return;
+
+      const history = loadPromptHistory();
+
+      if (history.length === 0) {
+        versionList.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+      }
+
+      if (emptyState) emptyState.style.display = 'none';
+
+      // Render version cards
+      versionList.innerHTML = history.map((version, index) => {
+        const timestamp = new Date(version.timestamp);
+        const dateStr = timestamp.toLocaleString();
+        const isFirst = index === 0;
+
+        return `
+          <div class="list-group-item">
+            <div class="d-flex w-100 justify-content-between align-items-start">
+              <div>
+                <h6 class="mb-1">
+                  Version ${history.length - index}
+                  ${isFirst ? '<span class="badge bg-success ms-2">Latest</span>' : ''}
+                </h6>
+                <p class="mb-1 text-muted small">${dateStr}</p>
+                <p class="mb-1 small">${version.description || 'No description'}</p>
+              </div>
+              <div class="btn-group-vertical btn-group-sm">
+                <button class="btn btn-outline-primary btn-sm" onclick="viewPromptVersion('${version.promptId}')">
+                  View
+                </button>
+                <button class="btn btn-outline-info btn-sm" onclick="comparePromptVersion('${version.promptId}')">
+                  Compare
+                </button>
+                <button class="btn btn-outline-success btn-sm" onclick="restorePromptVersionUI('${version.promptId}')">
+                  Restore
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportPromptVersionUI('${version.promptId}')">
+                  Export
+                </button>
+                ${!isFirst ? `<button class="btn btn-outline-danger btn-sm" onclick="deletePromptVersionUI('${version.promptId}')">Delete</button>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**
+     * View a specific prompt version (show in modal/alert)
+     */
+    window.viewPromptVersion = function(promptId) {
+      const history = loadPromptHistory();
+      const version = history.find(v => v.promptId === promptId);
+
+      if (version) {
+        const content = `
+=== SYSTEM ROLE ===
+${version.sections.systemRole}
+
+=== JSON SCHEMA ===
+${version.sections.jsonSchema}
+
+=== EXTRACTION RULES ===
+${version.sections.extractionRules}
+
+=== EXAMPLES ===
+${version.sections.examples}
+        `.trim();
+
+        // Create a modal-like display using Bootstrap alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-light border';
+        alertDiv.style.cssText = 'max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 12px;';
+        alertDiv.textContent = content;
+
+        const container = document.getElementById('diffOutputContainer');
+        container.innerHTML = '';
+        container.appendChild(alertDiv);
+
+        document.getElementById('diffViewerSection').style.display = 'block';
+      }
+    };
+
+    /**
+     * Compare prompt version with current
+     */
+    window.comparePromptVersion = function(promptId) {
+      try {
+        const history = loadPromptHistory();
+        const version = history.find(v => v.promptId === promptId);
+        const current = loadPromptFromStorage();
+
+        if (!version) {
+          alert('Version not found');
+          return;
+        }
+
+        // Check if Diff library is available
+        if (!window.Diff) {
+          alert('Diff library not loaded. Please refresh the page.');
+          return;
+        }
+
+        // Create unified diff for full prompt
+        const oldText = version.fullPrompt;
+        const newText = assembleFullPrompt(current);
+
+        const diff = window.Diff.createPatch(
+          'prompt.txt',
+          oldText,
+          newText,
+          `Version ${new Date(version.timestamp).toLocaleString()}`,
+          'Current Version'
+        );
+
+        // Render with diff2html
+        const diffContainer = document.getElementById('diffOutputContainer');
+
+        if (window.Diff2HtmlUI) {
+          const diff2htmlUi = new window.Diff2HtmlUI(diffContainer, diff, {
+            drawFileList: false,
+            matching: 'lines',
+            outputFormat: 'side-by-side',
+            highlight: true
+          });
+          diff2htmlUi.draw();
+        } else {
+          // Fallback: simple text display
+          diffContainer.innerHTML = `<pre style="white-space: pre-wrap; font-size: 12px;">${diff}</pre>`;
+        }
+
+        document.getElementById('diffViewerSection').style.display = 'block';
+      } catch (error) {
+        console.error('[Version History] Error comparing versions:', error);
+        alert('Error comparing versions. Check console for details.');
+      }
+    };
+
+    /**
+     * Restore prompt version with confirmation
+     */
+    window.restorePromptVersionUI = function(promptId) {
+      const history = loadPromptHistory();
+      const version = history.find(v => v.promptId === promptId);
+
+      if (!version) {
+        alert('Version not found');
+        return;
+      }
+
+      const timestamp = new Date(version.timestamp).toLocaleString();
+      if (confirm(`Restore prompt version from ${timestamp}?\n\nThis will replace your current prompt.`)) {
+        const success = restorePromptVersion(promptId);
+
+        if (success) {
+          alert('Version restored successfully!');
+          // Refresh the version list
+          renderVersionHistoryList();
+        } else {
+          alert('Error restoring version. Please try again.');
+        }
+      }
+    };
+
+    /**
+     * Export prompt version as JSON
+     */
+    window.exportPromptVersionUI = function(promptId) {
+      exportPromptVersion(promptId);
+    };
+
+    /**
+     * Delete prompt version with confirmation
+     */
+    window.deletePromptVersionUI = function(promptId) {
+      const history = loadPromptHistory();
+      const version = history.find(v => v.promptId === promptId);
+
+      if (!version) {
+        alert('Version not found');
+        return;
+      }
+
+      const timestamp = new Date(version.timestamp).toLocaleString();
+      if (confirm(`Delete prompt version from ${timestamp}?\n\nThis action cannot be undone.`)) {
+        const success = deletePromptVersion(promptId);
+
+        if (success) {
+          // Refresh the version list
+          renderVersionHistoryList();
+          // Hide diff viewer if it was showing the deleted version
+          document.getElementById('diffViewerSection').style.display = 'none';
+        } else {
+          alert('Error deleting version. Please try again.');
+        }
+      }
+    };
+
+    // Load version history when Version History tab is shown
+    document.getElementById('versionHistory-tab')?.addEventListener('shown.bs.tab', function() {
+      renderVersionHistoryList();
+    });
+
+    // Close diff viewer button
+    document.getElementById('closeDiffBtn')?.addEventListener('click', function() {
+      document.getElementById('diffViewerSection').style.display = 'none';
+    });
+
+    // ========== END VERSION HISTORY UI HANDLERS ==========
+
+    // ========== METADATA VIEWER HANDLERS ==========
+
+    // Store latest metadata for display
+    window.latestConversionMetadata = null;
+
+    /**
+     * Display conversion metadata in Status Modal
+     */
+    function displayConversionMetadata(metadata) {
+      if (!metadata) return;
+
+      window.latestConversionMetadata = metadata;
+      const contentDiv = document.getElementById('metadataContent');
+      const actionsDiv = document.getElementById('metadataActions');
+
+      if (!contentDiv) return;
+
+      // Create formatted display
+      const html = `
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <strong>Conversion ID:</strong> ${metadata.conversionId}
+          </div>
+          <div class="card-body">
+            <h6 class="card-title">Source Information</h6>
+            <ul class="list-unstyled">
+              <li><strong>Experiment ID:</strong> ${metadata.source?.elabftw?.experimentId || 'N/A'}</li>
+              <li><strong>Title:</strong> ${metadata.source?.elabftw?.title || 'N/A'}</li>
+              <li><strong>Author:</strong> ${metadata.source?.elabftw?.author || 'N/A'}</li>
+              <li><strong>Instance:</strong> ${metadata.source?.elabftw?.instance || 'N/A'}</li>
+            </ul>
+
+            <h6 class="card-title mt-3">Timing</h6>
+            <ul class="list-unstyled">
+              <li><strong>Start:</strong> ${new Date(metadata.timestamp?.start).toLocaleString()}</li>
+              <li><strong>Duration:</strong> ${(metadata.timestamp?.duration / 1000).toFixed(2)}s</li>
+            </ul>
+
+            ${metadata.llm?.enabled ? `
+            <h6 class="card-title mt-3">LLM Configuration</h6>
+            <ul class="list-unstyled">
+              <li><strong>Model:</strong> ${metadata.llm.model}</li>
+              <li><strong>Model Used:</strong> ${metadata.llm.modelUsed}</li>
+              <li><strong>Temperature:</strong> ${metadata.llm.apiParams?.temperature}</li>
+              <li><strong>Max Tokens:</strong> ${metadata.llm.apiParams?.max_tokens}</li>
+            </ul>
+
+            <h6 class="card-title mt-3">Results</h6>
+            <ul class="list-unstyled">
+              <li><strong>Status:</strong> <span class="badge ${metadata.results?.status === 'success' ? 'bg-success' : 'bg-warning'}">${metadata.results?.status}</span></li>
+              <li><strong>Samples Extracted:</strong> ${metadata.results?.samplesExtracted || 0}</li>
+              <li><strong>Protocols Extracted:</strong> ${metadata.results?.protocolsExtracted || 0}</li>
+            </ul>
+
+            <details class="mt-3">
+              <summary style="cursor: pointer;"><strong>Prompt Used (Click to Expand)</strong></summary>
+              <pre style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 11px;">${metadata.llm.prompt?.full || 'No prompt available'}</pre>
+            </details>
+            ` : `
+            <p class="text-muted mt-3">LLM was not enabled for this conversion.</p>
+            `}
+          </div>
+        </div>
+      `;
+
+      contentDiv.innerHTML = html;
+
+      if (actionsDiv) {
+        actionsDiv.style.display = 'block';
+      }
+    }
+
+    // Download metadata button handler
+    document.getElementById('downloadMetadataBtn')?.addEventListener('click', function() {
+      if (window.latestConversionMetadata && window.Elab2ArcMetadata) {
+        const url = window.Elab2ArcMetadata.exportMetadataAsJSON(window.latestConversionMetadata);
+        if (url) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `conversion-metadata-${window.latestConversionMetadata.conversionId}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+    });
+
+    // View troubleshooting report button handler
+    document.getElementById('viewTroubleshootingReportBtn')?.addEventListener('click', function() {
+      if (window.latestConversionMetadata && window.Elab2ArcMetadata) {
+        const report = window.Elab2ArcMetadata.generateTroubleshootingReport(window.latestConversionMetadata);
+
+        // Display report in a new window or modal
+        const reportWindow = window.open('', 'Troubleshooting Report', 'width=800,height=600');
+        if (reportWindow) {
+          reportWindow.document.write(`
+            <html>
+              <head>
+                <title>Troubleshooting Report</title>
+                <style>
+                  body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+                  pre { background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto; }
+                  h1, h2, h3 { color: #333; }
+                </style>
+              </head>
+              <body>
+                <pre>${report}</pre>
+              </body>
+            </html>
+          `);
+          reportWindow.document.close();
+        }
+      }
+    });
+
+    // Make display function available globally
+    window.displayConversionMetadata = displayConversionMetadata;
+
+    // ========== END METADATA VIEWER HANDLERS ==========
 
     addEventListener("hashchange", (event) => {
       if (true) {
