@@ -240,7 +240,8 @@ video {
             <input type="password" onchange="initCookies();" name="elabtoken" class="form-control"
               autocomplete="password" id="elabToken" required />
             <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="elabtoken"
-              onclick=" document.getElementById('elabToken').value = '20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320'; ">
+              onclick=" document.getElementById('elabToken').value = '20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320'; initCookies(); "
+              title="Load demo/test API key for eLabFTW">
               get a test api key
             </button>
             <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="elabToken"
@@ -260,7 +261,7 @@ video {
           </label>
 
           <div class="input-group mb-3">
-            <input type="password" name="datahubtoken" class="form-control" autocomplete="new-password"
+            <input type="password" onchange="initCookies();" name="datahubtoken" class="form-control" autocomplete="new-password"
               id="datahubToken" required />
             <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="datahubToken"
               onclick="location.href='https://datahublogin.dataplan.top/auth/gitlab'">
@@ -280,7 +281,7 @@ video {
             Together.AI API Key (for LLM Datamap Generation)
           </label>
           <div class="input-group mb-3">
-            <input type="password" name="togetherAPIKey" class="form-control" autocomplete="new-password"
+            <input type="password" onchange="initCookies();" name="togetherAPIKey" class="form-control" autocomplete="new-password"
               id="togetherAPIKey" placeholder="Enter Together.AI API key" />
             <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="togetherAPIKey"
               onclick="showPassword(this)">
@@ -996,12 +997,12 @@ video {
   <script src="./js/MEMfsGUI1006.js?v=20251008101314" type="text/javascript" charset="utf-8"></script>
 
   <!-- Load modular components before core -->
-  <script src="./js/modules/conversion-metadata.js?v=20251020150000" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/conversion-metadata.js?v=20251020200000" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/isa-generation.js?v=20251008120855" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/llm-service.js?v=20251008120855" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core1006b.js?v=20251020150000" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core1006c.js?v=20251020180000" type="text/javascript" charset="utf-8"></script>
 
 </body>
 
