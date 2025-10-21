@@ -53,14 +53,42 @@
     return isAbsolute ? `/${normalized}` : normalized || '.';
   }
 
+  // Valid model IDs available in Together AI
+  const VALID_MODELS = [
+    'meta-llama/Llama-3.2-3B-Instruct-Turbo',
+    'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
+    'openai/gpt-oss-20b',
+    'openai/gpt-oss-120b',
+    'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',
+    'google/gemma-3n-E4B-it',
+    'lgai/exaone-deep-32b',
+    'ServiceNow-AI/Apriel-1.5-15b-Thinker',
+    'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free'
+  ];
+
+  const DEFAULT_MODEL = 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput';
+
   /**
-   * Get the currently selected LLM model from localStorage
+   * Get the currently selected LLM model from localStorage with validation
    * @returns {string} - Model identifier
    */
   function getSelectedModel() {
     const savedModel = window.localStorage.getItem('togetherAIModel');
-    // Default to Llama if not set
-    return savedModel || 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free';
+
+    // If no saved model, use default
+    if (!savedModel) {
+      return DEFAULT_MODEL;
+    }
+
+    // Validate saved model against valid list
+    if (VALID_MODELS.includes(savedModel)) {
+      return savedModel;
+    }
+
+    // Invalid model found - clear it and use default
+    console.warn(`[LLM Model] Invalid model in localStorage: "${savedModel}". Resetting to default: "${DEFAULT_MODEL}"`);
+    window.localStorage.removeItem('togetherAIModel');
+    return DEFAULT_MODEL;
   }
 
   /**
