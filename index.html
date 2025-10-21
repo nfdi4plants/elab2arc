@@ -826,19 +826,19 @@ video {
     <div class="modal fade" id="promptEditorModal" tabindex="-1" aria-labelledby="promptEditorModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-fullscreen">
         <div class="modal-content">
-          <div class="modal-header bg-info text-white">
+          <div class="modal-header bg-light border-bottom">
             <h1 class="modal-title fs-5" id="promptEditorModalLabel">AI Prompt Editor</h1>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <!-- Alert for user guidance -->
-            <div class="alert alert-info" role="alert">
+            <!-- Alert for user guidance (shown only on first visit) -->
+            <div class="alert alert-light border-start border-info border-3" role="alert" id="promptEditorWelcome" style="display: none; padding: 0.5rem 1rem;">
               <strong>Welcome to the AI Prompt Editor!</strong> Here you can customize the LLM prompt used for protocol analysis.
               Changes are saved locally and will be used for future conversions. Click <strong>Reset to Default</strong> to restore the original prompt.
             </div>
 
             <!-- Tabbed Interface -->
-            <ul class="nav nav-tabs" id="promptEditorTabs" role="tablist">
+            <ul class="nav nav-tabs nav-tabs-sm" id="promptEditorTabs" role="tablist" style="margin-bottom: 0.75rem;">
               <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="systemRole-tab" data-bs-toggle="tab" data-bs-target="#systemRole" type="button" role="tab" aria-controls="systemRole" aria-selected="true">
                   System Role
@@ -872,67 +872,83 @@ video {
             </ul>
 
             <!-- Tab Content -->
-            <div class="tab-content mt-3" id="promptEditorTabContent">
+            <div class="tab-content" id="promptEditorTabContent">
               <!-- System Role Tab -->
               <div class="tab-pane fade show active" id="systemRole" role="tabpanel" aria-labelledby="systemRole-tab">
-                <div class="alert alert-secondary" role="alert">
+                <div class="text-muted small mb-2" style="padding: 0.25rem 0;">
                   <strong>System Role:</strong> This defines the AI's role and sets the context for analysis. Be clear and specific.
                 </div>
-                <label for="systemRoleInput" class="form-label">System Role and Context</label>
-                <textarea class="form-control font-monospace" id="systemRoleInput" rows="6" placeholder="You are a scientific data extraction assistant..."></textarea>
+                <label for="systemRoleInput" class="form-label small mb-1">System Role and Context</label>
+                <textarea class="form-control form-control-sm font-monospace" id="systemRoleInput" rows="6" placeholder="You are a scientific data extraction assistant..."></textarea>
               </div>
 
               <!-- JSON Schema Tab -->
               <div class="tab-pane fade" id="jsonSchema" role="tabpanel" aria-labelledby="jsonSchema-tab">
-                <div class="alert alert-secondary" role="alert">
+                <div class="text-muted small mb-2" style="padding: 0.25rem 0;">
                   <strong>JSON Schema:</strong> This defines the expected structure of the JSON output. Only modify if you understand ISA-Tab format.
                 </div>
-                <label for="jsonSchemaInput" class="form-label">Expected JSON Output Structure</label>
-                <textarea class="form-control font-monospace" id="jsonSchemaInput" rows="20" placeholder='{"samples": [...], "protocols": [...]}'></textarea>
+                <label for="jsonSchemaInput" class="form-label small mb-1">Expected JSON Output Structure</label>
+                <textarea class="form-control form-control-sm font-monospace" id="jsonSchemaInput" rows="20" placeholder='{"samples": [...], "protocols": [...]}'></textarea>
               </div>
 
               <!-- Extraction Rules Tab -->
               <div class="tab-pane fade" id="extractionRules" role="tabpanel" aria-labelledby="extractionRules-tab">
-                <div class="alert alert-secondary" role="alert">
+                <div class="text-muted small mb-2" style="padding: 0.25rem 0;">
                   <strong>Extraction Rules:</strong> These are critical instructions for parameter extraction, sample handling, protocol linking, and data file mapping.
                 </div>
-                <label for="extractionRulesInput" class="form-label">Extraction Rules</label>
-                <textarea class="form-control font-monospace" id="extractionRulesInput" rows="20" placeholder="CRITICAL - PARAMETER EXTRACTION RULES: ..."></textarea>
+                <label for="extractionRulesInput" class="form-label small mb-1">Extraction Rules</label>
+                <textarea class="form-control form-control-sm font-monospace" id="extractionRulesInput" rows="20" placeholder="CRITICAL - PARAMETER EXTRACTION RULES: ..."></textarea>
               </div>
 
               <!-- Examples Tab -->
               <div class="tab-pane fade" id="examples" role="tabpanel" aria-labelledby="examples-tab">
-                <div class="alert alert-secondary" role="alert">
+                <div class="text-muted small mb-2" style="padding: 0.25rem 0;">
                   <strong>Examples:</strong> Provide concrete examples to guide the AI's output format. Good examples improve extraction accuracy.
                 </div>
-                <label for="examplesInput" class="form-label">Examples of Good Extraction</label>
-                <textarea class="form-control font-monospace" id="examplesInput" rows="20" placeholder="EXAMPLES: **Good parameter extraction**..."></textarea>
+                <label for="examplesInput" class="form-label small mb-1">Examples of Good Extraction</label>
+                <textarea class="form-control form-control-sm font-monospace" id="examplesInput" rows="20" placeholder="EXAMPLES: **Good parameter extraction**..."></textarea>
               </div>
 
               <!-- Full Prompt Preview Tab -->
               <div class="tab-pane fade" id="fullPrompt" role="tabpanel" aria-labelledby="fullPrompt-tab">
-                <div class="alert alert-warning" role="alert">
+                <div class="text-muted small mb-2" style="padding: 0.25rem 0;">
                   <strong>Read-Only Preview:</strong> This shows how your sections combine into the final prompt sent to the AI.
                 </div>
-                <label for="fullPromptPreview" class="form-label">Assembled Prompt (Read-Only)</label>
-                <textarea class="form-control font-monospace bg-light" id="fullPromptPreview" rows="25" readonly></textarea>
+                <label for="fullPromptPreview" class="form-label small mb-1">Assembled Prompt (Read-Only)</label>
+                <textarea class="form-control form-control-sm font-monospace bg-light" id="fullPromptPreview" rows="25" readonly></textarea>
               </div>
 
               <!-- Version History Tab -->
               <div class="tab-pane fade" id="versionHistory" role="tabpanel" aria-labelledby="versionHistory-tab">
-                <div class="alert alert-info" role="alert">
-                  <strong>Version History:</strong> Your last 20 prompt versions are saved automatically. Compare, restore, or export previous versions.
+                <div class="alert alert-light border-start border-info border-3" role="alert" id="versionHistoryWelcome" style="display: none; padding: 0.5rem 1rem; margin-bottom: 0.75rem;">
+                  <strong>Version History:</strong> Your last 50 prompt versions are saved automatically. Compare, restore, export, or import previous versions.
+                </div>
+
+                <!-- Controls Toolbar -->
+                <div class="d-flex gap-2 align-items-center flex-wrap mb-2">
+                  <input type="text" class="form-control form-control-sm" id="versionSearchInput" placeholder="Search versions..." style="max-width: 250px;">
+                  <span class="text-muted small" id="versionCountDisplay"></span>
+                  <div class="ms-auto d-flex gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="exportAllVersionsBtn" title="Export all versions">
+                      Export All
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="importSingleVersionBtn" title="Import single version">
+                      Import Single
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="importAllVersionsBtn" title="Import all versions">
+                      Import All
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Version List -->
-                <div class="row">
-                  <div class="col-md-12">
-                    <h6>Saved Versions</h6>
-                    <div class="list-group" id="promptVersionList" style="max-height: 400px; overflow-y: auto;">
-                      <!-- Version items will be dynamically inserted here -->
-                    </div>
-                  </div>
+                <div class="list-group list-group-flush" id="promptVersionList" style="max-height: 450px; overflow-y: auto;">
+                  <!-- Version items will be dynamically inserted here -->
                 </div>
+
+                <!-- Hidden file inputs for import -->
+                <input type="file" id="importSingleFileInput" accept=".json" style="display: none;">
+                <input type="file" id="importAllFileInput" accept=".json" style="display: none;">
 
                 <!-- Diff Viewer -->
                 <div class="row mt-4" id="diffViewerSection" style="display: none;">
@@ -955,15 +971,15 @@ video {
               </div>
             </div>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer bg-light border-top py-2">
             <button type="button" class="btn btn-outline-secondary btn-sm" id="resetPromptBtn">
               Reset to Default
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-info btn-sm" id="savePromptBtn">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="savePromptBtn">
               Save Prompt
             </button>
-            <button type="button" class="btn btn-primary btn-sm" id="saveAndConvertBtn">
+            <button type="button" class="btn btn-dark btn-sm" id="saveAndConvertBtn">
               Save &amp; Start Conversion
             </button>
           </div>
@@ -997,12 +1013,12 @@ video {
   <script src="./js/MEMfsGUI1006.js?v=20251008101314" type="text/javascript" charset="utf-8"></script>
 
   <!-- Load modular components before core -->
-  <script src="./js/modules/conversion-metadata.js?v=20251020200000" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/conversion-metadata.js?v=20251021100100" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/isa-generation.js?v=20251008120855" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/llm-service.js?v=20251008120855" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core1006c.js?v=20251020180000" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core1006c.js?v=20251021120000" type="text/javascript" charset="utf-8"></script>
 
 </body>
 
