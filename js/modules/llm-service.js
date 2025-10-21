@@ -94,9 +94,16 @@
   /**
    * Get fallback models to try when rate limited
    * Reads from localStorage or returns default fallbacks
+   * ALWAYS includes Qwen and gpt-oss-120b as mandatory fallbacks
    * @returns {Array<string>} - Array of fallback model identifiers
    */
   function getFallbackModels() {
+    // Mandatory fallback models (always included for reliability)
+    const mandatoryFallbacks = [
+      'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',  // 262K context, largest window
+      'openai/gpt-oss-120b'             // 32K context, OpenAI's largest
+    ];
+
     // Try to get user-configured fallback models from localStorage
     const savedFallbackModels = window.localStorage.getItem('togetherAIFallbackModels');
 
@@ -104,21 +111,31 @@
       try {
         const fallbackList = JSON.parse(savedFallbackModels);
         if (Array.isArray(fallbackList) && fallbackList.length > 0) {
-          console.log(`[Fallback Models] Using user-configured models: ${fallbackList.join(', ')}`);
-          return fallbackList;
+          // Ensure mandatory fallbacks are included
+          const combined = [...mandatoryFallbacks];
+
+          // Add user-selected models that aren't already in mandatory list
+          for (const model of fallbackList) {
+            if (!combined.includes(model)) {
+              combined.push(model);
+            }
+          }
+
+          console.log(`[Fallback Models] User-configured + mandatory: ${combined.join(', ')}`);
+          return combined;
         }
       } catch (e) {
         console.warn('[Fallback Models] Could not parse saved fallback models, using defaults');
       }
     }
 
-    // Default fallback models if none configured
+    // Default fallback models if none configured (ordered by context window size)
     console.log('[Fallback Models] Using default fallback models');
     return [
-      'openai/gpt-oss-20b',             // 20B model, balanced
-      'openai/gpt-oss-120b',            // 120B model, large capacity
-      'google/gemma-3n-E4B-it',         // Google Gemma, efficient
-      'lgai/exaone-deep-32b'            // 32B model, good for complex reasoning
+      'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',  // 262K context, largest window
+      'openai/gpt-oss-120b',            // 32K context, OpenAI's largest
+      'google/gemma-3n-E4B-it',         // 32K context, Google efficient
+      'lgai/exaone-deep-32b'            // 32K context, good for complex reasoning
     ];
   }
 
