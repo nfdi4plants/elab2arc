@@ -4009,8 +4009,8 @@ Return ONLY valid JSON, no additional text.`
         // Add new version at the beginning
         history.unshift(version);
 
-        // Keep only last 20 versions
-        history = history.slice(0, 20);
+        // Keep only last 50 versions
+        history = history.slice(0, 50);
 
         // Save back to localStorage
         localStorage.setItem('promptHistory', JSON.stringify(history));
@@ -4210,6 +4210,18 @@ Return ONLY valid JSON, no additional text.`
 
       // Update preview
       updateFullPromptPreview();
+
+      // Check if this is the first time opening the prompt editor
+      const hasVisited = localStorage.getItem('promptEditorVisited');
+      if (!hasVisited) {
+        // Show welcome message
+        const welcomeAlert = document.getElementById('promptEditorWelcome');
+        if (welcomeAlert) {
+          welcomeAlert.style.display = 'block';
+        }
+        // Mark as visited
+        localStorage.setItem('promptEditorVisited', 'true');
+      }
     });
 
     // Update full prompt preview when any tab is changed
@@ -4328,42 +4340,93 @@ Return ONLY valid JSON, no additional text.`
 
       if (emptyState) emptyState.style.display = 'none';
 
-      // Render version cards
+      // Render version cards with compact horizontal layout
       versionList.innerHTML = history.map((version, index) => {
         const timestamp = new Date(version.timestamp);
-        const dateStr = timestamp.toLocaleString();
+        const dateStr = timestamp.toLocaleDateString() + ', ' + timestamp.toLocaleTimeString();
         const isFirst = index === 0;
+        const versionNumber = history.length - index;
 
         return `
-          <div class="list-group-item">
-            <div class="d-flex w-100 justify-content-between align-items-start">
-              <div>
-                <h6 class="mb-1">
-                  Version ${history.length - index}
-                  ${isFirst ? '<span class="badge bg-success ms-2">Latest</span>' : ''}
-                </h6>
-                <p class="mb-1 text-muted small">${dateStr}</p>
-                <p class="mb-1 small">${version.description || 'No description'}</p>
+          <div class="list-group-item" data-version-id="${version.promptId}" data-version-number="${versionNumber}" data-version-date="${dateStr}" data-version-desc="${version.description || ''}">
+            <div class="d-flex w-100 justify-content-between align-items-center gap-2">
+              <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
+                <strong class="text-nowrap">Version ${versionNumber}</strong>
+                ${isFirst ? '<span class="badge bg-success">Latest</span>' : ''}
+                <span class="text-muted small text-nowrap">${dateStr}</span>
               </div>
-              <div class="btn-group-vertical btn-group-sm">
-                <button class="btn btn-outline-primary btn-sm" onclick="viewPromptVersion('${version.promptId}')">
+              <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-outline-primary btn-sm" onclick="viewPromptVersion('${version.promptId}')" title="View this version">
                   View
                 </button>
-                <button class="btn btn-outline-info btn-sm" onclick="comparePromptVersion('${version.promptId}')">
+                <button class="btn btn-outline-info btn-sm" onclick="comparePromptVersion('${version.promptId}')" title="Compare with current">
                   Compare
                 </button>
-                <button class="btn btn-outline-success btn-sm" onclick="restorePromptVersionUI('${version.promptId}')">
+                <button class="btn btn-outline-success btn-sm" onclick="restorePromptVersionUI('${version.promptId}')" title="Restore this version">
                   Restore
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" onclick="exportPromptVersionUI('${version.promptId}')">
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportPromptVersionUI('${version.promptId}')" title="Export as JSON">
                   Export
                 </button>
-                ${!isFirst ? `<button class="btn btn-outline-danger btn-sm" onclick="deletePromptVersionUI('${version.promptId}')">Delete</button>` : ''}
+                ${!isFirst ? `<button class="btn btn-outline-danger btn-sm" onclick="deletePromptVersionUI('${version.promptId}')" title="Delete this version">Delete</button>` : ''}
               </div>
             </div>
           </div>
         `;
       }).join('');
+
+      // Update version count display
+      updateVersionCount();
+    }
+
+    /**
+     * Update version count display
+     */
+    function updateVersionCount() {
+      const countDisplay = document.getElementById('versionCountDisplay');
+      if (!countDisplay) return;
+
+      const allItems = document.querySelectorAll('#promptVersionList .list-group-item');
+      const visibleItems = Array.from(allItems).filter(item => item.style.display !== 'none');
+      const totalCount = allItems.length;
+
+      if (visibleItems.length === totalCount) {
+        countDisplay.textContent = `${totalCount} version${totalCount !== 1 ? 's' : ''}`;
+      } else {
+        countDisplay.textContent = `Showing ${visibleItems.length} of ${totalCount} versions`;
+      }
+    }
+
+    /**
+     * Filter version list based on search query
+     * @param {string} query - Search query
+     */
+    function filterVersionList(query) {
+      const versionItems = document.querySelectorAll('#promptVersionList .list-group-item');
+      const searchLower = query.toLowerCase().trim();
+
+      if (!searchLower) {
+        // Show all items if search is empty
+        versionItems.forEach(item => item.style.display = '');
+        updateVersionCount();
+        return;
+      }
+
+      versionItems.forEach(item => {
+        const versionNumber = item.dataset.versionNumber || '';
+        const versionDate = item.dataset.versionDate || '';
+        const versionDesc = item.dataset.versionDesc || '';
+
+        const searchText = `${versionNumber} ${versionDate} ${versionDesc}`.toLowerCase();
+
+        if (searchText.includes(searchLower)) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      updateVersionCount();
     }
 
     /**
@@ -4517,14 +4580,235 @@ ${version.sections.examples}
       }
     };
 
+    /**
+     * Export all prompt versions as a single JSON file
+     */
+    function exportAllVersions() {
+      try {
+        const history = loadPromptHistory();
+
+        if (history.length === 0) {
+          alert('No version history to export.');
+          return;
+        }
+
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          exportedBy: 'elab2arc-prompt-editor',
+          versionCount: history.length,
+          versions: history
+        };
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `prompt-history-all-${Date.now()}.json`;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        console.log('[Prompt History] Exported all versions:', history.length);
+        return true;
+      } catch (error) {
+        console.error('[Prompt History] Error exporting all versions:', error);
+        alert('Error exporting versions. Check console for details.');
+        return false;
+      }
+    }
+
+    /**
+     * Import a single prompt version from JSON file
+     * @param {File} file - JSON file to import
+     */
+    function importSingleVersion(file) {
+      try {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          try {
+            const importedData = JSON.parse(e.target.result);
+
+            // Validate structure
+            if (!importedData.promptId || !importedData.sections) {
+              alert('Invalid prompt version file. Missing required fields.');
+              return;
+            }
+
+            // Load existing history
+            let history = loadPromptHistory();
+
+            // Check if this version already exists
+            const existingIndex = history.findIndex(v => v.promptId === importedData.promptId);
+            if (existingIndex >= 0) {
+              if (!confirm('A version with this ID already exists. Replace it?')) {
+                return;
+              }
+              // Remove existing version
+              history.splice(existingIndex, 1);
+            }
+
+            // Add imported version at the beginning
+            history.unshift(importedData);
+
+            // Keep only last 50 versions
+            history = history.slice(0, 50);
+
+            // Save back to localStorage
+            localStorage.setItem('promptHistory', JSON.stringify(history));
+
+            console.log('[Prompt History] Imported single version:', importedData.promptId);
+            alert('Version imported successfully!');
+
+            // Refresh the version list
+            renderVersionHistoryList();
+          } catch (parseError) {
+            console.error('[Prompt History] Error parsing imported file:', parseError);
+            alert('Error parsing JSON file. Please check the file format.');
+          }
+        };
+
+        reader.readAsText(file);
+      } catch (error) {
+        console.error('[Prompt History] Error importing single version:', error);
+        alert('Error importing version. Check console for details.');
+      }
+    }
+
+    /**
+     * Import all prompt versions from JSON file (with auto-backup)
+     * @param {File} file - JSON file to import
+     */
+    function importAllVersions(file) {
+      try {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+          try {
+            const importedData = JSON.parse(e.target.result);
+
+            // Validate structure
+            if (!importedData.versions || !Array.isArray(importedData.versions)) {
+              alert('Invalid prompt history file. Missing or invalid "versions" array.');
+              return;
+            }
+
+            // Confirm replacement
+            const currentHistory = loadPromptHistory();
+            if (currentHistory.length > 0) {
+              const confirmMsg = `This will replace your current ${currentHistory.length} version(s) with ${importedData.versions.length} imported version(s).\n\nYour current history will be automatically downloaded as a backup.\n\nContinue?`;
+              if (!confirm(confirmMsg)) {
+                return;
+              }
+
+              // Auto-backup current history before replacing
+              const backupData = {
+                exportedAt: new Date().toISOString(),
+                exportedBy: 'elab2arc-prompt-editor-auto-backup',
+                versionCount: currentHistory.length,
+                versions: currentHistory
+              };
+
+              const backupJson = JSON.stringify(backupData, null, 2);
+              const backupBlob = new Blob([backupJson], { type: 'application/json' });
+              const backupUrl = URL.createObjectURL(backupBlob);
+
+              const backupLink = document.createElement('a');
+              backupLink.href = backupUrl;
+              backupLink.download = `prompt-history-backup-${Date.now()}.json`;
+              backupLink.click();
+
+              URL.revokeObjectURL(backupUrl);
+              console.log('[Prompt History] Auto-backup created before import');
+            }
+
+            // Replace history with imported versions
+            let newHistory = importedData.versions;
+
+            // Keep only last 50 versions
+            newHistory = newHistory.slice(0, 50);
+
+            // Save to localStorage
+            localStorage.setItem('promptHistory', JSON.stringify(newHistory));
+
+            console.log('[Prompt History] Imported all versions:', newHistory.length);
+            alert(`Successfully imported ${newHistory.length} version(s)!${currentHistory.length > 0 ? '\n\nYour previous history has been downloaded as a backup.' : ''}`);
+
+            // Refresh the version list
+            renderVersionHistoryList();
+          } catch (parseError) {
+            console.error('[Prompt History] Error parsing imported file:', parseError);
+            alert('Error parsing JSON file. Please check the file format.');
+          }
+        };
+
+        reader.readAsText(file);
+      } catch (error) {
+        console.error('[Prompt History] Error importing all versions:', error);
+        alert('Error importing versions. Check console for details.');
+      }
+    }
+
     // Load version history when Version History tab is shown
     document.getElementById('versionHistory-tab')?.addEventListener('shown.bs.tab', function() {
       renderVersionHistoryList();
+
+      // Check if this is the first time viewing version history
+      const hasVisitedVersionHistory = localStorage.getItem('versionHistoryVisited');
+      if (!hasVisitedVersionHistory) {
+        // Show welcome message for version history
+        const versionWelcome = document.getElementById('versionHistoryWelcome');
+        if (versionWelcome) {
+          versionWelcome.style.display = 'block';
+        }
+        // Mark as visited
+        localStorage.setItem('versionHistoryVisited', 'true');
+      }
     });
 
     // Close diff viewer button
     document.getElementById('closeDiffBtn')?.addEventListener('click', function() {
       document.getElementById('diffViewerSection').style.display = 'none';
+    });
+
+    // Search input event listener
+    document.getElementById('versionSearchInput')?.addEventListener('input', function(e) {
+      filterVersionList(e.target.value);
+    });
+
+    // Export All button
+    document.getElementById('exportAllVersionsBtn')?.addEventListener('click', function() {
+      exportAllVersions();
+    });
+
+    // Import Single button
+    document.getElementById('importSingleVersionBtn')?.addEventListener('click', function() {
+      document.getElementById('importSingleFileInput')?.click();
+    });
+
+    // Import All button
+    document.getElementById('importAllVersionsBtn')?.addEventListener('click', function() {
+      document.getElementById('importAllFileInput')?.click();
+    });
+
+    // File input handlers
+    document.getElementById('importSingleFileInput')?.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        importSingleVersion(file);
+        // Reset file input
+        e.target.value = '';
+      }
+    });
+
+    document.getElementById('importAllFileInput')?.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        importAllVersions(file);
+        // Reset file input
+        e.target.value = '';
+      }
     });
 
     // ========== END VERSION HISTORY UI HANDLERS ==========

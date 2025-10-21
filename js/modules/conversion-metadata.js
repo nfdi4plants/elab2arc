@@ -139,18 +139,44 @@
    */
   async function saveMetadataToARC(metadata, assayPath) {
     try {
-      if (!window.FS || !FS || !FS.fs) {
+      if (!window.fs) {
         console.warn('[Metadata] memfs not available, cannot save metadata');
         return null;
       }
 
-      const fs = FS.fs;  // Use global FS (same as elab2arc-core line 10)
+      const fs = window.fs;  // Use global fs from elab2arc-core line 10
+
+      // Validate and log the assayPath input
+      console.log(`[Metadata] AssayPath parameter received: ${assayPath}`);
 
       // Create elab2arc-metadata directory if it doesn't exist (visible, not hidden)
       const metadataDir = `${assayPath}/elab2arc-metadata`;
+      console.log(`[Metadata] Computed metadata directory: ${metadataDir}`);
+
       if (!fs.existsSync(metadataDir)) {
-        fs.mkdirSync(metadataDir, { recursive: true });
-        console.log(`[Metadata] Created directory: ${metadataDir}`);
+        console.log(`[Metadata] Directory does not exist, attempting to create: ${metadataDir}`);
+
+        try {
+          fs.mkdirSync(metadataDir, { recursive: true });
+        } catch (mkdirError) {
+          console.error(`[Metadata] Failed to create directory`);
+          console.error(`[Metadata]   AssayPath: ${assayPath}`);
+          console.error(`[Metadata]   Target directory: ${metadataDir}`);
+          console.error(`[Metadata]   Error:`, mkdirError);
+          throw new Error(`Failed to create metadata directory ${metadataDir}: ${mkdirError.message}`);
+        }
+
+        // VERIFY directory was created successfully
+        if (!fs.existsSync(metadataDir)) {
+          console.error(`[Metadata] CRITICAL: Directory creation did not fail but directory does not exist`);
+          console.error(`[Metadata]   AssayPath: ${assayPath}`);
+          console.error(`[Metadata]   Expected directory: ${metadataDir}`);
+          throw new Error(`Directory creation appeared to succeed but directory does not exist: ${metadataDir}`);
+        }
+
+        console.log(`[Metadata] ✓ Successfully created and verified directory: ${metadataDir}`);
+      } else {
+        console.log(`[Metadata] ✓ Directory already exists: ${metadataDir}`);
       }
 
       // Save primary metadata file with conversion ID
@@ -206,12 +232,12 @@
    */
   function loadConversionHistory(assayPath) {
     try {
-      if (!window.FS || !FS || !FS.fs) {
+      if (!window.fs) {
         console.warn('[Metadata] memfs not available');
         return [];
       }
 
-      const fs = FS.fs;  // Use global FS
+      const fs = window.fs;  // Use global fs from elab2arc-core
       const metadataDir = `${assayPath}/elab2arc-metadata`;
 
       if (!fs.existsSync(metadataDir)) {
@@ -250,11 +276,11 @@
    */
   function loadLatestMetadata(assayPath) {
     try {
-      if (!window.FS || !FS || !FS.fs) {
+      if (!window.fs) {
         return null;
       }
 
-      const fs = FS.fs;  // Use global FS
+      const fs = window.fs;  // Use global fs from elab2arc-core
       const latestPath = `${assayPath}/elab2arc-metadata/latest.json`;
 
       if (!fs.existsSync(latestPath)) {
@@ -295,11 +321,11 @@
    */
   function findConversionByExperimentId(elabId, arcRoot) {
     try {
-      if (!window.FS || !FS || !FS.fs) {
+      if (!window.fs) {
         return [];
       }
 
-      const fs = FS.fs;  // Use global FS
+      const fs = window.fs;  // Use global fs from elab2arc-core
       const results = [];
 
       // Recursively search for elab2arc-metadata folders
