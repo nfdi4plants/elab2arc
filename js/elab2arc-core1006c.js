@@ -1315,27 +1315,57 @@ Date: ${timestamp}`;
         apiKeyInput.value = savedAPIKey;
       }
 
-      // Load saved model selection
+      // Load saved model selection with validation
       const savedModel = window.localStorage.getItem('togetherAIModel');
       const modelSelect = document.getElementById('togetherAIModel');
 
       if (savedModel && modelSelect) {
-        modelSelect.value = savedModel;
+        // Check if savedModel exists in dropdown options
+        const optionExists = Array.from(modelSelect.options).some(option => option.value === savedModel);
+
+        if (optionExists) {
+          modelSelect.value = savedModel;
+          console.log(`[Config] Loaded saved model: ${savedModel}`);
+        } else {
+          // Invalid model - clear localStorage and use dropdown default
+          console.warn(`[Config] Invalid saved model "${savedModel}" - not found in dropdown. Clearing localStorage.`);
+          window.localStorage.removeItem('togetherAIModel');
+          // Dropdown will use its default selected value from HTML
+        }
       }
 
-      // Load saved fallback models selection
+      // Load saved fallback models selection with validation
       const savedFallbackModels = window.localStorage.getItem('togetherAIFallbackModels');
       const fallbackSelect = document.getElementById('togetherAIFallbackModels');
 
       if (savedFallbackModels && fallbackSelect) {
         try {
           const fallbackModelsList = JSON.parse(savedFallbackModels);
-          // Select the saved options
+
+          // Get valid options from dropdown
+          const validOptions = Array.from(fallbackSelect.options).map(opt => opt.value);
+
+          // Filter out any invalid models
+          const validFallbackModels = fallbackModelsList.filter(model => validOptions.includes(model));
+
+          // If some models were invalid, log warning and update localStorage
+          if (validFallbackModels.length !== fallbackModelsList.length) {
+            const invalidModels = fallbackModelsList.filter(model => !validOptions.includes(model));
+            console.warn(`[Config] Removed invalid fallback models from localStorage: ${invalidModels.join(', ')}`);
+            window.localStorage.setItem('togetherAIFallbackModels', JSON.stringify(validFallbackModels));
+          }
+
+          // Select the valid saved options
           Array.from(fallbackSelect.options).forEach(option => {
-            option.selected = fallbackModelsList.includes(option.value);
+            option.selected = validFallbackModels.includes(option.value);
           });
+
+          if (validFallbackModels.length > 0) {
+            console.log(`[Config] Loaded ${validFallbackModels.length} fallback model(s): ${validFallbackModels.join(', ')}`);
+          }
         } catch (e) {
           console.warn('[Config] Could not parse saved fallback models:', e);
+          window.localStorage.removeItem('togetherAIFallbackModels');
         }
       }
 
