@@ -43,12 +43,6 @@ var blobb = [];
     var turndownService = new TurndownService();
     var mainOrMaster = "main";
     turndownService.keep(['table']);
-    function connectionTest(url) {
-
-    }
-
-    function proxySwitch() {
-    }
     const kblinkJSON = {
       home: "https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/",
       arc: "https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/#select-arc--start-conversion",
@@ -2020,7 +2014,7 @@ Date: ${timestamp}`;
       }
     };
 
-    async function createAssay(assayId, targetPath, useExistingStructure, subDirs) {
+    async function createAssay(assayId, targetPath, useExistingStructure, subDirs, gitRoot) {
       console.log(`createAssay called with: assayId=${assayId}, targetPath=${targetPath}, useExisting=${useExistingStructure}`);
 
       if (useExistingStructure) {
@@ -2042,13 +2036,16 @@ Date: ${timestamp}`;
           }
         });
 
-        // Clear and recreate dataset/resources folder for fresh content
+        // Selectively manage dataset folder - preserve untracked (manual) files
         const datasetPath = memfsPathJoin(targetPath, subDirs.datasets || subDirs.resources);
         if (fs.existsSync(datasetPath)) {
-          console.log(`Clearing existing dataset/resources folder: ${datasetPath}`);
-          fs.rmSync(datasetPath, { recursive: true, force: true });
+          console.log(`Cleaning dataset folder (preserving manual files): ${datasetPath}`);
+          const { deleted, preserved } = await cleanTrackedFiles(gitRoot, datasetPath);
+          console.log(`Summary: Removed ${deleted} previous file(s), preserved ${preserved} file(s)`);
+        } else {
+          fs.mkdirSync(datasetPath, { recursive: true });
+          console.log(`Created new dataset folder: ${datasetPath}`);
         }
-        fs.mkdirSync(datasetPath, { recursive: true });
 
         return;
       } else {
@@ -2068,12 +2065,16 @@ Date: ${timestamp}`;
           }
         });
 
-        // Delete and recreate dataset/resources folder for fresh content
+        // Selectively manage dataset folder - preserve untracked (manual) files
         const datasetPath = memfsPathJoin(targetPath, subDirs.datasets || subDirs.resources);
         if (fs.existsSync(datasetPath)) {
-          fs.rmSync(datasetPath, { recursive: true, force: true });
+          console.log(`Cleaning dataset folder (preserving manual files): ${datasetPath}`);
+          const { deleted, preserved } = await cleanTrackedFiles(gitRoot, datasetPath);
+          console.log(`Summary: Removed ${deleted} previous file(s), preserved ${preserved} file(s)`);
+        } else {
+          fs.mkdirSync(datasetPath, { recursive: true });
+          console.log(`Created new dataset folder: ${datasetPath}`);
         }
-        fs.mkdirSync(datasetPath, { recursive: true });
       }
     }
 
@@ -2179,6 +2180,183 @@ Date: ${timestamp}`;
       return `${elabid}-${sanitizedTitle}`;
     }
 
+    /**
+     * Generate filename with human-readable name before upload ID
+     * Format: {basename}_{uploadId}.{ext} (e.g., "data_12345.csv")
+     * @param {string} realname - Sanitized filename from eLabFTW
+     * @param {number|string} uploadId - eLabFTW upload ID
+     * @returns {string} Filename with ID before extension
+     */
+    function generateUploadFileName(realname, uploadId) {
+      // Find the last dot to separate basename and extension
+      const lastDotIndex = realname.lastIndexOf('.');
+
+      if (lastDotIndex === -1 || lastDotIndex === 0) {
+        // No extension or dot at start (hidden file)
+        return `${realname}_${uploadId}`;
+      }
+
+      // Split into basename and extension
+      const basename = realname.substring(0, lastDotIndex);
+      const extension = realname.substring(lastDotIndex); // includes the dot
+
+      return `${basename}_${uploadId}${extension}`;
+    }
+
+    /**
+     * Migrate old index-based filenames to new ID-based filenames
+     * @param {string} datasetPath - Path to dataset folder
+     * @param {Array} uploads - Upload objects from eLabFTW
+     */
+    function migrateOldFilenames(datasetPath, uploads) {
+      if (!fs.existsSync(datasetPath)) return;
+
+      const migratedFiles = [];
+
+      for (const [index, upload] of Object.entries(uploads)) {
+        const realname = upload.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+        const oldFileName = `${index}_${realname}`;  // Old format
+        const newFileName = generateUploadFileName(realname, upload.id);  // New format
+        const oldPath = memfsPathJoin(datasetPath, oldFileName);
+        const newPath = memfsPathJoin(datasetPath, newFileName);
+
+        // If old file exists and new doesn't, rename it
+        if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+          fs.renameSync(oldPath, newPath);
+          migratedFiles.push(`${oldFileName} → ${newFileName}`);
+          console.log(`  Migrated: ${oldFileName} → ${newFileName}`);
+        }
+      }
+
+      if (migratedFiles.length > 0) {
+        console.log(`Migrated ${migratedFiles.length} file(s) to new naming scheme`);
+      }
+    }
+
+    /**
+     * Check if a file is tracked by git
+     * @param {string} gitRoot - Git repository root
+     * @param {string} filePath - Full path to file
+     * @returns {Promise<boolean>} True if tracked, false if untracked
+     */
+    async function isFileTrackedByGit(gitRoot, filePath) {
+      try {
+        const relativePath = filePath.replace(gitRoot, '').replace(/^\//, '');
+
+        const matrix = await git.statusMatrix({
+          fs,
+          dir: gitRoot,
+          filepaths: [relativePath]
+        });
+
+        if (!matrix || matrix.length === 0) {
+          return false; // File not in git
+        }
+
+        // matrix[0] = [filepath, HEADStatus, WORKDIRStatus, STAGEStatus]
+        // HEADStatus: 0 = absent (untracked), 1 = present (tracked)
+        const headStatus = matrix[0][1];
+        return headStatus === 1;
+      } catch (error) {
+        console.warn(`Error checking git status for ${filePath}:`, error);
+        return false; // Safer to assume untracked
+      }
+    }
+
+    /**
+     * Separate tracked and untracked files in a directory
+     * @param {string} gitRoot - Git repository root
+     * @param {string} dirPath - Directory to scan
+     * @returns {Promise<{tracked: string[], untracked: string[]}>}
+     */
+    async function categorizeFilesByGitStatus(gitRoot, dirPath) {
+      const tracked = [];
+      const untracked = [];
+
+      if (!fs.existsSync(dirPath)) {
+        return { tracked, untracked };
+      }
+
+      try {
+        const files = fs.readdirSync(dirPath);
+
+        for (const file of files) {
+          const fullPath = memfsPathJoin(dirPath, file);
+          const stat = fs.statSync(fullPath);
+
+          // Skip directories
+          if (stat.isDirectory()) {
+            continue;
+          }
+
+          const isTracked = await isFileTrackedByGit(gitRoot, fullPath);
+
+          if (isTracked) {
+            tracked.push(file);
+          } else {
+            untracked.push(file);
+          }
+        }
+      } catch (error) {
+        console.error('Error categorizing files:', error);
+      }
+
+      return { tracked, untracked };
+    }
+
+    /**
+     * Remove only git-tracked files, preserve untracked (manual) files
+     * @param {string} gitRoot - Git repository root
+     * @param {string} dirPath - Directory to clean
+     * @param {Array<string>} preserveList - Filenames to always preserve
+     * @returns {Promise<{deleted: number, preserved: number}>}
+     */
+    async function cleanTrackedFiles(gitRoot, dirPath, preserveList = ['README.md', 'readme.md', '.gitkeep']) {
+      let deletedCount = 0;
+      let preservedCount = 0;
+
+      if (!fs.existsSync(dirPath)) {
+        return { deleted: deletedCount, preserved: preservedCount };
+      }
+
+      try {
+        const { tracked, untracked } = await categorizeFilesByGitStatus(gitRoot, dirPath);
+
+        console.log(`  Found ${tracked.length} tracked file(s) and ${untracked.length} untracked file(s)`);
+
+        // Delete tracked files (unless in preserve list)
+        for (const file of tracked) {
+          if (preserveList.some(p => file.toLowerCase() === p.toLowerCase())) {
+            preservedCount++;
+            console.log(`  Preserved (documentation): ${file}`);
+            continue;
+          }
+
+          const filePath = memfsPathJoin(dirPath, file);
+          try {
+            fs.unlinkSync(filePath);
+            deletedCount++;
+            console.log(`  Removed (previous conversion): ${file}`);
+          } catch (e) {
+            console.warn(`  Failed to remove ${file}:`, e.message);
+          }
+        }
+
+        // Report preserved manual files
+        if (untracked.length > 0) {
+          preservedCount += untracked.length;
+          console.log(`  Preserved ${untracked.length} manually added file(s):`);
+          untracked.forEach(f => console.log(`    - ${f}`));
+        }
+
+      } catch (error) {
+        console.error('Error cleaning tracked files:', error);
+        console.warn('⚠️  Skipping cleanup to preserve all files');
+      }
+
+      return { deleted: deletedCount, preserved: preservedCount };
+    }
+
     async function processExperiment(completedEntries, totalEntries, elabid, params, res, users, datahubURL, arcDir, instance, entryType) {
       // Calculate base progress for this experiment (0-90%, leaving 90-100% for final git push)
       const baseProgress = (completedEntries / totalEntries) * 90;
@@ -2198,6 +2376,12 @@ Date: ${timestamp}`;
 
       // Convert to markdown
       let markdown = turndownService.turndown(protocol);
+
+      // Add extra_fields as markdown table if they exist (GitHub issue #29)
+      const extraFieldsMarkdown = await Elab2ArcExtraFields.formatAsMarkdown(res.metadata_decoded, instance, params.elabtoken);
+      if (extraFieldsMarkdown) {
+        markdown += extraFieldsMarkdown;
+      }
 
       // Get target path from input field and derive all paths from it
       const targetPathInput = document.getElementById("targetPath");
@@ -2285,7 +2469,7 @@ Date: ${timestamp}`;
       console.log(`Final paths: base=${baseAssayPath}, protocols=${protocolPath}, data=${datasetPath}, useExisting=${useExistingStructure}, isStudy=${isStudy}`);
 
       // Create required directories using simplified approach
-      await createAssay(assayId, baseAssayPath, useExistingStructure, standardSubDirs);
+      await createAssay(assayId, baseAssayPath, useExistingStructure, standardSubDirs, gitRoot);
 
       // Generate ISA file for new structures only (not for existing ones)
       if (!useExistingStructure) {
@@ -2620,7 +2804,10 @@ ${res.uploads && res.uploads.length > 0 ?
             files: {
               protocolPath: `protocols/${protocolFilename}`,
               isaPath: 'isa.assay.xlsx',
-              dataFiles: (res.uploads || []).map(u => `dataset/${u.real_name}`)
+              dataFiles: (res.uploads || []).map(u => {
+                const sanitized = u.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+                return `dataset/${generateUploadFileName(sanitized, u.id)}`;
+              })
             },
             startTime: conversionStartTime,
             endTime: conversionEndTime
@@ -2752,6 +2939,19 @@ ${res.uploads && res.uploads.length > 0 ?
       const containerPath = memfsPathJoin(baseAssayPath, containerFolder);
       const experimentPath = memfsPathJoin(containerPath, experimentFolderName);
 
+      // Clean only this experiment's files (preserve manual additions)
+      if (fs.existsSync(experimentPath)) {
+        console.log(`Cleaning experiment folder: ${experimentFolderName}`);
+        await cleanTrackedFiles(gitRoot, experimentPath);
+      } else {
+        fs.mkdirSync(experimentPath, { recursive: true });
+      }
+
+      // Check if migration from old index-based names is needed
+      if (fs.existsSync(experimentPath)) {
+        migrateOldFilenames(experimentPath, uploads);
+      }
+
       for (const [index, upload] of Object.entries(uploads)) {
         const blob = await fetchElabFiles(
           params.elabtoken,
@@ -2762,7 +2962,7 @@ ${res.uploads && res.uploads.length > 0 ?
         const realname = upload.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
         const longname = upload.long_name;
         const longnameEncoded = encodeURIComponent(longname);
-        const fileName = `${index}_${realname}`;
+        const fileName = generateUploadFileName(realname, upload.id);
         const fullPath = memfsPathJoin(experimentPath, fileName);
         const relativeFilePath = `${baseAssayPath.replace(gitRoot, "")}/${containerFolder}/${experimentFolderName}/${fileName}`;
 
@@ -2887,6 +3087,12 @@ ${res.uploads && res.uploads.length > 0 ?
             const elabWWW= instance.replace("api/v2/", "");
             protocol = protocol.replace(/\w+\.php\?mode=view/g, elabWWW+"/$&"  );
 
+            // Add extra_fields to protocol preview if they exist (GitHub issue #29)
+            const extraFieldsHTML = await Elab2ArcExtraFields.formatAsHTML(data.metadata_decoded, instance, elabtoken);
+            if (extraFieldsHTML) {
+                protocol += '\n' + extraFieldsHTML;
+            }
+
             // Populate content - wait for DOM to be ready
             const expTitleEl = document.getElementById('expTitle');
             if (expTitleEl) {
@@ -2933,19 +3139,18 @@ ${res.uploads && res.uploads.length > 0 ?
             const uploads = data.uploads;
             if (!uploads || uploads.length === 0) {
                 uploadGallery.innerHTML = "<p class='text-muted'>No attachments</p>";
-                return;
-            }
-
-            // Create placeholders immediately for fast rendering
-            uploadGallery.innerHTML = "";
-            const uploadPromises = [];
-            const uploadElements = [];
+            } else {
+                // Create placeholders immediately for fast rendering
+                uploadGallery.innerHTML = "";
+                const uploadPromises = [];
+                const uploadElements = [];
 
             // First pass: Create placeholders and prepare metadata
             for (const [index, ele] of Object.entries(uploads)) {
                 const realname = ele.real_name.replace(/[^a-zA-Z0-9_,\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
+                const fileName = generateUploadFileName(realname, ele.id);
                 const isImage = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(ele.real_name);
-                const uploadId = `upload-${index}`;
+                const uploadId = `upload-${ele.id}`;
 
                 // Create placeholder element
                 const placeholderHTML = isImage
@@ -2955,7 +3160,7 @@ ${res.uploads && res.uploads.length > 0 ?
                              <div class="spinner-border spinner-border-sm text-primary mb-2" role="status">
                                <span class="visually-hidden">Loading...</span>
                              </div>
-                             <small class="d-block text-truncate">${realname}</small>
+                             <small class="d-block text-truncate">${fileName}</small>
                              <small class="text-muted">${(ele.filesize / 1024).toFixed(1)} KB</small>
                            </div>
                          </div>
@@ -2963,7 +3168,7 @@ ${res.uploads && res.uploads.length > 0 ?
                     : `<div class="col-12 mb-2" id="${uploadId}">
                          <div class="card">
                            <div class="card-body p-2">
-                             <small>📄 File: ${realname}</small>
+                             <small>📄 File: ${fileName}</small>
                            </div>
                          </div>
                        </div>`;
@@ -3056,6 +3261,7 @@ ${res.uploads && res.uploads.length > 0 ?
                 }
                 console.log('[eLabFTW Preview] All uploads loaded');
             })();
+            } // End of else block for upload processing
 
             // Related items
             const relatedItems = document.getElementById('relatedItems');
@@ -3225,6 +3431,11 @@ ${res.uploads && res.uploads.length > 0 ?
       const isAbsolute = joined.startsWith('/');
       return isAbsolute ? `/${normalized}` : normalized || '.';
     }
+
+    // Expose path utilities globally for use by other modules
+    window.normalizePathSeparators = normalizePathSeparators;
+    window.memfsPathDirname = memfsPathDirname;
+    window.memfsPathJoin = memfsPathJoin;
 
     async function arcWrite(arcPath, arc) {
       let contracts = arc.GetWriteContracts()

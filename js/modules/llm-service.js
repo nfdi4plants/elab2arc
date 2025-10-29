@@ -25,6 +25,7 @@
     ]
   };
 
+  // Note: This module loads before elab2arc-core1006c.js, so we need a local implementation
   // Helper function for path joining (used in generateDatamapFromLLM)
   function memfsPathJoin(...segments) {
     // Filter out empty/null segments and join with '/'

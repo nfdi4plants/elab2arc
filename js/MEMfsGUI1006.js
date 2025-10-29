@@ -70,22 +70,6 @@ function refreshTree(targetPath = '.') {
     });
 }
 
-function createFile(parentPath = '.') {
-    const filename = prompt('Enter new folder name:');
-    if (filename) {
-        try {
-            const fullPath = parentPath === '.' 
-                ? filename 
-                : `${parentPath}/${filename}`;
-            fs.mkdirSync(fullPath);
-            refreshTree(fullPath); // Refresh and expand new path [[8]]
-        } catch (e) {
-            console.log('Error: ' + e.message);
-        }
-    }
-}
-
-
 // Add new navigation function
 function navigateBack() {
     const parentPath = memfsPathDirname(currentPath);
@@ -341,34 +325,6 @@ function refreshMainArea() {
     });
 
     document.getElementById('current-path').value = currentPath;
-}
-
-function getFileIcon(extension) {
-    const iconMap = {
-        'txt': '📝',
-        'md': '📝',
-        'jpg': '🖼️',
-        'jpeg': '🖼️',
-        'png': '🖼️',
-        'gif': '🖼️',
-        'bmp': '🖼️',
-        'svg': '🖼️',
-        'csv': '📊',
-        'tsv': '📊',
-        'xlsx': '📊',
-        'xls': '📊',
-        'pdf': '📕',
-        'doc': '📄',
-        'docx': '📄',
-        'zip': '📦',
-        'rar': '📦',
-        'js': '⚙️',
-        'html': '🌐',
-        'css': '🎨',
-        'json': '🔧'
-    };
-
-    return iconMap[extension] || '📄';
 }
 
 function navigateTo(path) {
@@ -2284,6 +2240,7 @@ function getFileIcon(extension) {
 // FILE SYSTEM PATH UTILITIES
 // =============================================================================
 
+// Note: MEMfsGUI1006.js loads before elab2arc-core1006c.js, so we need local definitions
 // Normalize path separators to forward slashes
 function normalizePathSeparators(str) {
     const path = require('path');
@@ -2293,71 +2250,56 @@ function normalizePathSeparators(str) {
 
 // Get directory name from path (like path.dirname)
 function memfsPathDirname(filePath) {
-    // Normalize separators
-    filePath = filePath.replace(/\\/g, '/');
+    if (typeof filePath !== 'string') filePath = String(filePath);
+    if (filePath === '') return '.';
 
-    // Handle edge cases
-    if (!filePath || filePath === '/' || filePath === '.') {
-        return '/';
+    // Remove trailing slashes (except if path is all slashes)
+    let len = filePath.length;
+    while (len > 0 && filePath[len - 1] === '/') len--;
+    if (len === 0) return '/'; // Handle root path
+
+    const normalized = filePath.slice(0, len);
+    const lastSlashIndex = normalized.lastIndexOf('/');
+
+    if (lastSlashIndex === -1) {
+        // No directory separators found
+        return (normalized === '.' || normalized === '..') ? normalized : '.';
     }
 
-    // Remove trailing slash
-    if (filePath.endsWith('/') && filePath.length > 1) {
-        filePath = filePath.slice(0, -1);
-    }
+    // Slice to last slash and remove trailing slashes from the result
+    let result = normalized.slice(0, lastSlashIndex);
+    len = result.length;
+    while (len > 0 && result[len - 1] === '/') len--;
 
-    // Get directory part
-    const lastSlash = filePath.lastIndexOf('/');
-    if (lastSlash === -1) {
-        return '.';
-    }
-    if (lastSlash === 0) {
-        return '/';
-    }
-
-    return filePath.substring(0, lastSlash);
+    return len === 0 ? '/' : result.slice(0, len);
 }
 
 // Join path segments (like path.join)
 function memfsPathJoin(...segments) {
-    // Filter out empty segments and normalize
-    const filtered = segments.filter(s => s && s !== '');
+    // Filter out empty/null segments and join with '/'
+    const joined = segments.filter(s => s != null && s !== '').join('/');
 
-    if (filtered.length === 0) {
-        return '.';
-    }
-
-    // Join with forward slashes
-    let joined = filtered.join('/');
-
-    // Normalize: remove double slashes, handle . and ..
-    const parts = [];
-    const tokens = joined.split('/');
-
-    for (const token of tokens) {
-        if (token === '' || token === '.') {
-            continue;
-        }
-        if (token === '..') {
-            if (parts.length > 0 && parts[parts.length - 1] !== '..') {
-                parts.pop();
-            } else {
-                parts.push('..');
-            }
+    // Split into components and normalize
+    const stack = [];
+    joined.split('/').forEach(segment => {
+        if (segment === '.' || segment === '') return; // Skip no-ops
+        if (segment === '..') {
+            // Handle parent directory (if not at root)
+            if (stack.length > 0 && stack[stack.length - 1] !== '') stack.pop();
         } else {
-            parts.push(token);
+            stack.push(segment);
         }
+    });
+
+    // Rebuild path and remove trailing slash (except for root)
+    let normalized = stack.join('/');
+    if (normalized.endsWith('/') && normalized !== '') {
+        normalized = normalized.slice(0, -1);
     }
 
     // Handle absolute paths
     const isAbsolute = joined.startsWith('/');
-    let result = parts.join('/');
-
-    if (isAbsolute) {
-        result = '/' + result;
-    }
-
-    return result || '.';
+    return isAbsolute ? `/${normalized}` : normalized || '.';
 }
 
 // Read directory contents (async)
