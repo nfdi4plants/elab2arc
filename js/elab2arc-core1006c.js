@@ -2745,6 +2745,8 @@ ${res.uploads && res.uploads.length > 0 ?
       // ========== END EXPERIMENTAL ==========
 
       // ========== METADATA TRACKING: Save conversion metadata ==========
+      // Saves to: {assayPath}/elab2arc-metadata/conversion-{UUID}.json and latest.json
+      // Automatically cleans up old conversions (keeps last 10)
       if (window.Elab2ArcMetadata) {
         try {
           const conversionEndTime = Date.now();
@@ -2865,14 +2867,6 @@ ${res.uploads && res.uploads.length > 0 ?
                 const latestPath = normalizeGitPath(latestFullPath);
                 console.log(`[Metadata] Adding to git: ${latestPath}`);
                 await git.add({ fs, dir: gitRoot, filepath: latestPath });
-              }
-
-              // Add backup metadata if it exists
-              const backupFullPath = `${baseAssayPath}/dataset/elab2arc-metadata.json`;
-              if (fs.existsSync(backupFullPath)) {
-                const backupPath = normalizeGitPath(backupFullPath);
-                console.log(`[Metadata] Adding to git: ${backupPath}`);
-                await git.add({ fs, dir: gitRoot, filepath: backupPath });
               }
 
               console.log('[Metadata] Successfully added metadata files to git');

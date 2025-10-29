@@ -132,10 +132,15 @@
 
   /**
    * Save metadata to ARC filesystem
-   * Creates elab2arc-metadata folder and saves metadata JSON
+   * Creates elab2arc-metadata folder and saves metadata JSON files
+   * Automatically cleans up old conversions (keeps last 10)
    * @param {Object} metadata - Metadata object
    * @param {string} assayPath - Path to assay folder
-   * @returns {Promise<string>} - Path to saved metadata file
+   * @returns {Promise<string>} - Path to saved metadata file (conversion-{UUID}.json)
+   *
+   * Creates two files:
+   * - conversion-{UUID}.json: Unique historical record
+   * - latest.json: Always contains most recent conversion
    */
   async function saveMetadataToARC(metadata, assayPath) {
     try {
@@ -203,18 +208,10 @@
         console.log(`[Metadata] Saved latest metadata to: ${latestPath}`);
       }
 
-      // Create backup in dataset folder for visibility (visible filename)
-      const datasetDir = `${assayPath}/dataset`;
-      if (fs.existsSync(datasetDir)) {
-        const backupPath = `${datasetDir}/elab2arc-metadata.json`;
-        fs.writeFileSync(backupPath, metadataJSON, 'utf8');
-
-        // Verify backup was written
-        if (!fs.existsSync(backupPath)) {
-          console.warn(`[Metadata] Warning: backup not found after write: ${backupPath}`);
-        } else {
-          console.log(`[Metadata] Saved backup metadata to: ${backupPath}`);
-        }
+      // Clean up old conversion files (keep last 10 conversions)
+      const cleanupStats = cleanupOldConversions(metadataDir, 10);
+      if (cleanupStats.deleted > 0) {
+        console.log(`[Metadata] Cleanup removed ${cleanupStats.deleted} old conversion(s)`);
       }
 
       return metadataPath;
@@ -222,6 +219,80 @@
     } catch (error) {
       console.error('[Metadata] Error saving metadata:', error);
       return null;
+    }
+  }
+
+  /**
+   * Clean up old conversion files, keeping only the most recent N conversions
+   * @param {string} metadataDir - Path to elab2arc-metadata folder
+   * @param {number} keepCount - Number of recent conversions to keep (default: 10)
+   * @returns {Object} - Cleanup statistics {deleted: number, kept: number}
+   */
+  function cleanupOldConversions(metadataDir, keepCount = 10) {
+    try {
+      if (!window.fs) {
+        console.warn('[Metadata] memfs not available, skipping cleanup');
+        return { deleted: 0, kept: 0 };
+      }
+
+      const fs = window.fs;
+
+      if (!fs.existsSync(metadataDir)) {
+        return { deleted: 0, kept: 0 };
+      }
+
+      // Get all conversion files (exclude latest.json)
+      const files = fs.readdirSync(metadataDir);
+      const conversionFiles = files.filter(f => f.startsWith('conversion-') && f.endsWith('.json'));
+
+      // If we have fewer files than the limit, no cleanup needed
+      if (conversionFiles.length <= keepCount) {
+        console.log(`[Metadata] Cleanup: ${conversionFiles.length} conversion(s), no cleanup needed (limit: ${keepCount})`);
+        return { deleted: 0, kept: conversionFiles.length };
+      }
+
+      // Parse files to get timestamps
+      const filesWithTimestamps = conversionFiles.map(filename => {
+        try {
+          const filePath = `${metadataDir}/${filename}`;
+          const content = fs.readFileSync(filePath, 'utf8');
+          const metadata = JSON.parse(content);
+          return {
+            filename: filename,
+            path: filePath,
+            timestamp: new Date(metadata.timestamp?.start || 0)
+          };
+        } catch (error) {
+          console.error(`[Metadata] Error reading ${filename} for cleanup:`, error);
+          return null;
+        }
+      }).filter(f => f !== null);
+
+      // Sort by timestamp (newest first)
+      filesWithTimestamps.sort((a, b) => b.timestamp - a.timestamp);
+
+      // Determine which files to keep and which to delete
+      const filesToKeep = filesWithTimestamps.slice(0, keepCount);
+      const filesToDelete = filesWithTimestamps.slice(keepCount);
+
+      // Delete old files
+      let deletedCount = 0;
+      for (const file of filesToDelete) {
+        try {
+          fs.unlinkSync(file.path);
+          deletedCount++;
+          console.log(`[Metadata] Cleanup: Deleted old conversion: ${file.filename}`);
+        } catch (error) {
+          console.error(`[Metadata] Error deleting ${file.filename}:`, error);
+        }
+      }
+
+      console.log(`[Metadata] Cleanup: Deleted ${deletedCount} old conversion(s), kept ${filesToKeep.length}`);
+      return { deleted: deletedCount, kept: filesToKeep.length };
+
+    } catch (error) {
+      console.error('[Metadata] Error during cleanup:', error);
+      return { deleted: 0, kept: 0 };
     }
   }
 
@@ -505,6 +576,7 @@
   window.Elab2ArcMetadata = {
     createConversionMetadata: createConversionMetadata,
     saveMetadataToARC: saveMetadataToARC,
+    cleanupOldConversions: cleanupOldConversions,
     loadConversionHistory: loadConversionHistory,
     loadLatestMetadata: loadLatestMetadata,
     exportMetadataAsJSON: exportMetadataAsJSON,
