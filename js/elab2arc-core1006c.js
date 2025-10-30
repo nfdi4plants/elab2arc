@@ -12,6 +12,8 @@ var elabJSON;
 var statusInfo = "";
 const version = "2025-06-03";
 var blobb = [];
+var conversionHistory = []; // Store last 5 conversions
+var conversionStartTime = null; // Track when conversion starts
     var typeConfig = {
       Experiment: {
         displayName: 'Experiment',
@@ -1674,6 +1676,29 @@ Date: ${timestamp}`;
         const pbarLabel = document.getElementById("pbarLabel");
         pbarLabel.innerHTML = '<strong style="color: #28a745; font-size: 1.1em;">✓ All conversions complete! You can close this window.</strong>';
 
+        // Save conversion to history
+        const conversionEndTime = Date.now();
+        const duration = conversionEndTime - conversionStartTime;
+        const historyEntry = {
+          timestamp: conversionEndTime,
+          statusHTML: statusInfo,
+          entryCount: totalEntries,
+          duration: duration,
+          success: true,
+          arcName: arcName
+        };
+
+        // Add to history array
+        conversionHistory.push(historyEntry);
+
+        // Keep only last 5 conversions
+        if (conversionHistory.length > 5) {
+          conversionHistory.shift();
+        }
+
+        // Render the updated history
+        renderConversionHistory();
+
         // Show success notification after a brief delay to ensure modal is visible
         setTimeout(() => {
           alert(`Success! All ${totalEntries} eLabFTW entries have been converted to ARC format and pushed to PLANTDataHUB.`);
@@ -1682,6 +1707,30 @@ Date: ${timestamp}`;
         console.log(users);
       } catch (error) {
         console.error("Error processing eLab entries:", error);
+
+        // Save failed conversion to history
+        const conversionEndTime = Date.now();
+        const duration = conversionEndTime - conversionStartTime;
+        const historyEntry = {
+          timestamp: conversionEndTime,
+          statusHTML: statusInfo + `<div style="margin-bottom: 8px; padding: 6px; border-left: 3px solid #dc3545; background-color: rgba(220,53,69,0.1);"><span style="color: #dc3545; font-weight: bold;">✗ Error:</span> ${error.message || 'An unexpected error occurred'}</div>`,
+          entryCount: 0,
+          duration: duration,
+          success: false,
+          arcName: arcName || 'Unknown'
+        };
+
+        // Add to history array
+        conversionHistory.push(historyEntry);
+
+        // Keep only last 5 conversions
+        if (conversionHistory.length > 5) {
+          conversionHistory.shift();
+        }
+
+        // Render the updated history
+        renderConversionHistory();
+
         alert("An unexpected error occurred while processing eLabFTW entries.");
       }
     }
@@ -1747,6 +1796,47 @@ Date: ${timestamp}`;
       // PROCEED WITH CONVERSION
       // ============================================================================
 
+      // Clear status information from previous conversion
+      statusInfo = "";
+      const detailedInfo = document.getElementById("detailedStatus");
+      if (detailedInfo) {
+        detailedInfo.innerHTML = "";
+      }
+
+      // Clear files changed section
+      const filesChanged = document.getElementById("filesChanged");
+      if (filesChanged) {
+        filesChanged.innerHTML = "";
+      }
+
+      // Clear LLM stream content
+      const llmStreamContent = document.getElementById("llmStreamContent");
+      if (llmStreamContent) {
+        llmStreamContent.innerHTML = "";
+      }
+
+      // Clear metadata content
+      const metadataContent = document.getElementById("metadataContent");
+      if (metadataContent) {
+        metadataContent.innerHTML = '<p class="text-muted">No conversion metadata available yet. Metadata is saved after each conversion when LLM is enabled.</p>';
+      }
+
+      // Reset progress bar
+      const pbarModal = document.getElementById("pbarModal");
+      if (pbarModal) {
+        pbarModal.style.width = "1%";
+        pbarModal.setAttribute("aria-valuenow", "1");
+      }
+
+      // Reset progress label
+      const pbarLabel = document.getElementById("pbarLabel");
+      if (pbarLabel) {
+        pbarLabel.innerHTML = "Conversion Status";
+      }
+
+      // Record conversion start time
+      conversionStartTime = Date.now();
+
       // Open status modal using Bootstrap API
       const statusModalEl = document.getElementById('statusModal');
       if (statusModalEl) {
@@ -1755,6 +1845,13 @@ Date: ${timestamp}`;
           keyboard: true
         });
         statusModal.show();
+      }
+
+      // Switch to "Current Conversion" tab programmatically
+      const currentTab = document.getElementById('current-tab');
+      if (currentTab) {
+        const tab = new bootstrap.Tab(currentTab);
+        tab.show();
       }
 
       // Get ARC information from arcInfo element (which may contain the full path)
@@ -1887,6 +1984,82 @@ Date: ${timestamp}`;
       statusInfo = "";
     }
 
+    // Render conversion history in the History tab
+    function renderConversionHistory() {
+      const historyContainer = document.getElementById("conversionHistoryContainer");
+      if (!historyContainer) return;
+
+      // If no history, show placeholder message
+      if (conversionHistory.length === 0) {
+        historyContainer.innerHTML = '<p class="text-muted text-center py-4">No conversion history yet. Your last 5 conversions will appear here.</p>';
+        return;
+      }
+
+      // Build HTML for history entries (newest first)
+      let historyHTML = '<div class="accordion" id="historyAccordion">';
+
+      // Reverse iteration to show newest first
+      for (let i = conversionHistory.length - 1; i >= 0; i--) {
+        const entry = conversionHistory[i];
+        const entryIndex = conversionHistory.length - i; // 1-based index for display
+
+        // Format timestamp
+        const date = new Date(entry.timestamp);
+        const formattedDate = date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+
+        // Format duration
+        const durationSeconds = Math.floor(entry.duration / 1000);
+        const minutes = Math.floor(durationSeconds / 60);
+        const seconds = durationSeconds % 60;
+        const durationStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+        // Determine status color
+        const statusColor = entry.success ? '#28a745' : '#dc3545';
+        const statusIcon = entry.success ? '✓' : '✗';
+        const statusText = entry.success ? 'Success' : 'Failed';
+
+        // Create accordion item for this history entry
+        historyHTML += `
+          <div class="card mb-2">
+            <div class="card-header" id="historyHeading${i}">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <button class="btn btn-link text-start text-decoration-none p-0" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#historyCollapse${i}" aria-expanded="false" aria-controls="historyCollapse${i}">
+                    <span style="color: ${statusColor}; font-weight: bold; font-size: 1.1em;">${statusIcon}</span>
+                    <strong>${formattedDate}</strong>
+                  </button>
+                </div>
+                <div class="text-end">
+                  <span class="badge bg-primary">${entry.entryCount} entries</span>
+                  <span class="badge bg-secondary">${durationStr}</span>
+                  <span class="badge" style="background-color: ${statusColor};">${statusText}</span>
+                </div>
+              </div>
+              ${entry.arcName ? `<div class="small text-muted mt-1">ARC: ${entry.arcName}</div>` : ''}
+            </div>
+            <div id="historyCollapse${i}" class="collapse" aria-labelledby="historyHeading${i}" data-bs-parent="#historyAccordion">
+              <div class="card-body">
+                <div style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px;">
+                  ${entry.statusHTML}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      historyHTML += '</div>';
+      historyContainer.innerHTML = historyHTML;
+    }
 
 
     /**
@@ -2165,7 +2338,7 @@ Date: ${timestamp}`;
         .replace(/^_|_$/g, '') // Remove leading/trailing underscores
         .substring(0, 30); // Limit to 30 characters
 
-      return `eLabFTW_protocol_${elabid}_${sanitizedTitle}.md`;
+      return `eLabFTW_protocol_${elabid}_${sanitizedTitle}.elab2arc.md`;
     }
 
     function generateExperimentFolderName(elabid, title) {
@@ -2193,14 +2366,14 @@ Date: ${timestamp}`;
 
       if (lastDotIndex === -1 || lastDotIndex === 0) {
         // No extension or dot at start (hidden file)
-        return `${realname}_${uploadId}`;
+        return `${realname}_${uploadId}.elab2arc`;
       }
 
       // Split into basename and extension
       const basename = realname.substring(0, lastDotIndex);
       const extension = realname.substring(lastDotIndex); // includes the dot
 
-      return `${basename}_${uploadId}${extension}`;
+      return `${basename}_${uploadId}.elab2arc${extension}`;
     }
 
     /**
@@ -2320,33 +2493,33 @@ Date: ${timestamp}`;
       }
 
       try {
-        const { tracked, untracked } = await categorizeFilesByGitStatus(gitRoot, dirPath);
+        // Get all files in the directory
+        const allFiles = fs.readdirSync(dirPath);
+        console.log(`  Found ${allFiles.length} total file(s) in directory`);
 
-        console.log(`  Found ${tracked.length} tracked file(s) and ${untracked.length} untracked file(s)`);
+        // Only delete files with .elab2arc suffix (these are elab2arc-generated files)
+        for (const file of allFiles) {
+          const filePath = memfsPathJoin(dirPath, file);
 
-        // Delete tracked files (unless in preserve list)
-        for (const file of tracked) {
-          if (preserveList.some(p => file.toLowerCase() === p.toLowerCase())) {
-            preservedCount++;
-            console.log(`  Preserved (documentation): ${file}`);
+          // Skip directories
+          if (fs.statSync(filePath).isDirectory()) {
             continue;
           }
 
-          const filePath = memfsPathJoin(dirPath, file);
-          try {
-            fs.unlinkSync(filePath);
-            deletedCount++;
-            console.log(`  Removed (previous conversion): ${file}`);
-          } catch (e) {
-            console.warn(`  Failed to remove ${file}:`, e.message);
+          // Only delete files with .elab2arc suffix
+          if (file.includes('.elab2arc')) {
+            try {
+              fs.unlinkSync(filePath);
+              deletedCount++;
+              console.log(`  Removed (elab2arc-generated): ${file}`);
+            } catch (e) {
+              console.warn(`  Failed to remove ${file}:`, e.message);
+            }
+          } else {
+            // Preserve all other files (manually added or other files)
+            preservedCount++;
+            console.log(`  Preserved (non-elab2arc file): ${file}`);
           }
-        }
-
-        // Report preserved manual files
-        if (untracked.length > 0) {
-          preservedCount += untracked.length;
-          console.log(`  Preserved ${untracked.length} manually added file(s):`);
-          untracked.forEach(f => console.log(`    - ${f}`));
         }
 
       } catch (error) {
@@ -2486,11 +2659,11 @@ Date: ${timestamp}`;
         );
 
         const progressStep1 = baseProgress + (1 / totalEntries) * 90 * 0.3;
-        updateInfo(`isa.assay.xlsx has been updated at <b>${assayId}</b>`, progressStep1);
+        updateInfo(`isa.assay.elab2arc.xlsx has been updated at <b>${assayId}</b>`, progressStep1);
 
         // Calculate git path for ISA file based on the baseAssayPath
         const relativeAssayPath = baseAssayPath.replace(gitRoot, "");
-        const isaPath = `${relativeAssayPath}/isa.assay.xlsx`;
+        const isaPath = `${relativeAssayPath}/isa.assay.elab2arc.xlsx`;
 
         try {
           await git.add({ fs, dir: gitRoot, filepath: isaPath });
@@ -2609,10 +2782,10 @@ ${res.uploads && res.uploads.length > 0 ?
 *Generated by [elab2ARC](https://github.com/nfdi4plants/elab2arc)*
 `;
 
-      const readmePath = memfsPathJoin(datasetPath, 'README.md');
+      const readmePath = memfsPathJoin(datasetPath, 'README.elab2arc.md');
       await fs.promises.writeFile(readmePath, readmeContent);
 
-      const relativeDatasetPath = `${baseAssayPath.replace(gitRoot, "")}/${dataFolderName}/README.md`;
+      const relativeDatasetPath = `${baseAssayPath.replace(gitRoot, "")}/${dataFolderName}/README.elab2arc.md`;
       await git.add({ fs, dir: gitRoot, filepath: relativeDatasetPath });
 
       // ========== METADATA TRACKING: Initialize conversion metadata (BEFORE try block for scope) ==========
@@ -2805,7 +2978,7 @@ ${res.uploads && res.uploads.length > 0 ?
             },
             files: {
               protocolPath: `protocols/${protocolFilename}`,
-              isaPath: 'isa.assay.xlsx',
+              isaPath: 'isa.assay.elab2arc.xlsx',
               dataFiles: (res.uploads || []).map(u => {
                 const sanitized = u.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
                 return `dataset/${generateUploadFileName(sanitized, u.id)}`;
@@ -3613,15 +3786,15 @@ ${res.uploads && res.uploads.length > 0 ?
         let comments_datahub_url = arctrl.Comment$.create("datahub_url", "arctest");
 
         // Create annotation table
-        if (fs.existsSync(dir + "/assays/" + assayName + "/isa.assay.xlsx")) {
+        if (fs.existsSync(dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx")) {
           try {
-            console.log("isa.assay.xlsx file exist");
-            assay = await Xlsx.fromXlsxFile(dir + "/assays/" + assayName + "/isa.assay.xlsx");
+            console.log("isa.assay.elab2arc.xlsx file exist");
+            assay = await Xlsx.fromXlsxFile(dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx");
             isa_assay = await arctrl.XlsxController.Assay.fromFsWorkbook(assay);
             isa_assay.Performers = [person];
             isa_assay.Comment = [comments_datahub_url];
             let spreadsheet = arctrl.XlsxController.Assay.toFsWorkbook(isa_assay);
-            const outPath = dir + "/assays/" + assayName + "/isa.assay.xlsx";
+            const outPath = dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx";
 
             console.log(spreadsheet);
 
@@ -3637,7 +3810,7 @@ ${res.uploads && res.uploads.length > 0 ?
           // -------- 2. Transform object to generic spreadsheet ----------
           let spreadsheet = arctrl.XlsxController.Assay.toFsWorkbook(myAssay);
           // -------- 3. Write spreadsheet to xlsx file (or bytes) ----------
-          const outPath = dir + "/assays/" + assayName + "/isa.assay.xlsx";
+          const outPath = dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx";
 
           console.log(spreadsheet);
 

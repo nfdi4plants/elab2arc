@@ -728,88 +728,115 @@ video {
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
-                aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
-                style="width: 1%">
-              </div>
-            </div>
-            <div class="accordion" id="accordionUI">
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="statusHeading">
-                  <button class="accordion-button" id="pbarLabel" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus">
-                    Conversion Status
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs mb-3" id="conversionTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current-conversion" type="button" role="tab" aria-controls="current-conversion" aria-selected="true">
+                  Current Conversion
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-conversion" type="button" role="tab" aria-controls="history-conversion" aria-selected="false">
+                  History (Last 5)
+                </button>
+              </li>
+            </ul>
 
-                  </button>
-
-                </h2>
-                <div id="submitStatus" class="accordion-collapse collapse show" aria-labelledby="statusHeading"
-                  data-bs-parent="#accordionUI">
-                  <div class="accordion-body" id="detailedStatus" style="max-height: 300px; overflow-y: auto;">
-
+            <!-- Tab Content -->
+            <div class="tab-content" id="conversionTabsContent">
+              <!-- Current Conversion Tab -->
+              <div class="tab-pane fade show active" id="current-conversion" role="tabpanel" aria-labelledby="current-tab">
+                <div class="progress">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" id="pbarModal" role="progressbar"
+                    aria-label="Animated striped example" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100"
+                    style="width: 1%">
                   </div>
                 </div>
-              </div>
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="llmStreamHeading">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#llmStreamInfo" aria-expanded="false" aria-controls="llmStreamInfo">
-                    LLM Response Stream (Debug)
-                  </button>
-                </h2>
-                <div id="llmStreamInfo" class="accordion-collapse collapse" aria-labelledby="llmStreamHeading"
-                  data-bs-parent="#accordionUI">
-                  <div class="accordion-body">
-                    <div style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap;" id="llmStreamContent">
-                      <!-- LLM responses will be displayed here -->
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="elabHeading">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" id="filesAcc"
-                    data-bs-target="#elabInfo" aria-expanded="false" aria-controls="elabInfo">
-                    Files Changed in ARC
+                <div class="accordion" id="accordionUI">
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="statusHeading">
+                      <button class="accordion-button" id="pbarLabel" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#submitStatus" aria-expanded="true" aria-controls="submitStatus">
+                        Conversion Status
 
-                  </button>
-
-                </h2>
-                <div id="elabInfo" class="accordion-collapse collapse" aria-labelledby="elabHeading"
-                  data-bs-parent="#accordionUI">
-                  <div class="accordion-body">
-                    <div class="center" id="filesChanged">
-
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="accordion-item">
-                <h2 class="accordion-header" id="metadataHeading">
-                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#conversionMetadata" aria-expanded="false" aria-controls="conversionMetadata">
-                    Conversion Metadata (Troubleshooting)
-                  </button>
-                </h2>
-                <div id="conversionMetadata" class="accordion-collapse collapse" aria-labelledby="metadataHeading"
-                  data-bs-parent="#accordionUI">
-                  <div class="accordion-body">
-                    <div class="alert alert-info" role="alert">
-                      <strong>Conversion Metadata:</strong> Detailed information about LLM prompts, models, timing, and results for troubleshooting.
-                    </div>
-                    <div id="metadataContent" style="max-height: 500px; overflow-y: auto;">
-                      <p class="text-muted">No conversion metadata available yet. Metadata is saved after each conversion when LLM is enabled.</p>
-                    </div>
-                    <div class="mt-3" id="metadataActions" style="display: none;">
-                      <button type="button" class="btn btn-sm btn-outline-primary" id="downloadMetadataBtn">
-                        Download Metadata JSON
                       </button>
-                      <button type="button" class="btn btn-sm btn-outline-secondary" id="viewTroubleshootingReportBtn">
-                        View Troubleshooting Report
-                      </button>
+
+                    </h2>
+                    <div id="submitStatus" class="accordion-collapse collapse show" aria-labelledby="statusHeading"
+                      data-bs-parent="#accordionUI">
+                      <div class="accordion-body" id="detailedStatus" style="max-height: 300px; overflow-y: auto;">
+
+                      </div>
                     </div>
                   </div>
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="llmStreamHeading">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#llmStreamInfo" aria-expanded="false" aria-controls="llmStreamInfo">
+                        LLM Response Stream (Debug)
+                      </button>
+                    </h2>
+                    <div id="llmStreamInfo" class="accordion-collapse collapse" aria-labelledby="llmStreamHeading"
+                      data-bs-parent="#accordionUI">
+                      <div class="accordion-body">
+                        <div style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap;" id="llmStreamContent">
+                          <!-- LLM responses will be displayed here -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="elabHeading">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" id="filesAcc"
+                        data-bs-target="#elabInfo" aria-expanded="false" aria-controls="elabInfo">
+                        Files Changed in ARC
+
+                      </button>
+
+                    </h2>
+                    <div id="elabInfo" class="accordion-collapse collapse" aria-labelledby="elabHeading"
+                      data-bs-parent="#accordionUI">
+                      <div class="accordion-body">
+                        <div class="center" id="filesChanged">
+
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="metadataHeading">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#conversionMetadata" aria-expanded="false" aria-controls="conversionMetadata">
+                        Conversion Metadata (Troubleshooting)
+                      </button>
+                    </h2>
+                    <div id="conversionMetadata" class="accordion-collapse collapse" aria-labelledby="metadataHeading"
+                      data-bs-parent="#accordionUI">
+                      <div class="accordion-body">
+                        <div class="alert alert-info" role="alert">
+                          <strong>Conversion Metadata:</strong> Detailed information about LLM prompts, models, timing, and results for troubleshooting.
+                        </div>
+                        <div id="metadataContent" style="max-height: 500px; overflow-y: auto;">
+                          <p class="text-muted">No conversion metadata available yet. Metadata is saved after each conversion when LLM is enabled.</p>
+                        </div>
+                        <div class="mt-3" id="metadataActions" style="display: none;">
+                          <button type="button" class="btn btn-sm btn-outline-primary" id="downloadMetadataBtn">
+                            Download Metadata JSON
+                          </button>
+                          <button type="button" class="btn btn-sm btn-outline-secondary" id="viewTroubleshootingReportBtn">
+                            View Troubleshooting Report
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- History Tab -->
+              <div class="tab-pane fade" id="history-conversion" role="tabpanel" aria-labelledby="history-tab">
+                <div id="conversionHistoryContainer">
+                  <p class="text-muted text-center py-4">No conversion history yet. Your last 5 conversions will appear here.</p>
                 </div>
               </div>
             </div>
