@@ -42,6 +42,88 @@ var conversionStartTime = null; // Track when conversion starts
     const detailedInfo = document.getElementById("detailedStatus");
     const filesChanged = document.getElementById("filesChanged");
 
+    // =============================================================================
+    // TOAST NOTIFICATION SYSTEM
+    // =============================================================================
+
+    /**
+     * Show a Bootstrap toast notification
+     * @param {string} message - The message to display
+     * @param {string} type - Type: 'success', 'danger', 'warning', 'info', 'primary'
+     * @param {number} duration - Auto-hide delay in milliseconds (default: 5000, use 0 for no auto-hide)
+     */
+    function showToast(message, type = 'info', duration = 5000) {
+      const toastContainer = document.getElementById('toastContainer');
+      if (!toastContainer) {
+        console.error('Toast container not found');
+        return;
+      }
+
+      // Create unique ID for this toast
+      const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+
+      // Icon mapping
+      const icons = {
+        success: '✓',
+        danger: '✗',
+        warning: '⚠',
+        info: 'ℹ',
+        primary: '▸'
+      };
+
+      const icon = icons[type] || 'ℹ';
+
+      // Create toast HTML
+      const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+            <div class="toast-body">
+              <strong>${icon}</strong> ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      `;
+
+      // Add to container
+      toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+
+      // Initialize and show toast
+      const toastElement = document.getElementById(toastId);
+      const bsToast = new bootstrap.Toast(toastElement, {
+        autohide: duration > 0,
+        delay: duration
+      });
+
+      // Remove from DOM after hidden
+      toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+      });
+
+      bsToast.show();
+    }
+
+    // Convenience functions for different toast types
+    function showSuccessToast(message, duration = 5000) {
+      showToast(message, 'success', duration);
+    }
+
+    function showErrorToast(message, duration = 8000) {
+      showToast(message, 'danger', duration);
+    }
+
+    function showWarningToast(message, duration = 6000) {
+      showToast(message, 'warning', duration);
+    }
+
+    function showInfoToast(message, duration = 5000) {
+      showToast(message, 'info', duration);
+    }
+
+    // =============================================================================
+    // END TOAST NOTIFICATION SYSTEM
+    // =============================================================================
+
     var turndownService = new TurndownService();
     var mainOrMaster = "main";
     turndownService.keep(['table']);
@@ -281,7 +363,7 @@ var conversionStartTime = null; // Track when conversion starts
             document.getElementById("checkExp" + e).checked = true;
             newExp.push(e);
           } catch (error) {
-            alert("there is an error: " + error + ". Experiment No. " + e + " can not be accessed and has been removed from the list.  ")
+            showErrorToast("Error: " + error + ". Experiment No. " + e + " can not be accessed and has been removed from the list.");
           }
         }
       }
@@ -295,7 +377,7 @@ var conversionStartTime = null; // Track when conversion starts
             document.getElementById("checkRes" + e).checked = true;
             newRes.push(e);
           } catch (error) {
-            alert("there is an error: " + error + ". Resource No. " + e + " can not be accessed and has been removed from the list.  ")
+            showErrorToast("Error: " + error + ". Resource No. " + e + " can not be accessed and has been removed from the list.");
           }
         }
       }
@@ -514,7 +596,7 @@ var conversionStartTime = null; // Track when conversion starts
         return userJSON;
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
-        alert(error.message || error);
+        showErrorToast(error.message || error);
       }
     };
 
@@ -613,7 +695,7 @@ var conversionStartTime = null; // Track when conversion starts
 
       } catch (error) {
         // Handle network/API errors [[6]]
-        alert(" ARC creation failed, please check if the name is unique" + error.message || error);
+        showErrorToast("ARC creation failed, please check if the name is unique. " + (error.message || error));
         throw new Error(`Project creation failed: ${error.message}`);
       }
     };
@@ -702,7 +784,7 @@ var conversionStartTime = null; // Track when conversion starts
         document.getElementById("userProjectsTable").innerHTML = tableHTML;
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
-        alert(error.message || error);
+        showErrorToast(error.message || error);
       }
     };
 
@@ -849,7 +931,7 @@ var conversionStartTime = null; // Track when conversion starts
 
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
-        alert(error.message || error);
+        showErrorToast(error.message || error);
       }
     };
 
@@ -1228,7 +1310,7 @@ Date: ${timestamp}`;
           const togetherAPIKey = window.localStorage.getItem('togetherAPIKey');
 
           if (!togetherAPIKey || togetherAPIKey.trim() === '') {
-            alert("⚠️ Together.AI API Key Required!\n\nTo use LLM Datamap Generation, you need to provide a Together.AI API key.\n\nPlease enter your API key in the field below, or go to the Token page.\n\nThe API key field is now visible for you to enter your key.");
+            showWarningToast("Together.AI API Key Required!<br><br>To use LLM Datamap Generation, you need to provide a Together.AI API key.<br><br>Please enter your API key in the field below, or go to the Token page.");
             // Keep switch ON so user can enter key in the visible field
             return;
           }
@@ -1238,7 +1320,7 @@ Date: ${timestamp}`;
           const isValid = await validateTogetherAPIKey(togetherAPIKey);
 
           if (!isValid) {
-            alert("⚠️ Together.AI API Key Invalid!\n\nThe API key you provided is not valid or has expired.\n\nPlease update your API key in the field below, or go to the Token page.\n\nYou can get a free API key at: https://api.together.xyz/\n\nThe API key field remains visible for you to update it.");
+            showWarningToast("Together.AI API Key Invalid!<br><br>The API key you provided is not valid or has expired.<br><br>Please update your API key in the field below, or go to the Token page.<br><br>Get a free key at: https://api.together.xyz/");
             // Keep switch ON so user can fix the key in the visible field
 
             // Navigate to token page if user wants
@@ -1529,7 +1611,7 @@ Date: ${timestamp}`;
 
           // Authorization error
           if (res.code === 403) {
-            alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
+            showErrorToast("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
             completedEntries++;
             continue;
           }
@@ -1539,7 +1621,7 @@ Date: ${timestamp}`;
             users = await fetchElabJSON(params.elabtoken, "users", params.instance);
             if (users.code >= 400) {
               console.error("Failed to fetch users:", users);
-              alert("Failed to fetch user data from eLabFTW.");
+              showErrorToast("Failed to fetch user data from eLabFTW.");
               completedEntries++;
               continue;
             }
@@ -1569,7 +1651,7 @@ Date: ${timestamp}`;
 
           // Authorization error
           if (res.code === 403) {
-            alert("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
+            showErrorToast("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
             completedEntries++;
             continue;
           }
@@ -1579,7 +1661,7 @@ Date: ${timestamp}`;
             users = await fetchElabJSON(params.elabtoken, "users", params.instance);
             if (users.code >= 400) {
               console.error("Failed to fetch users:", users);
-              alert("Failed to fetch user data from eLabFTW.");
+              showErrorToast("Failed to fetch user data from eLabFTW.");
               completedEntries++;
               continue;
             }
@@ -1701,7 +1783,7 @@ Date: ${timestamp}`;
 
         // Show success notification after a brief delay to ensure modal is visible
         setTimeout(() => {
-          alert(`Success! All ${totalEntries} eLabFTW entries have been converted to ARC format and pushed to PLANTDataHUB.`);
+          showSuccessToast(`Success! All ${totalEntries} eLabFTW entries have been converted to ARC format and pushed to PLANTDataHUB.`, 10000);
         }, 500);
 
         console.log(users);
@@ -1731,7 +1813,7 @@ Date: ${timestamp}`;
         // Render the updated history
         renderConversionHistory();
 
-        alert("An unexpected error occurred while processing eLabFTW entries.");
+        showErrorToast("An unexpected error occurred while processing eLabFTW entries.");
       }
     }
     
@@ -1745,14 +1827,14 @@ Date: ${timestamp}`;
       // 1. Check if targetPath (ARC selection) is filled
       const targetPathInput = document.getElementById("targetPath");
       if (!targetPathInput || !targetPathInput.value || targetPathInput.value.trim() === '') {
-        alert("⚠️ Please select an ARC first!\n\nGo to the ARC tab and select your target ARC from the list.");
+        showWarningToast("Please select an ARC first!<br><br>Go to the ARC tab and select your target ARC from the list.");
         return;
       }
 
       // 2. Check GitLab URL validity
       const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
       if (!gitlabURL || gitlabURL.includes("Please select") || gitlabURL.trim() === '') {
-        alert("⚠️ No ARC selected!\n\nPlease select your ARC from the ARC tab.");
+        showWarningToast("No ARC selected!<br><br>Please select your ARC from the ARC tab.");
         return;
       }
 
@@ -1763,11 +1845,11 @@ Date: ${timestamp}`;
           throw new Error('Invalid protocol');
         }
         if (!gitlabURL.includes('git')) {
-          alert("⚠️ Invalid ARC URL!\n\nThe URL does not appear to be a valid Git repository URL.\n\nURL: " + gitlabURL);
+          showWarningToast("Invalid ARC URL!<br><br>The URL does not appear to be a valid Git repository URL.<br><br>URL: " + gitlabURL);
           return;
         }
       } catch (error) {
-        alert("⚠️ Invalid ARC URL format!\n\nPlease make sure you selected a valid ARC.\n\nURL: " + gitlabURL);
+        showWarningToast("Invalid ARC URL format!<br><br>Please make sure you selected a valid ARC.<br><br>URL: " + gitlabURL);
         return;
       }
 
@@ -1781,14 +1863,14 @@ Date: ${timestamp}`;
       // 4. Validate DataHub token
       const datahubToken = document.getElementById("datahubToken");
       if (!datahubToken || !datahubToken.value || datahubToken.value.trim() === '') {
-        alert("⚠️ DataHub token is missing!\n\nPlease enter your DataHub API token in the Token tab.");
+        showWarningToast("DataHub token is missing!<br><br>Please enter your DataHub API token in the Token tab.");
         return;
       }
 
       // 5. Validate eLabFTW token
       const elabToken = document.getElementById("elabToken");
       if (!elabToken || !elabToken.value || elabToken.value.trim() === '') {
-        alert("⚠️ eLabFTW token is missing!\n\nPlease enter your eLabFTW API token in the Token tab.");
+        showWarningToast("eLabFTW token is missing!<br><br>Please enter your eLabFTW API token in the Token tab.");
         return;
       }
 
@@ -1870,7 +1952,7 @@ Date: ${timestamp}`;
       }
 
       if (gitRoot.includes("Please select your ARC")) {
-        alert("⚠️ Please select your ARC.");
+        showWarningToast("Please select your ARC.");
         return;
       };
 
@@ -1961,7 +2043,7 @@ Date: ${timestamp}`;
         // };
         const arcName = document.getElementById("arcInfo").innerHTML;
         if (arcName.includes("Please select your ARC")) {
-          alert("please select your ARC.");
+          showWarningToast("Please select your ARC.");
           return;
         };
 
@@ -3823,7 +3905,7 @@ ${res.uploads && res.uploads.length > 0 ?
 
 
     function showError(text) {
-      alert(text);
+      showErrorToast(text);
       updateInfo(text, "0")
 
     }
@@ -4883,13 +4965,13 @@ ${version.sections.examples}
         const current = loadPromptFromStorage();
 
         if (!version) {
-          alert('Version not found');
+          showWarningToast('Version not found');
           return;
         }
 
         // Check if Diff library is available
         if (!window.Diff) {
-          alert('Diff library not loaded. Please refresh the page.');
+          showWarningToast('Diff library not loaded. Please refresh the page.');
           return;
         }
 
@@ -4924,7 +5006,7 @@ ${version.sections.examples}
         document.getElementById('diffViewerSection').style.display = 'block';
       } catch (error) {
         console.error('[Version History] Error comparing versions:', error);
-        alert('Error comparing versions. Check console for details.');
+        showErrorToast('Error comparing versions. Check console for details.');
       }
     };
 
@@ -4936,7 +5018,7 @@ ${version.sections.examples}
       const version = history.find(v => v.promptId === promptId);
 
       if (!version) {
-        alert('Version not found');
+        showWarningToast('Version not found');
         return;
       }
 
@@ -4945,11 +5027,11 @@ ${version.sections.examples}
         const success = restorePromptVersion(promptId);
 
         if (success) {
-          alert('Version restored successfully!');
+          showSuccessToast('Version restored successfully!');
           // Refresh the version list
           renderVersionHistoryList();
         } else {
-          alert('Error restoring version. Please try again.');
+          showErrorToast('Error restoring version. Please try again.');
         }
       }
     };
@@ -4969,7 +5051,7 @@ ${version.sections.examples}
       const version = history.find(v => v.promptId === promptId);
 
       if (!version) {
-        alert('Version not found');
+        showWarningToast('Version not found');
         return;
       }
 
@@ -4983,7 +5065,7 @@ ${version.sections.examples}
           // Hide diff viewer if it was showing the deleted version
           document.getElementById('diffViewerSection').style.display = 'none';
         } else {
-          alert('Error deleting version. Please try again.');
+          showErrorToast('Error deleting version. Please try again.');
         }
       }
     };
@@ -4996,7 +5078,7 @@ ${version.sections.examples}
         const history = loadPromptHistory();
 
         if (history.length === 0) {
-          alert('No version history to export.');
+          showInfoToast('No version history to export.');
           return;
         }
 
@@ -5021,7 +5103,7 @@ ${version.sections.examples}
         return true;
       } catch (error) {
         console.error('[Prompt History] Error exporting all versions:', error);
-        alert('Error exporting versions. Check console for details.');
+        showErrorToast('Error exporting versions. Check console for details.');
         return false;
       }
     }
@@ -5040,7 +5122,7 @@ ${version.sections.examples}
 
             // Validate structure
             if (!importedData.promptId || !importedData.sections) {
-              alert('Invalid prompt version file. Missing required fields.');
+              showErrorToast('Invalid prompt version file. Missing required fields.');
               return;
             }
 
@@ -5067,20 +5149,20 @@ ${version.sections.examples}
             localStorage.setItem('promptHistory', JSON.stringify(history));
 
             console.log('[Prompt History] Imported single version:', importedData.promptId);
-            alert('Version imported successfully!');
+            showSuccessToast('Version imported successfully!');
 
             // Refresh the version list
             renderVersionHistoryList();
           } catch (parseError) {
             console.error('[Prompt History] Error parsing imported file:', parseError);
-            alert('Error parsing JSON file. Please check the file format.');
+            showErrorToast('Error parsing JSON file. Please check the file format.');
           }
         };
 
         reader.readAsText(file);
       } catch (error) {
         console.error('[Prompt History] Error importing single version:', error);
-        alert('Error importing version. Check console for details.');
+        showErrorToast('Error importing version. Check console for details.');
       }
     }
 
@@ -5098,7 +5180,7 @@ ${version.sections.examples}
 
             // Validate structure
             if (!importedData.versions || !Array.isArray(importedData.versions)) {
-              alert('Invalid prompt history file. Missing or invalid "versions" array.');
+              showErrorToast('Invalid prompt history file. Missing or invalid "versions" array.');
               return;
             }
 
@@ -5141,20 +5223,20 @@ ${version.sections.examples}
             localStorage.setItem('promptHistory', JSON.stringify(newHistory));
 
             console.log('[Prompt History] Imported all versions:', newHistory.length);
-            alert(`Successfully imported ${newHistory.length} version(s)!${currentHistory.length > 0 ? '\n\nYour previous history has been downloaded as a backup.' : ''}`);
+            showSuccessToast(`Successfully imported ${newHistory.length} version(s)!${currentHistory.length > 0 ? '<br><br>Your previous history has been downloaded as a backup.' : ''}`);
 
             // Refresh the version list
             renderVersionHistoryList();
           } catch (parseError) {
             console.error('[Prompt History] Error parsing imported file:', parseError);
-            alert('Error parsing JSON file. Please check the file format.');
+            showErrorToast('Error parsing JSON file. Please check the file format.');
           }
         };
 
         reader.readAsText(file);
       } catch (error) {
         console.error('[Prompt History] Error importing all versions:', error);
-        alert('Error importing versions. Check console for details.');
+        showErrorToast('Error importing versions. Check console for details.');
       }
     }
 
