@@ -43,6 +43,56 @@ var conversionStartTime = null; // Track when conversion starts
     const filesChanged = document.getElementById("filesChanged");
 
     // =============================================================================
+    // ARC README TEMPLATE
+    // =============================================================================
+
+    const arcReadmeText = `#   Project Title: [Your Project Title]
+
+## Abstract
+
+[Provide a concise summary of your research project.]
+
+## Investigators
+
+* [Name 1, Affiliation 1]
+* [Name 2, Affiliation 2]
+    ...
+
+## Funding
+
+[List funding sources and grant numbers.]
+
+## Project Description
+
+[Provide a detailed description of the research, including background, objectives, and methodology.]
+
+## Data Overview
+
+[Describe the types of data generated in this project.]
+
+## ARC Structure
+
+This ARC is organized as follows:
+
+* **Studies:** Each study represents a specific experiment within the project.
+* **Assays:** Each assay represents a specific technical analysis performed within a study.
+
+## Studies
+
+* [Study 1: *Descriptive Study Title 1*](./study1/README.md)
+* [Study 2: *Descriptive Study Title 2*](./study2/README.md)
+    ...
+
+## License
+
+CC BY 4.0
+
+## Citations
+
+[List relevant publications or datasets.]
+`;
+
+    // =============================================================================
     // TOAST NOTIFICATION SYSTEM
     // =============================================================================
 
@@ -601,62 +651,69 @@ var conversionStartTime = null; // Track when conversion starts
     };
 
     const createNewArc = async () => {
-      loading.show();
-      // const projectDescription = document.getElementById("descriptionInput").value;
-      const projectDescription = arcReadmeText;
-      const projectName = document.getElementById("projectnameInput").value.replace(/[^a-zA-Z0-9_\-]/g, "-");
-      const username = window.userId.username;
+      try {
+        loading.show();
+        // const projectDescription = document.getElementById("descriptionInput").value;
+        const projectDescription = arcReadmeText;
+        const projectName = document.getElementById("projectnameInput").value.replace(/[^a-zA-Z0-9_\-]/g, "-");
+        const username = window.userId.username;
 
-      const accessToken = document.getElementById("datahubToken").value;
-      await createGitLabRepo(projectName, projectDescription, accessToken);
-      const url = `https://git.nfdi4plants.org/${username}/${projectName}.git`;
-      await cloneARC(url, projectName);
-      newARC = new arctrl.ARC();
-      const name = window.userId.name;
+        const accessToken = document.getElementById("datahubToken").value;
+        await createGitLabRepo(projectName, projectDescription, accessToken);
+        const url = `https://git.nfdi4plants.org/${username}/${projectName}.git`;
+        await cloneARC(url, projectName);
+        newARC = new arctrl.ARC();
+        const name = window.userId.name;
 
-      await arcWrite(projectName, newARC);
-      let inv = arctrl.ArcInvestigation.init(projectName);
-      const newContact = arctrl.Person.create(void 0, name.split(" ")[0], name.split(" ").slice(-1)[0], window.userId.commit_email, void 0, void 0, void 0, void 0, void 0, void 0);
+        await arcWrite(projectName, newARC);
+        let inv = arctrl.ArcInvestigation.init(projectName);
+        const newContact = arctrl.Person.create(void 0, name.split(" ")[0], name.split(" ").slice(-1)[0], window.userId.commit_email, void 0, void 0, void 0, void 0, void 0, void 0);
 
 
-      // for (const ee of isa_inv.Contacts){
-      //     if (ee.toString() != ccc.toString()){
-      //         console.log("no same person");
-      //     }else{ 
-      //         console.log("same person");
-      //         break;
-      //     };
-      // }
-      inv.Contacts = [newContact];
-      let invXlsx = arctrl.XlsxController.Investigation.toFsWorkbook(inv);
-      Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
-      await git.add({ fs, dir: projectName, filepath: '.' });
-      const gitRoot = projectName + "/";
-      await commitPush(
-        accessToken,
-        url,
-        "elab2arcTool",
-        "",
-        projectName,
-        gitRoot,
-        1,
-        "N/A",
-        "Initial ARC setup",
-        projectName,
-        false,
-        0,
-        "",
-        "isa.investigation.xlsx",
-        "",
-        "",
-        0,
-        1,
-        null
-      );
-      //document.getElementById('gitlabInfo').innerHTML= `${url}`;
-      //document.getElementById('arcInfo').innerHTML= `${projectName}`;
-      checkGitLabConnection()
-      loading.hide()
+        // for (const ee of isa_inv.Contacts){
+        //     if (ee.toString() != ccc.toString()){
+        //         console.log("no same person");
+        //     }else{
+        //         console.log("same person");
+        //         break;
+        //     };
+        // }
+        inv.Contacts = [newContact];
+        let invXlsx = arctrl.XlsxController.Investigation.toFsWorkbook(inv);
+        Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
+        await git.add({ fs, dir: projectName, filepath: '.' });
+        const gitRoot = projectName + "/";
+        await commitPush(
+          accessToken,
+          url,
+          "elab2arcTool",
+          "",
+          projectName,
+          gitRoot,
+          1,
+          "N/A",
+          "Initial ARC setup",
+          projectName,
+          false,
+          0,
+          "",
+          "isa.investigation.xlsx",
+          "",
+          "",
+          0,
+          1,
+          null
+        );
+        //document.getElementById('gitlabInfo').innerHTML= `${url}`;
+        //document.getElementById('arcInfo').innerHTML= `${projectName}`;
+        checkGitLabConnection()
+        showToast("ARC created successfully!", "success", 5000);
+      } catch (error) {
+        console.error("Error creating new ARC:", error);
+        showErrorToast(`Failed to create new ARC: ${error.message || error}`, 10000);
+      } finally {
+        loading.hide();
+      }
     }
 
 
@@ -2741,11 +2798,13 @@ Date: ${timestamp}`;
         );
 
         const progressStep1 = baseProgress + (1 / totalEntries) * 90 * 0.3;
-        updateInfo(`isa.assay.elab2arc.xlsx has been updated at <b>${assayId}</b>`, progressStep1);
+        const isaFileName = isStudy ? 'isa.study.elab2arc.xlsx' : 'isa.assay.elab2arc.xlsx';
+        const isaTypeLabel = isStudy ? 'study' : 'assay';
+        updateInfo(`${isaFileName} has been updated at <b>${assayId}</b>`, progressStep1);
 
         // Calculate git path for ISA file based on the baseAssayPath
         const relativeAssayPath = baseAssayPath.replace(gitRoot, "");
-        const isaPath = `${relativeAssayPath}/isa.assay.elab2arc.xlsx`;
+        const isaPath = `${relativeAssayPath}/${isaFileName}`;
 
         try {
           await git.add({ fs, dir: gitRoot, filepath: isaPath });
@@ -2967,16 +3026,35 @@ ${res.uploads && res.uploads.length > 0 ?
           affiliation: res.team_name || ''
         };
 
-        // Generate isa.assay.xlsx with metadata + multi-process sheets
-        updateInfo(`📝 Generating ISA assay file for: <b>${assayId}</b>`, baseProgress + 0.6);
-        const isaFilePath = await Elab2ArcISA.generateIsaAssayElab2arcWithDatamap(
-          baseAssayPath,
-          assayId,
-          isaMetadata,
-          protocolInfo,
-          datasetInfo,
-          llmData
-        );
+        // Generate ISA file (study or assay) with metadata + multi-process sheets
+        const isaType = isStudy ? 'study' : 'assay';
+
+        // Use actual folder name for batch conversions, experiment name for individual
+        const assayIdentifier = useExistingStructure
+          ? baseAssayPath.split('/').filter(p => p).pop()  // Extract folder name (e.g., "allinone")
+          : assayId;  // Use experiment-based name for new structures
+
+        updateInfo(`📝 Generating ISA ${isaType} file for: <b>${assayIdentifier}</b>`, baseProgress + 0.6);
+
+        let isaFilePath;
+        if (isStudy) {
+          // Generate isa.study.xlsx for studies
+          isaFilePath = await Elab2ArcISA.generateIsaStudy(
+            baseAssayPath,
+            assayIdentifier,
+            isaMetadata
+          );
+        } else {
+          // Generate isa.assay.xlsx for assays
+          isaFilePath = await Elab2ArcISA.generateIsaAssayElab2arcWithDatamap(
+            baseAssayPath,
+            assayIdentifier,
+            isaMetadata,
+            protocolInfo,
+            datasetInfo,
+            llmData
+          );
+        }
 
         if (isaFilePath) {
           // Add ISA file to git
@@ -2984,18 +3062,18 @@ ${res.uploads && res.uploads.length > 0 ?
           try {
             await git.add({ fs, dir: gitRoot, filepath: relativeIsaPath });
             console.log(`[ISA Gen] Added to git: ${relativeIsaPath}`);
-            updateInfo(`✓ ISA assay file created for: <b>${assayId}</b>`, baseProgress + 0.8);
+            updateInfo(`✓ ISA ${isaType} file created for: <b>${assayIdentifier}</b>`, baseProgress + 0.8);
           } catch (gitError) {
             console.warn(`[ISA Gen] Could not add ISA file to git:`, gitError);
-            updateInfo(`⚠️ ISA file created but not added to git: <b>${assayId}</b>`, baseProgress + 0.8);
+            updateInfo(`⚠️ ISA file created but not added to git: <b>${assayIdentifier}</b>`, baseProgress + 0.8);
           }
         } else {
-          updateInfo(`⚠️ ISA file generation failed for: <b>${assayId}</b>`, baseProgress + 0.8);
+          updateInfo(`⚠️ ISA file generation failed for: <b>${assayIdentifier}</b>`, baseProgress + 0.8);
         }
       } catch (isaError) {
         // Log error but continue conversion
         console.error('[ISA Gen] ISA generation failed (experimental feature):', isaError);
-        updateInfo(`⚠️ ISA generation error for: <b>${assayId}</b>`, baseProgress + 0.8);
+        updateInfo(`⚠️ ISA generation error for: <b>${assayIdentifier}</b>`, baseProgress + 0.8);
       }
       // ========== END EXPERIMENTAL ==========
 
@@ -3060,10 +3138,11 @@ ${res.uploads && res.uploads.length > 0 ?
             },
             files: {
               protocolPath: `protocols/${protocolFilename}`,
-              isaPath: 'isa.assay.elab2arc.xlsx',
+              isaPath: isStudy ? 'isa.study.elab2arc.xlsx' : 'isa.assay.elab2arc.xlsx',
               dataFiles: (res.uploads || []).map(u => {
                 const sanitized = u.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
-                return `dataset/${generateUploadFileName(sanitized, u.id)}`;
+                const dataFolder = isStudy ? 'resources' : 'dataset';
+                return `${dataFolder}/${generateUploadFileName(sanitized, u.id)}`;
               })
             },
             startTime: conversionStartTime,
