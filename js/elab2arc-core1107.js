@@ -10,7 +10,7 @@
 var fs = FS.fs;
 var elabJSON;
 var statusInfo = "";
-const version = "2025-06-03";
+const version = "2025-12-04";
 var blobb = [];
 var conversionHistory = []; // Store last 5 conversions
 var conversionStartTime = null; // Track when conversion starts
@@ -1218,7 +1218,8 @@ Protocol: ${protocolFilename}
 
 Converted from eLabFTW ${entryLabel} #${elabid}
 Source URL: ${elabEntryUrl}
-Author: ${fullname}${teamName ? ' (' + teamName + ')' : ''}
+eLabFTW Author: ${fullname}${teamName ? ' (' + teamName + ')' : ''}
+Converted by: ${window.userId?.name || window.userId?.username || 'unknown'}
 Conversion tool: elab2ARC v${version}
 Date: ${timestamp}`;
       }
@@ -1234,8 +1235,8 @@ Date: ${timestamp}`;
         fs,
         dir: gitRoot,
         author: {
-          name: fullname,
-          email: email,
+          name: 'elab2arc',
+          email: 'elab@dataplan.top',
         },
         message: commitMessage
       });
@@ -1278,7 +1279,6 @@ Date: ${timestamp}`;
         });
         console.log(pushResult);
         updateInfo("PLANTDataHUB has been updated (master branch).  <br>", pushProgressEnd);
-        showError(datahubURL + "ARC has been updated on master branch");
         //showError( "push to git failed. The error is "+ error)
       }
     }
