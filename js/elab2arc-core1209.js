@@ -4054,8 +4054,7 @@ ${res.uploads && res.uploads.length > 0 ?
 
           break;
         case "ftw":
-          showTab("ftwTab");
-
+          showTab("homeTab");
 
           break;
         case "https://xrzhou.com/elab2arc/":
