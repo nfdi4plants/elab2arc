@@ -43,6 +43,65 @@ var conversionStartTime = null; // Track when conversion starts
     const filesChanged = document.getElementById("filesChanged");
 
     // =============================================================================
+    // PROXY CONFIGURATION WITH FALLBACK
+    // =============================================================================
+    const proxyConfig = {
+      corsProxy: {
+        primary: 'https://corsproxy.cplantbox.com/',
+        backup: 'https://corsproxy2.cplantbox.com/',
+        current: 'https://corsproxy.cplantbox.com/'
+      },
+      gitProxy: {
+        primary: 'https://gitcors.cplantbox.com',
+        backup: 'https://gitcors2.cplantbox.com',
+        current: 'https://gitcors.cplantbox.com'
+      }
+    };
+
+    function getCorsProxy() {
+      return proxyConfig.corsProxy.current;
+    }
+
+    function getGitProxy() {
+      return proxyConfig.gitProxy.current;
+    }
+
+    function switchToBackupProxy(proxyType) {
+      if (proxyType === 'cors' && proxyConfig.corsProxy.current === proxyConfig.corsProxy.primary) {
+        proxyConfig.corsProxy.current = proxyConfig.corsProxy.backup;
+        console.warn('[Proxy] Switched CORS proxy to backup:', proxyConfig.corsProxy.current);
+        showWarningToast('Switched to backup CORS proxy');
+        return true;
+      } else if (proxyType === 'git' && proxyConfig.gitProxy.current === proxyConfig.gitProxy.primary) {
+        proxyConfig.gitProxy.current = proxyConfig.gitProxy.backup;
+        console.warn('[Proxy] Switched Git proxy to backup:', proxyConfig.gitProxy.current);
+        showWarningToast('Switched to backup Git proxy');
+        return true;
+      }
+      return false;
+    }
+
+    async function fetchWithProxyFallback(url, options = {}) {
+      const corsProxy = getCorsProxy();
+      const fullUrl = corsProxy + url;
+
+      try {
+        const response = await fetch(fullUrl, options);
+        if (!response.ok && response.status === 0) {
+          throw new Error('CORS proxy failed');
+        }
+        return response;
+      } catch (error) {
+        if (switchToBackupProxy('cors')) {
+          const backupUrl = getCorsProxy() + url;
+          console.log('[Proxy] Retrying with backup proxy:', backupUrl);
+          return fetch(backupUrl, options);
+        }
+        throw error;
+      }
+    }
+
+    // =============================================================================
     // ARC README TEMPLATE
     // =============================================================================
 
@@ -566,13 +625,11 @@ CC BY 4.0
 
     // Function to check connection to GitLab API
     async function checkGitLabConnection() {
-      const url = 'https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects';
+      const targetUrl = 'https://git.nfdi4plants.org/api/v4/projects';
 
       try {
-        const response = await fetch(url, {
+        const response = await fetchWithProxyFallback(targetUrl, {
           method: 'GET',
-          // Authentication may be required depending on endpoint
-          // headers: { 'PRIVATE-TOKEN': 'YOUR_PRIVATE_TOKEN' }
         });
 
         console.log('GitLab API Status Code:', response.status);
@@ -616,13 +673,13 @@ CC BY 4.0
     const fetchUser = async (accessToken) => {
       try {
         // Define the API endpoint for fetching user-related projects
-        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/user`;
+        const targetUrl = 'https://git.nfdi4plants.org/api/v4/user';
 
         // Fetch the data from the API with the access token in the headers
-        const response = await fetch(apiUrl, {
+        const response = await fetchWithProxyFallback(targetUrl, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${accessToken}` // Include the token in the Authorization header [[3]]
+            'Authorization': `Bearer ${accessToken}`
           }
         });
         console.log(response);
@@ -719,25 +776,23 @@ CC BY 4.0
 
     const createGitLabRepo = async (projectName, projectDescription, accessToken) => {
       try {
-        // Define the API endpoint for creating a new project [[4]][[6]]
-        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects`;
+        // Define the API endpoint for creating a new project
+        const targetUrl = 'https://git.nfdi4plants.org/api/v4/projects';
 
         // Prepare request configuration
-        const response = await fetch(apiUrl, {
+        const response = await fetchWithProxyFallback(targetUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${accessToken}`, // Authentication header [[3]]
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             name: projectName,
             description: projectDescription,
-            visibility: 'private', // Optional: Set default visibility [[7]]
+            visibility: 'private',
             initialize_with_readme: 'true',
             default_branch: 'main',
             lfs_enabled: 'true',
-
-
           })
         });
 
@@ -760,15 +815,13 @@ CC BY 4.0
     const fetchUserProjects = async (userId, accessToken, apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
       try {
         // Define the API endpoint for fetching user-related projects
-        // const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/users/${userId}/projects`;
-        // Define the API endpoint for fetching user-related projects
-        const apiUrl = `https://corsproxy.cplantbox.com/https://git.nfdi4plants.org/api/v4/projects` + apiParameter;
+        const targetUrl = 'https://git.nfdi4plants.org/api/v4/projects' + apiParameter;
 
         // Fetch the data from the API with the access token in the headers
-        const response = await fetch(apiUrl, {
+        const response = await fetchWithProxyFallback(targetUrl, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${accessToken}` // Include the token in the Authorization header [[3]]
+            'Authorization': `Bearer ${accessToken}`
           }
         });
 
@@ -996,6 +1049,10 @@ CC BY 4.0
 
 
     function setelabURL(elabURL) {
+      if (!elabURL || elabURL === 'null' || elabURL === 'undefined') {
+        elabURL = 'https://elab.dataplan.top/api/v2/';
+        showInfoToast('eLabFTW URL has been set to https://elab.dataplan.top/');
+      }
       var elabURL1 = unescape(elabURL);
       elabURL1.slice(-1) == "/" ? {} : elabURL1 = elabURL1 + "/";
       try {
@@ -1012,14 +1069,13 @@ CC BY 4.0
       document.getElementById('elabURLInput1').value = elabURL1;
 
     }
-    async function fetchElabJSON(elabToken, query = 'experiments/', elabURL, corsproxy = 'https://corsproxy.cplantbox.com/') {
+    async function fetchElabJSON(elabToken, query = 'experiments/', elabURL) {
       // Define the API endpoint
-      const elabftwServerUrl = corsproxy + elabURL + query;
-      // Define the API key      
+      const targetUrl = elabURL + query;
       const headers = { 'accept': 'application/json', 'Authorization': elabToken, 'Origin': 'x-requested-with' };
-      // Make the fetch request      
+      // Make the fetch request with proxy fallback
       try {
-        const response = await fetch(elabftwServerUrl, { headers, method: 'GET' });
+        const response = await fetchWithProxyFallback(targetUrl, { headers, method: 'GET' });
         const json = await response.json();
         json.statuscode = response.status;
         return json;
@@ -1033,14 +1089,13 @@ CC BY 4.0
       }
     }
 
-    async function fetchElabFiles(elabToken, query = 'experiments/', elabURL, corsproxy = 'https://corsproxy.cplantbox.com/') {
+    async function fetchElabFiles(elabToken, query = 'experiments/', elabURL) {
       // Define the API endpoint
-      const elabftwServerUrl = corsproxy + elabURL + query;
-      // Define the API key - accept any content type for binary files
+      const targetUrl = elabURL + query;
       const headers = { 'accept': '*/*', 'Authorization': elabToken, 'Origin': 'x-requested-with' };
-      // Make the fetch request
+      // Make the fetch request with proxy fallback
       try {
-        var response = await fetch(`${elabftwServerUrl}`, { headers, method: 'GET' });
+        const response = await fetchWithProxyFallback(targetUrl, { headers, method: 'GET' });
         const blob = await response.blob();
         console.log(`[fetchElabFiles] Fetched file with type: ${blob.type}, size: ${blob.size} bytes`);
         return blob;
@@ -1079,57 +1134,54 @@ CC BY 4.0
     async function datahubClone(datahubURL, dir, datahubtoken) {
       // Use clean URL without embedded credentials (more secure)
       console.log('[DataHub Clone] Cloning from:', datahubURL);
-      try {
-        const cloneResponse = await git.clone({
+
+      const cloneWithProxy = async (proxy, branch) => {
+        return git.clone({
           fs,
           http,
           dir,
-          corsProxy: 'https://gitcors.cplantbox.com',
-          url: datahubURL,  // Clean URL without credentials
-          ref: 'main',
+          corsProxy: proxy,
+          url: datahubURL,
+          ref: branch,
           singleBranch: true,
           depth: 1,
           force: true,
-          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),  // OAuth2 authentication via callback
-          // onProgress: event => {
-          //   updateLabel(event.phase)
-          //   if (event.total) {
-          //     updateProgressBar(10 + (event.loaded / event.total) * 30)
-          //   } else {
-          //     updateIndeterminateProgressBar(10 + (event.loaded / 100) * 30)
-          //   }
-          // }
+          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
+      };
+
+      try {
+        await cloneWithProxy(getGitProxy(), 'main');
         mainOrMaster = "main";
       } catch (error) {
+        // Try backup proxy if primary fails with network error
+        if (error.message && (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('CORS'))) {
+          if (switchToBackupProxy('git')) {
+            try {
+              await cloneWithProxy(getGitProxy(), 'main');
+              mainOrMaster = "main";
+              return;
+            } catch (backupError) {
+              console.warn("[DataHub Clone] Backup proxy also failed for 'main' branch");
+            }
+          }
+        }
+
         // Branch "main" not found - trying "master" (common for older repositories)
         console.log("[DataHub Clone] Branch 'main' not found, trying 'master' branch...");
-        if (error.message && !error.message.includes('Could not find')) {
-          console.warn("[DataHub Clone] Unexpected error:", error);
+        try {
+          await cloneWithProxy(getGitProxy(), 'master');
+          mainOrMaster = "master";
+        } catch (masterError) {
+          // Try backup proxy for master branch
+          if (switchToBackupProxy('git')) {
+            await cloneWithProxy(getGitProxy(), 'master');
+            mainOrMaster = "master";
+          } else {
+            throw masterError;
+          }
         }
-        const cloneResponse = await git.clone({
-          fs,
-          http,
-          dir,
-          corsProxy: 'https://gitcors.cplantbox.com',
-          url: datahubURL,  // Clean URL without credentials
-          ref: 'master',
-          singleBranch: true,
-          depth: 1,
-          force: true,
-          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),  // OAuth2 authentication via callback
-          // onProgress: event => {
-          //   updateLabel(event.phase)
-          //   if (event.total) {
-          //     updateProgressBar(50 + (event.loaded / event.total) * 30)
-          //   } else {
-          //     updateIndeterminateProgressBar(50 + (event.loaded / 100) * 30)
-          //   }
-          // }
-        });
-        mainOrMaster = "master";
       }
-
     }
 
     // =============================================================================
@@ -1337,6 +1389,12 @@ Date: ${timestamp}`;
         }
 
         window.localStorage.setItem('togetherAPIKey', togetherAPIKeyInput.value);
+      }
+
+      // Set default eLabFTW URL if not set
+      const elabURLInput = document.getElementById("elabURLInput1");
+      if (elabURLInput && (!elabURLInput.value || elabURLInput.value === 'null' || elabURLInput.value === 'undefined')) {
+        setelabURL('https://elab.dataplan.top/api/v2/');
       }
     }
 
@@ -2798,7 +2856,7 @@ Date: ${timestamp}`;
         );
 
         const progressStep1 = baseProgress + (1 / totalEntries) * 90 * 0.3;
-        const isaFileName = isStudy ? 'isa.study.elab2arc.xlsx' : 'isa.assay.elab2arc.xlsx';
+        const isaFileName = isStudy ? 'isa.study.xlsx' : 'isa.assay.xlsx';
         const isaTypeLabel = isStudy ? 'study' : 'assay';
         updateInfo(`${isaFileName} has been updated at <b>${assayId}</b>`, progressStep1);
 
@@ -3138,7 +3196,7 @@ ${res.uploads && res.uploads.length > 0 ?
             },
             files: {
               protocolPath: `protocols/${protocolFilename}`,
-              isaPath: isStudy ? 'isa.study.elab2arc.xlsx' : 'isa.assay.elab2arc.xlsx',
+              isaPath: isStudy ? 'isa.study.xlsx' : 'isa.assay.xlsx',
               dataFiles: (res.uploads || []).map(u => {
                 const sanitized = u.real_name.replace(/[^a-zA-Z0-9_,.\-+%$|(){}\[\]*=#?&$!^°<>;]/g, "_");
                 const dataFolder = isStudy ? 'resources' : 'dataset';
@@ -3947,15 +4005,15 @@ ${res.uploads && res.uploads.length > 0 ?
         let comments_datahub_url = arctrl.Comment$.create("datahub_url", "arctest");
 
         // Create annotation table
-        if (fs.existsSync(dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx")) {
+        if (fs.existsSync(dir + "/assays/" + assayName + "/isa.assay.xlsx")) {
           try {
-            console.log("isa.assay.elab2arc.xlsx file exist");
-            assay = await Xlsx.fromXlsxFile(dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx");
+            console.log("isa.assay.xlsx file exist");
+            assay = await Xlsx.fromXlsxFile(dir + "/assays/" + assayName + "/isa.assay.xlsx");
             isa_assay = await arctrl.XlsxController.Assay.fromFsWorkbook(assay);
             isa_assay.Performers = [person];
             isa_assay.Comment = [comments_datahub_url];
             let spreadsheet = arctrl.XlsxController.Assay.toFsWorkbook(isa_assay);
-            const outPath = dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx";
+            const outPath = dir + "/assays/" + assayName + "/isa.assay.xlsx";
 
             console.log(spreadsheet);
 
@@ -3971,7 +4029,7 @@ ${res.uploads && res.uploads.length > 0 ?
           // -------- 2. Transform object to generic spreadsheet ----------
           let spreadsheet = arctrl.XlsxController.Assay.toFsWorkbook(myAssay);
           // -------- 3. Write spreadsheet to xlsx file (or bytes) ----------
-          const outPath = dir + "/assays/" + assayName + "/isa.assay.elab2arc.xlsx";
+          const outPath = dir + "/assays/" + assayName + "/isa.assay.xlsx";
 
           console.log(spreadsheet);
 
