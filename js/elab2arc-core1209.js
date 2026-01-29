@@ -49,7 +49,8 @@ var conversionStartTime = null; // Track when conversion starts
       corsProxy: {
         primary: 'https://corsproxy.cplantbox.com/',
         backup: 'https://corsproxy2.cplantbox.com/',
-        current: 'https://corsproxy.cplantbox.com/'
+        current: 'https://corsproxy.cplantbox.com/',
+        tryDirectFirst: true  // Try direct access before using proxy
       },
       gitProxy: {
         primary: 'https://gitcors.cplantbox.com',
@@ -57,6 +58,9 @@ var conversionStartTime = null; // Track when conversion starts
         current: 'https://gitcors.cplantbox.com'
       }
     };
+
+    // Log CORS info message at application startup
+    console.info('%c[elab2arc] Note: CORS errors in the console are normal and expected. The application automatically falls back to using a CORS proxy when direct access is blocked.', 'color: #888; font-style: italic;');
 
     function getCorsProxy() {
       return proxyConfig.corsProxy.current;
@@ -82,20 +86,62 @@ var conversionStartTime = null; // Track when conversion starts
     }
 
     async function fetchWithProxyFallback(url, options = {}) {
+      // Helper to detect CORS errors - treat any TypeError as CORS error when in direct-first mode
+      // since we're specifically checking if direct browser-to-API access works
+      const isCorsError = (error) => {
+        // CORS errors typically manifest as TypeError with various messages
+        // When tryDirectFirst is enabled, assume TypeError = CORS block
+        return error && error.name === 'TypeError';
+      };
+
+      // Step 1: Try direct fetch (no proxy) - if enabled
+      if (proxyConfig.corsProxy.tryDirectFirst) {
+        try {
+          console.log('[fetchWithProxyFallback] Trying direct access:', url);
+          const response = await fetch(url, options);
+          if (response.ok) {
+            console.log('[fetchWithProxyFallback] Direct access succeeded');
+            return response;
+          }
+          // If direct fetch got a response but not OK (e.g., 401, 404), proceed to proxy
+          console.log('[fetchWithProxyFallback] Direct fetch returned non-OK status:', response.status);
+        } catch (directError) {
+          if (!isCorsError(directError)) {
+            // Not a CORS error - rethrow immediately (e.g., network error, invalid URL)
+            console.error('[fetchWithProxyFallback] Non-CORS error on direct fetch:', directError);
+            throw directError;
+          }
+          console.log('[fetchWithProxyFallback] CORS error detected, falling back to proxy');
+          console.info('[fetchWithProxyFallback] Note: CORS errors above are expected when server doesn\'t allow direct browser access. The application will use the CORS proxy instead.');
+        }
+      }
+
+      // Step 2: Try primary CORS proxy
       const corsProxy = getCorsProxy();
       const fullUrl = corsProxy + url;
 
+      // Add Origin header for CORS proxy (required by corsproxy.cplantbox.com)
+      const proxyOptions = {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Origin': window.location.origin
+        }
+      };
+
       try {
-        const response = await fetch(fullUrl, options);
+        console.log('[fetchWithProxyFallback] Trying primary proxy:', fullUrl);
+        const response = await fetch(fullUrl, proxyOptions);
         if (!response.ok && response.status === 0) {
           throw new Error('CORS proxy failed');
         }
         return response;
       } catch (error) {
+        // Step 3: Try backup CORS proxy
         if (switchToBackupProxy('cors')) {
           const backupUrl = getCorsProxy() + url;
-          console.log('[Proxy] Retrying with backup proxy:', backupUrl);
-          return fetch(backupUrl, options);
+          console.log('[fetchWithProxyFallback] Retrying with backup proxy:', backupUrl);
+          return fetch(backupUrl, proxyOptions);
         }
         throw error;
       }
@@ -1154,6 +1200,13 @@ CC BY 4.0
         await cloneWithProxy(getGitProxy(), 'main');
         mainOrMaster = "main";
       } catch (error) {
+        // Check for 401 authentication errors
+        if (error.message && error.message.includes('401')) {
+          showErrorToast('Authentication failed: Your DataHub token may have expired (tokens expire after 2 hours). Please click "get a token" to refresh.');
+          console.warn('[DataHub Clone] 401 Unauthorized: Token may be expired. Please refresh your token.');
+          throw new Error('DataHub token expired - please refresh your token');
+        }
+
         // Try backup proxy if primary fails with network error
         if (error.message && (error.message.includes('fetch') || error.message.includes('network') || error.message.includes('CORS'))) {
           if (switchToBackupProxy('git')) {
@@ -1314,6 +1367,12 @@ Date: ${timestamp}`;
         updateInfo("PLANTDataHUB has been updated.  <br>", pushProgressEnd);
         //
       } catch (error) {
+        // Check for 401 authentication errors
+        if (error.message && error.message.includes('401')) {
+          showErrorToast('Push failed: Your DataHub token may have expired. Please click "get a token" to refresh and try again.');
+          console.warn('[Git Push] 401 Unauthorized: Token may be expired.');
+          throw new Error('DataHub token expired - please refresh your token');
+        }
         // Branch "main" not found - trying "master" (common for older repositories)
         console.log("[DataHub Push] Branch 'main' not found, trying 'master' branch...");
         if (error.message && !error.message.includes('Could not find')) {
@@ -2842,18 +2901,11 @@ Date: ${timestamp}`;
       await createAssay(assayId, baseAssayPath, useExistingStructure, standardSubDirs, gitRoot);
 
       // Generate ISA file for new structures only (not for existing ones)
+      // DEPRECATED: Old fullAssay2() method removed - Issue #36 fix
+      // The new ISA generation method (generateIsaAssayElab2arcWithDatamap/generateIsaStudy)
+      // is now the single source of truth for ISA file generation (see lines 3098-3115)
       if (!useExistingStructure) {
-        await fullAssay2(
-          assayId,
-          "new metadata table",
-          res.lastname,
-          res.firstname,
-          email,
-          res.team_name,
-          `Generated by elab2ARC tool on ${Date()} datahub_url is: ${datahubURL}`,
-          arcDir,
-          datahubURL
-        );
+        // await fullAssay2(...) - REMOVED: Was causing duplicate isa.assay.xlsx files
 
         const progressStep1 = baseProgress + (1 / totalEntries) * 90 * 0.3;
         const isaFileName = isStudy ? 'isa.study.xlsx' : 'isa.assay.xlsx';
@@ -3097,10 +3149,14 @@ ${res.uploads && res.uploads.length > 0 ?
         let isaFilePath;
         if (isStudy) {
           // Generate isa.study.xlsx for studies
+          // Issue #42 fix: Pass protocolInfo, datasetInfo, and llmData to study generation
           isaFilePath = await Elab2ArcISA.generateIsaStudy(
             baseAssayPath,
             assayIdentifier,
-            isaMetadata
+            isaMetadata,
+            protocolInfo,
+            datasetInfo,
+            llmData
           );
         } else {
           // Generate isa.assay.xlsx for assays

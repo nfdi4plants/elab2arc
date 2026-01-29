@@ -676,11 +676,24 @@
    * @param {string} studyPath - Path to study directory
    * @param {string} studyName - Study identifier
    * @param {Object} metadata - Metadata object with user info
+   * @param {Object} protocolInfo - Protocol information (optional) - Issue #42 fix
+   * @param {Object} datasetInfo - Dataset information (optional) - Issue #42 fix
+   * @param {Object} llmData - LLM annotation data (optional) - Issue #42 fix
    * @returns {Promise<string>} - Path to generated file
    */
-  async function generateIsaStudy(studyPath, studyName, metadata = {}) {
+  async function generateIsaStudy(
+    studyPath,
+    studyName,
+    metadata = {},
+    protocolInfo = null,
+    datasetInfo = null,
+    llmData = null
+  ) {
     try {
       console.log(`[ISA Gen] Generating ISA study for: ${studyName}`);
+      if (llmData) {
+        console.log(`[ISA Gen] LLM annotation data provided for study - Issue #42 fix`);
+      }
 
       // Create ArcStudy using ARCtrl
       const arcStudy = window.arctrl.ArcStudy.create(studyName);
