@@ -43,6 +43,12 @@ var conversionStartTime = null; // Track when conversion starts
     const filesChanged = document.getElementById("filesChanged");
 
     // =============================================================================
+    // PROGRESS UPDATE THROTTLING
+    // =============================================================================
+    let lastProgressUpdate = 0;
+    const PROGRESS_THROTTLE_MS = 1000; // Update at most once per second
+
+    // =============================================================================
     // PROXY CONFIGURATION WITH FALLBACK
     // =============================================================================
     const proxyConfig = {
@@ -1181,6 +1187,12 @@ CC BY 4.0
       // Use clean URL without embedded credentials (more secure)
       console.log('[DataHub Clone] Cloning from:', datahubURL);
 
+      // Get repo name for display
+      const repoName = getRepoName(datahubURL);
+
+      // Reset progress throttle tracker for fresh clone operation
+      lastProgressUpdate = 0;
+
       const cloneWithProxy = async (proxy, branch) => {
         return git.clone({
           fs,
@@ -1193,11 +1205,42 @@ CC BY 4.0
           depth: 1,
           force: true,
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
+          onProgress: (event) => {
+            // event.phase: current phase (e.g., "fetching", "checkout")
+            // event.loaded: bytes transferred
+            // event.total: total bytes (may be undefined)
+
+            // Throttle progress updates to avoid flooding UI
+            const now = Date.now();
+            if (now - lastProgressUpdate < PROGRESS_THROTTLE_MS) {
+              return; // Skip this update
+            }
+            lastProgressUpdate = now;
+
+            const phase = event.phase || 'Cloning';
+            const loaded = formatBytes(event.loaded || 0);
+
+            let progressText = '';
+            if (event.total) {
+              const total = formatBytes(event.total);
+              const percent = Math.round((event.loaded / event.total) * 100);
+              progressText = `${percent}%`;
+            } else {
+              progressText = loaded;
+            }
+
+            // Update status in Conversion Status accordion
+            updateInfo(
+              `Cloning repository: ${repoName} (${phase}: ${progressText})`,
+              1  // Use minimal progress (1%) to show activity without affecting main progress
+            );
+          }
         });
       };
 
       try {
         await cloneWithProxy(getGitProxy(), 'main');
+        updateInfo(`✓ Clone complete: ${repoName} (main branch)`, 1);
         mainOrMaster = "main";
       } catch (error) {
         // Check for 401 authentication errors
@@ -1212,6 +1255,7 @@ CC BY 4.0
           if (switchToBackupProxy('git')) {
             try {
               await cloneWithProxy(getGitProxy(), 'main');
+              updateInfo(`✓ Clone complete: ${repoName} (main branch via backup proxy)`, 1);
               mainOrMaster = "main";
               return;
             } catch (backupError) {
@@ -1224,11 +1268,13 @@ CC BY 4.0
         console.log("[DataHub Clone] Branch 'main' not found, trying 'master' branch...");
         try {
           await cloneWithProxy(getGitProxy(), 'master');
+          updateInfo(`✓ Clone complete: ${repoName} (master branch)`, 1);
           mainOrMaster = "master";
         } catch (masterError) {
           // Try backup proxy for master branch
           if (switchToBackupProxy('git')) {
             await cloneWithProxy(getGitProxy(), 'master');
+            updateInfo(`✓ Clone complete: ${repoName} (master branch via backup proxy)`, 1);
             mainOrMaster = "master";
           } else {
             throw masterError;
@@ -1361,6 +1407,7 @@ Date: ${timestamp}`;
           remote: 'origin',
           force: true,
           ref: 'main',
+          corsProxy: getGitProxy(),
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
         console.log(pushResult);
@@ -1386,6 +1433,7 @@ Date: ${timestamp}`;
           force: true,
           remote: 'origin',
           ref: 'master',
+          corsProxy: getGitProxy(),
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
         console.log(pushResult);
@@ -4312,6 +4360,40 @@ ${res.uploads && res.uploads.length > 0 ?
       }
     }
 
+    /**
+     * Format bytes to human-readable string (KB, MB, GB)
+     * @param {number} bytes - Number of bytes
+     * @returns {string} Formatted string (e.g., "2.4 MB")
+     */
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    /**
+     * Extract repository name from GitLab URL
+     * @param {string} url - Full repository URL
+     * @returns {string} Repository name (e.g., "username/reponame")
+     */
+    function getRepoName(url) {
+      try {
+        // Remove protocol and git suffix
+        const cleanUrl = url.replace(/^https?:\/\//, '').replace(/\.git$/, '');
+        // Extract path components (e.g., git.nfdi4plants.org/username/reponame)
+        const parts = cleanUrl.split('/');
+        // Return the last two parts (username/reponame)
+        if (parts.length >= 2) {
+          return parts.slice(-2).join('/');
+        }
+        return cleanUrl;
+      } catch (e) {
+        return url;
+      }
+    }
+
     function updateLabel(phrase) {
       document.getElementById("pbarLabel").innerHTML = phrase;
     }
@@ -4425,6 +4507,7 @@ ${res.uploads && res.uploads.length > 0 ?
           remote: 'origin',
           force: false,
           ref: 'main',
+          corsProxy: getGitProxy(),
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
 
