@@ -589,3 +589,43 @@ display: block;
 .table td:nth-child(6) {
     min-width: 90px;
 }
+
+/* LFS progress indicator */
+.lfs-progress {
+  background-color: #e7f3ff;
+  border-left: 4px solid #007bff;
+  padding: 10px 15px;
+  margin: 10px 0;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.lfs-progress.uploading {
+  background-color: #fff3cd;
+  border-left-color: #ffc107;
+}
+
+.lfs-progress.success {
+  background-color: #d4edda;
+  border-left-color: #28a745;
+}
+
+.lfs-progress.error {
+  background-color: #f8d7da;
+  border-left-color: #dc3545;
+}
+
+.lfs-progress .lfs-filename {
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.lfs-progress .lfs-size {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.lfs-progress .lfs-status {
+  float: right;
+  font-weight: 500;
+}
