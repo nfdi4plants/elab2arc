@@ -3619,15 +3619,19 @@ ${res.uploads && res.uploads.length > 0 ?
         await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
 
         // Add file with LFS support for large files
-        const datahubURL = localStorage.getItem('datahubURL') || 'https://git.nfdi4plants.org';
         const datahubToken = localStorage.getItem('datahubToken');
-        const corsProxy = getGitProxy() || 'https://gitcors.cplantbox.com/';
+        // Use CORS proxy for LFS API calls - it properly handles CORS headers and Authorization forwarding
+        // Tested: corsproxy.cplantbox.com returns proper CORS headers for LFS batch API
+        const lfsProxy = getCorsProxy() || 'https://corsproxy.cplantbox.com/';
 
         if (window.GitLFSService) {
+          // GitLab LFS requires Basic auth with username "oauth2" and token as password
+          // Format: Basic base64("oauth2:token")
+          const lfsAuth = `Basic ${btoa('oauth2:' + datahubToken)}`;
           const lfsResult = await GitLFSService.addFileWithLFS(
             fs, git, gitRoot, relativeFilePath,
-            datahubURL, `Bearer ${datahubToken}`,
-            corsProxy
+            datahubURL, lfsAuth,
+            lfsProxy
           );
           if (lfsResult.usedLFS) {
             console.log(`[LFS] File ${fileName} (${GitLFSService.formatBytes(lfsResult.size)}) stored via LFS`);
