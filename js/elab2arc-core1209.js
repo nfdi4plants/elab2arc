@@ -1183,6 +1183,79 @@ CC BY 4.0
 
     }
 
+    /**
+     * Get repository size from GitLab API
+     * Returns size in bytes or null if unavailable
+     */
+    async function getRepositorySize(datahubURL, datahubtoken) {
+      try {
+        // Extract project path from URL (e.g., https://git.nfdi4plants.org/group/project.git)
+        const urlObj = new URL(datahubURL);
+        let projectPath = urlObj.pathname.replace(/\.git$/, '');
+
+        // Remove leading slash and encode the path properly for GitLab API
+        // GitLab API expects: /api/v4/projects/group%2Fproject (slash encoded as %2F)
+        projectPath = projectPath.startsWith('/') ? projectPath.slice(1) : projectPath;
+        const encodedPath = projectPath.replace(/\//g, '%2F');
+
+        // GitLab API endpoint for project with statistics
+        const apiUrl = `https://git.nfdi4plants.org/api/v4/projects/${encodedPath}?statistics=1`;
+
+        console.log(`[Repo Size] Fetching repository size from: ${apiUrl}`);
+
+        // Try direct fetch first (without CORS proxy) - GitLab usually allows direct API calls with auth
+        let response;
+        try {
+          console.log('[Repo Size] Trying direct API access...');
+          response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${datahubtoken}`
+            }
+          });
+          console.log(`[Repo Size] Direct API response status: ${response.status}`);
+        } catch (directError) {
+          // If direct access fails (CORS), try with proxy fallback
+          console.log('[Repo Size] Direct access failed, trying with CORS proxy...');
+          response = await fetchWithProxyFallback(apiUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${datahubtoken}`
+            }
+          });
+          console.log(`[Repo Size] Proxy API response status: ${response.status}`);
+        }
+
+        if (response.ok) {
+          const project = await response.json();
+          // GitLab returns size in bytes (statistics.repository_size)
+          const sizeBytes = project.statistics?.repository_size || 0;
+          const sizeMB = sizeBytes / 1024 / 1024;
+          console.log(`[Repo Size] Repository size: ${sizeMB.toFixed(2)} MB (${sizeBytes} bytes)`);
+          return sizeBytes;
+        } else {
+          const errorText = await response.text();
+          console.warn(`[Repo Size] Could not fetch repository size (status ${response.status}): ${errorText}`);
+          return null;
+        }
+      } catch (error) {
+        console.warn('[Repo Size] Error fetching repository size:', error.message);
+        return null;
+      }
+    }
+
+    /**
+     * Show warning toast for large repositories
+     */
+    function showLargeRepoWarning(sizeMB) {
+      const message = `
+        <strong>⚠️ Large Repository Detected</strong><br>
+        This repository is <strong>${sizeMB.toFixed(2)} MB</strong> in size.<br>
+        Using optimized clone mode to avoid downloading large historical files.
+      `;
+      showToast(message, 'warning');
+    }
+
     async function datahubClone(datahubURL, dir, datahubtoken) {
       // Use clean URL without embedded credentials (more secure)
       console.log('[DataHub Clone] Cloning from:', datahubURL);
@@ -1190,10 +1263,49 @@ CC BY 4.0
       // Get repo name for display
       const repoName = getRepoName(datahubURL);
 
+      // Check repository size before cloning
+      const REPO_SIZE_THRESHOLD = 50 * 1024 * 1024; // 50 MB in bytes
+      console.log('[Clone] Checking repository size (threshold: 50MB)...');
+      const repoSize = await getRepositorySize(datahubURL, datahubtoken);
+
+      // Determine if we should use noCheckout
+      let useNoCheckout = false;
+      if (repoSize !== null) {
+        useNoCheckout = repoSize > REPO_SIZE_THRESHOLD;
+      } else {
+        // If we can't determine repository size, check localStorage for user preference
+        // Default to noCheckout for safety if size is unknown (to avoid potential large file downloads)
+        const noCheckoutDefault = localStorage.getItem('noCheckoutDefault');
+        if (noCheckoutDefault === null) {
+          // First time with unknown size - ask user or default to true for safety
+          console.log('[Clone] Repository size unknown - defaulting to noCheckout mode for safety');
+          useNoCheckout = true;
+        } else {
+          useNoCheckout = noCheckoutDefault === 'true';
+        }
+      }
+
+      console.log(`[Clone] Repository size: ${repoSize ? (repoSize / 1024 / 1024).toFixed(2) + ' MB' : 'unknown'}`);
+      console.log(`[Clone] useNoCheckout: ${useNoCheckout} (repoSize > ${REPO_SIZE_THRESHOLD / 1024 / 1024} MB: ${repoSize > REPO_SIZE_THRESHOLD})`);
+
+      if (useNoCheckout) {
+        if (repoSize !== null) {
+          const sizeMB = repoSize / 1024 / 1024;
+          console.warn(`[Clone] Repository is ${sizeMB.toFixed(2)} MB - using noCheckout mode`);
+          showLargeRepoWarning(sizeMB);
+        } else {
+          console.warn('[Clone] Repository size unknown - using noCheckout mode as safety precaution');
+          showToast('Repository size could not be determined. Using optimized clone mode to avoid downloading large files.', 'warning');
+        }
+      }
+
       // Reset progress throttle tracker for fresh clone operation
       lastProgressUpdate = 0;
 
       const cloneWithProxy = async (proxy, branch) => {
+        // Optimization: noCheckout=true skips downloading working tree files for large repos
+        // This avoids downloading large historical files that were committed WITHOUT LFS
+        // elab2arc only adds NEW files and doesn't read existing repo content
         return git.clone({
           fs,
           http,
@@ -1202,7 +1314,8 @@ CC BY 4.0
           url: datahubURL,
           ref: branch,
           singleBranch: true,
-          depth: 1,
+          depth: 1,                    // Shallow clone - only latest commit
+          noCheckout: useNoCheckout,   // Conditional - skip checkout only for large repos (>50MB)
           force: true,
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
           onProgress: (event) => {
@@ -1241,6 +1354,9 @@ CC BY 4.0
       try {
         await cloneWithProxy(getGitProxy(), 'main');
         updateInfo(`✓ Clone complete: ${repoName} (main branch)`, 1);
+        if (useNoCheckout) {
+          console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
+        }
         mainOrMaster = "main";
       } catch (error) {
         // Check for 401 authentication errors
@@ -1256,6 +1372,9 @@ CC BY 4.0
             try {
               await cloneWithProxy(getGitProxy(), 'main');
               updateInfo(`✓ Clone complete: ${repoName} (main branch via backup proxy)`, 1);
+              if (useNoCheckout) {
+                console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
+              }
               mainOrMaster = "main";
               return;
             } catch (backupError) {
@@ -1269,17 +1388,43 @@ CC BY 4.0
         try {
           await cloneWithProxy(getGitProxy(), 'master');
           updateInfo(`✓ Clone complete: ${repoName} (master branch)`, 1);
+          if (useNoCheckout) {
+            console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
+          }
           mainOrMaster = "master";
         } catch (masterError) {
           // Try backup proxy for master branch
           if (switchToBackupProxy('git')) {
             await cloneWithProxy(getGitProxy(), 'master');
             updateInfo(`✓ Clone complete: ${repoName} (master branch via backup proxy)`, 1);
+            if (useNoCheckout) {
+              console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
+            }
             mainOrMaster = "master";
           } else {
             throw masterError;
           }
         }
+      }
+
+      // Initialize Git LFS support after clone
+      try {
+        if (window.GitLFSService) {
+          await GitLFSService.initLFS(fs, dir);
+          await git.add({ fs, dir, filepath: '.gitattributes' });
+          await git.commit({
+            fs,
+            dir,
+            message: 'chore: initialize Git LFS\n\nCo-Authored-By: elab2arc',
+            author: { name: 'elab2arc', email: 'elab@dataplan.top' }
+          });
+          console.log('[LFS] LFS initialized in repository');
+        } else {
+          console.warn('[LFS] GitLFSService not available - LFS support disabled');
+        }
+      } catch (lfsError) {
+        // LFS initialization is optional - don't fail the entire process
+        console.warn('[LFS] Could not initialize LFS (continuing without LFS):', lfsError.message);
       }
     }
 
@@ -3473,7 +3618,24 @@ ${res.uploads && res.uploads.length > 0 ?
         console.log(`[Upload] File type: ${blob.type}, size: ${blob.size} bytes`);
         await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
 
-        await git.add({ fs, dir: gitRoot, filepath: relativeFilePath });
+        // Add file with LFS support for large files
+        const datahubURL = localStorage.getItem('datahubURL') || 'https://git.nfdi4plants.org';
+        const datahubToken = localStorage.getItem('datahubToken');
+        const corsProxy = getGitProxy() || 'https://gitcors.cplantbox.com/';
+
+        if (window.GitLFSService) {
+          const lfsResult = await GitLFSService.addFileWithLFS(
+            fs, git, gitRoot, relativeFilePath,
+            datahubURL, `Bearer ${datahubToken}`,
+            corsProxy
+          );
+          if (lfsResult.usedLFS) {
+            console.log(`[LFS] File ${fileName} (${GitLFSService.formatBytes(lfsResult.size)}) stored via LFS`);
+          }
+        } else {
+          // Fallback to normal git.add if LFS service not available
+          await git.add({ fs, dir: gitRoot, filepath: relativeFilePath });
+        }
 
         // Update status HTML
 
