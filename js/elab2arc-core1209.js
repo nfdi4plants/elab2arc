@@ -1183,78 +1183,6 @@ CC BY 4.0
 
     }
 
-    /**
-     * Get repository size from GitLab API
-     * Returns size in bytes or null if unavailable
-     */
-    async function getRepositorySize(datahubURL, datahubtoken) {
-      try {
-        // Extract project path from URL (e.g., https://git.nfdi4plants.org/group/project.git)
-        const urlObj = new URL(datahubURL);
-        let projectPath = urlObj.pathname.replace(/\.git$/, '');
-
-        // Remove leading slash and encode the path properly for GitLab API
-        // GitLab API expects: /api/v4/projects/group%2Fproject (slash encoded as %2F)
-        projectPath = projectPath.startsWith('/') ? projectPath.slice(1) : projectPath;
-        const encodedPath = projectPath.replace(/\//g, '%2F');
-
-        // GitLab API endpoint for project with statistics
-        const apiUrl = `https://git.nfdi4plants.org/api/v4/projects/${encodedPath}?statistics=1`;
-
-        console.log(`[Repo Size] Fetching repository size from: ${apiUrl}`);
-
-        // Try direct fetch first (without CORS proxy) - GitLab usually allows direct API calls with auth
-        let response;
-        try {
-          console.log('[Repo Size] Trying direct API access...');
-          response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${datahubtoken}`
-            }
-          });
-          console.log(`[Repo Size] Direct API response status: ${response.status}`);
-        } catch (directError) {
-          // If direct access fails (CORS), try with proxy fallback
-          console.log('[Repo Size] Direct access failed, trying with CORS proxy...');
-          response = await fetchWithProxyFallback(apiUrl, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${datahubtoken}`
-            }
-          });
-          console.log(`[Repo Size] Proxy API response status: ${response.status}`);
-        }
-
-        if (response.ok) {
-          const project = await response.json();
-          // GitLab returns size in bytes (statistics.repository_size)
-          const sizeBytes = project.statistics?.repository_size || 0;
-          const sizeMB = sizeBytes / 1024 / 1024;
-          console.log(`[Repo Size] Repository size: ${sizeMB.toFixed(2)} MB (${sizeBytes} bytes)`);
-          return sizeBytes;
-        } else {
-          const errorText = await response.text();
-          console.warn(`[Repo Size] Could not fetch repository size (status ${response.status}): ${errorText}`);
-          return null;
-        }
-      } catch (error) {
-        console.warn('[Repo Size] Error fetching repository size:', error.message);
-        return null;
-      }
-    }
-
-    /**
-     * Show warning toast for large repositories
-     */
-    function showLargeRepoWarning(sizeMB) {
-      const message = `
-        <strong>⚠️ Large Repository Detected</strong><br>
-        This repository is <strong>${sizeMB.toFixed(2)} MB</strong> in size.<br>
-        Using optimized clone mode to avoid downloading large historical files.
-      `;
-      showToast(message, 'warning');
-    }
 
     async function datahubClone(datahubURL, dir, datahubtoken) {
       // Use clean URL without embedded credentials (more secure)
@@ -1263,49 +1191,11 @@ CC BY 4.0
       // Get repo name for display
       const repoName = getRepoName(datahubURL);
 
-      // Check repository size before cloning
-      const REPO_SIZE_THRESHOLD = 50 * 1024 * 1024; // 50 MB in bytes
-      console.log('[Clone] Checking repository size (threshold: 50MB)...');
-      const repoSize = await getRepositorySize(datahubURL, datahubtoken);
-
-      // Determine if we should use noCheckout
-      let useNoCheckout = false;
-      // if (repoSize !== null) {
-      //   useNoCheckout = repoSize > REPO_SIZE_THRESHOLD;
-      // } else {
-      //   // If we can't determine repository size, check localStorage for user preference
-      //   // Default to noCheckout for safety if size is unknown (to avoid potential large file downloads)
-      //   const noCheckoutDefault = localStorage.getItem('noCheckoutDefault');
-      //   if (noCheckoutDefault === null) {
-      //     // First time with unknown size - ask user or default to true for safety
-      //     console.log('[Clone] Repository size unknown - defaulting to noCheckout mode for safety');
-      //     useNoCheckout = true;
-      //   } else {
-      //     useNoCheckout = noCheckoutDefault === 'true';
-      //   }
-      // }
-
-      console.log(`[Clone] Repository size: ${repoSize ? (repoSize / 1024 / 1024).toFixed(2) + ' MB' : 'unknown'}`);
-      console.log(`[Clone] useNoCheckout: ${useNoCheckout} (repoSize > ${REPO_SIZE_THRESHOLD / 1024 / 1024} MB: ${repoSize > REPO_SIZE_THRESHOLD})`);
-
-      if (useNoCheckout) {
-        if (repoSize !== null) {
-          const sizeMB = repoSize / 1024 / 1024;
-          console.warn(`[Clone] Repository is ${sizeMB.toFixed(2)} MB - using noCheckout mode`);
-          showLargeRepoWarning(sizeMB);
-        } else {
-          console.warn('[Clone] Repository size unknown - using noCheckout mode as safety precaution');
-          showToast('Repository size could not be determined. Using optimized clone mode to avoid downloading large files.', 'warning');
-        }
-      }
 
       // Reset progress throttle tracker for fresh clone operation
       lastProgressUpdate = 0;
 
       const cloneWithProxy = async (proxy, branch) => {
-        // Optimization: noCheckout=true skips downloading working tree files for large repos
-        // This avoids downloading large historical files that were committed WITHOUT LFS
-        // elab2arc only adds NEW files and doesn't read existing repo content
         return git.clone({
           fs,
           http,
@@ -1315,7 +1205,7 @@ CC BY 4.0
           ref: branch,
           singleBranch: true,
           depth: 1,                    // Shallow clone - only latest commit
-          noCheckout: useNoCheckout,   // Conditional - skip checkout only for large repos (>50MB)
+          noCheckout: false,           // Always checkout files to ensure proper git status
           force: true,
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
           onProgress: (event) => {
@@ -1354,9 +1244,6 @@ CC BY 4.0
       try {
         await cloneWithProxy(getGitProxy(), 'main');
         updateInfo(`✓ Clone complete: ${repoName} (main branch)`, 1);
-        if (useNoCheckout) {
-          console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
-        }
         mainOrMaster = "main";
       } catch (error) {
         // Check for 401 authentication errors
@@ -1372,9 +1259,6 @@ CC BY 4.0
             try {
               await cloneWithProxy(getGitProxy(), 'main');
               updateInfo(`✓ Clone complete: ${repoName} (main branch via backup proxy)`, 1);
-              if (useNoCheckout) {
-                console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
-              }
               mainOrMaster = "main";
               return;
             } catch (backupError) {
@@ -1388,18 +1272,12 @@ CC BY 4.0
         try {
           await cloneWithProxy(getGitProxy(), 'master');
           updateInfo(`✓ Clone complete: ${repoName} (master branch)`, 1);
-          if (useNoCheckout) {
-            console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
-          }
           mainOrMaster = "master";
         } catch (masterError) {
           // Try backup proxy for master branch
           if (switchToBackupProxy('git')) {
             await cloneWithProxy(getGitProxy(), 'master');
             updateInfo(`✓ Clone complete: ${repoName} (master branch via backup proxy)`, 1);
-            if (useNoCheckout) {
-              console.log('[Clone] Optimized clone (shallow + noCheckout) - large historical files were not downloaded');
-            }
             mainOrMaster = "master";
           } else {
             throw masterError;
@@ -1483,6 +1361,30 @@ CC BY 4.0
       }
     }
 
+    // Helper function to count files in a directory recursively (for diagnostics)
+    async function countFilesInDir(dir, maxDepth = 20, currentDepth = 0) {
+      let count = 0;
+      try {
+        if (currentDepth >= maxDepth) return count;
+
+        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = `${dir}/${entry.name}`;
+          if (entry.isDirectory()) {
+            // Skip .git directory
+            if (entry.name !== '.git') {
+              count += await countFilesInDir(fullPath, maxDepth, currentDepth + 1);
+            }
+          } else if (entry.isFile()) {
+            count++;
+          }
+        }
+      } catch (e) {
+        console.warn(`[countFilesInDir] Error reading ${dir}:`, e.message);
+      }
+      return count;
+    }
+
     async function commitPush(datahubtoken, datahubURL, fullname, email, dir, gitRoot, elabid, experimentTitle, assayId, isStudy, fileCount, targetPath, protocolFilename, teamName, sourceInstance, completedEntries, totalEntries, entryType) {
       // Create structured commit message following Git best practices
       const timestamp = new Date().toISOString();
@@ -1543,8 +1445,48 @@ Date: ${timestamp}`;
       const pushProgressStart = baseProgress + (1 / totalEntries) * 90 * 0.9;
       const pushProgressEnd = baseProgress + (1 / totalEntries) * 90;
 
+      // ========== DIAGNOSTIC LOGS BEFORE PUSH ==========
+      console.log('[PUSH DIAGNOSTIC] ========== PRE-PUSH CHECK ==========');
+      console.log('[PUSH DIAGNOSTIC] Git root:', gitRoot);
+      console.log('[PUSH DIAGNOSTIC] Remote:', datahubURL);
+
+      // Log memory usage if available
+      if (performance.memory) {
+        const usedMB = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+        const totalMB = (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
+        const limitMB = (performance.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2);
+        console.log(`[PUSH DIAGNOSTIC] Memory: ${usedMB}MB used / ${totalMB}MB total / ${limitMB}MB limit`);
+      } else {
+        console.log('[PUSH DIAGNOSTIC] Memory API not available (non-Chrome browser)');
+      }
+
+      // Log file count in repository
+      try {
+        const fileCount = await countFilesInDir(gitRoot);
+        console.log(`[PUSH DIAGNOSTIC] Total files in repository: ${fileCount}`);
+      } catch (e) {
+        console.log('[PUSH DIAGNOSTIC] Could not count files:', e.message);
+      }
+
+      // Log current HEAD
+      try {
+        const head = await git.resolveRef({ fs, dir: gitRoot, ref: 'HEAD' });
+        console.log(`[PUSH DIAGNOSTIC] Current HEAD: ${head}`);
+      } catch (e) {
+        console.log('[PUSH DIAGNOSTIC] Could not resolve HEAD:', e.message);
+      }
+      console.log('[PUSH DIAGNOSTIC] ========== STARTING PUSH ==========');
+      // ================================================
+
+      // Try to trigger garbage collection before push (Chrome DevTools only)
+      if (typeof gc === 'function') {
+        console.log('[PUSH] Triggering garbage collection before push...');
+        gc();
+      }
+
       try {
         updateInfo("Pushing to PLANTDataHUB (main branch)...", pushProgressStart);
+        console.log('[PUSH] Starting push to main branch...');
         let pushResult = await git.push({
           fs,
           http,
@@ -1555,10 +1497,32 @@ Date: ${timestamp}`;
           corsProxy: getGitProxy(),
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
-        console.log(pushResult);
+        console.log('[PUSH] Push completed successfully!');
+        console.log('[PUSH DIAGNOSTIC] ========== PUSH RESULT ==========');
+        console.log('[PUSH DIAGNOSTIC] Push result:', JSON.stringify(pushResult, null, 2));
+
+        // Log memory after push
+        if (performance.memory) {
+          const usedMB = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+          console.log(`[PUSH DIAGNOSTIC] Memory after push: ${usedMB}MB`);
+        }
+        console.log('[PUSH DIAGNOSTIC] ========== PUSH COMPLETE ==========');
         updateInfo("PLANTDataHUB has been updated.  <br>", pushProgressEnd);
         //
       } catch (error) {
+        console.error('[PUSH DIAGNOSTIC] ========== PUSH ERROR ==========');
+        console.error('[PUSH ERROR] Error during push:', error);
+        console.error('[PUSH ERROR] Error message:', error.message);
+        console.error('[PUSH ERROR] Error stack:', error.stack);
+
+        // Log memory at error
+        if (performance.memory) {
+          const usedMB = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+          const totalMB = (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
+          console.error(`[PUSH ERROR] Memory at error: ${usedMB}MB used / ${totalMB}MB total`);
+        }
+        console.error('[PUSH DIAGNOSTIC] =====================================');
+
         // Check for 401 authentication errors
         if (error.message && error.message.includes('401')) {
           showErrorToast('Push failed: Your DataHub token may have expired. Please click "get a token" to refresh and try again.');
@@ -1571,6 +1535,7 @@ Date: ${timestamp}`;
           console.warn("[DataHub Push] Unexpected error:", error);
         }
         updateInfo("Pushing to PLANTDataHUB (master branch)...", pushProgressStart);
+        console.log('[PUSH] Retrying with master branch...');
         let pushResult = await git.push({
           fs,
           http,
@@ -3621,9 +3586,10 @@ ${res.uploads && res.uploads.length > 0 ?
         // Add file with LFS support for large files
         // Get token using standardized method
         const datahubToken = getDatahubToken();
-        // Use CORS proxy for LFS API calls - it properly handles CORS headers and Authorization forwarding
-        // Tested: corsproxy.cplantbox.com returns proper CORS headers for LFS batch API
-        const lfsProxy = getCorsProxy() || 'https://corsproxy.cplantbox.com/';
+        // Use dedicated LFS proxy for LFS API calls - it properly handles CORS headers AND Authorization forwarding
+        // The general CORS proxy (corsproxy.cplantbox.com) does NOT forward Authorization headers
+        // Tested: lfsproxy.cplantbox.com returns proper CORS headers for LFS batch API with auth
+        const lfsProxy = 'https://lfsproxy.cplantbox.com';
 
         if (window.GitLFSService) {
           // GitLab LFS requires Basic auth with username "oauth2" and token as password
@@ -4559,6 +4525,139 @@ ${res.uploads && res.uploads.length > 0 ?
       const sizes = ['Bytes', 'KB', 'MB', 'GB'];
       const i = Math.floor(Math.log(bytes) / Math.log(k));
       return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    }
+
+    /**
+     * Download the entire ARC repository as a ZIP file
+     * @param {string} gitRoot - Root directory path of the git repository
+     * @param {string} repoName - Repository name for the ZIP filename
+     */
+    async function downloadARCAsZip(gitRoot, repoName) {
+      try {
+        updateInfo("Preparing ZIP archive...", 5);
+        showToast("Preparing ZIP archive...", "info", 3000);
+
+        const zip = new JSZip();
+        let fileCount = 0;
+        let totalSize = 0;
+        const filesToProcess = [];
+
+        // Recursively collect all files (excluding .git directory)
+        async function collectFiles(dir, maxDepth = 20, currentDepth = 0) {
+          if (currentDepth >= maxDepth) return;
+
+          try {
+            const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              const fullPath = `${dir}/${entry.name}`;
+
+              // Skip .git directory and temporary files
+              if (entry.name === '.git' || entry.name === '.DS_Store') {
+                continue;
+              }
+
+              if (entry.isDirectory()) {
+                await collectFiles(fullPath, maxDepth, currentDepth + 1);
+              } else if (entry.isFile()) {
+                // Get file stats for size tracking
+                try {
+                  const stats = await fs.promises.stat(fullPath);
+                  totalSize += stats.size;
+                  filesToProcess.push({ path: fullPath, size: stats.size });
+                } catch (e) {
+                  console.warn(`[downloadARCAsZip] Error stating file ${fullPath}:`, e.message);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn(`[downloadARCAsZip] Error reading ${dir}:`, e.message);
+          }
+        }
+
+        await collectFiles(gitRoot);
+        fileCount = filesToProcess.length;
+        const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
+
+        console.log(`[downloadARCAsZip] Found ${fileCount} files (${totalSizeMB} MB)`);
+
+        // Add files to ZIP with progress updates
+        let processedFiles = 0;
+        const progressUpdateInterval = 50; // Update progress every 50 files
+
+        for (const file of filesToProcess) {
+          try {
+            // Read file content from memfs
+            const content = fs.readFileSync(file.path);
+
+            // Calculate relative path from gitRoot
+            let relativePath = file.path.substring(gitRoot.length);
+            if (relativePath.startsWith('/')) {
+              relativePath = relativePath.substring(1);
+            }
+
+            // Add to ZIP
+            zip.file(relativePath, content);
+
+            processedFiles++;
+
+            // Update progress periodically
+            if (processedFiles % progressUpdateInterval === 0 || processedFiles === fileCount) {
+              const progress = Math.min(90, 5 + (processedFiles / fileCount) * 80);
+              const processedSizeMB = (filesToProcess.slice(0, processedFiles)
+                .reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2);
+              updateInfo(`Adding files... (${processedFiles}/${fileCount}, ${processedSizeMB} MB / ${totalSizeMB} MB)`, progress);
+            }
+
+            // Small delay to keep UI responsive
+            if (processedFiles % 100 === 0) {
+              await new Promise(resolve => setTimeout(resolve, 0));
+            }
+          } catch (e) {
+            console.warn(`[downloadARCAsZip] Error processing ${file.path}:`, e.message);
+          }
+        }
+
+        // Generate ZIP blob
+        updateInfo("Generating ZIP file...", 95);
+        console.log("[downloadARCAsZip] Generating ZIP blob...");
+
+        const zipBlob = await zip.generateAsync({
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 }
+        }, (metadata) => {
+          if (metadata.percent) {
+            const progress = 95 + (metadata.percent / 100) * 4;
+            updateProgressBar(progress);
+          }
+        });
+
+        // Create filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        const zipFilename = `${repoName.replace(/[\/\\]/g, '-')}-${timestamp}.zip`;
+
+        // Trigger download
+        updateInfo("Starting download...", 99);
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = zipFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        updateInfo("Download started!", 100);
+        showToast(`ZIP archive downloaded: ${zipFilename} (${formatBytes(totalSize)})`, 'success', 5000);
+        updateProgressBar(100);
+
+        console.log(`[downloadARCAsZip] Download complete: ${zipFilename}`);
+
+      } catch (error) {
+        console.error("[downloadARCAsZip] Error creating ZIP:", error);
+        showToast(`Failed to create ZIP: ${error.message}`, 'error', 8000);
+        updateInfo("ZIP creation failed", 0);
+      }
     }
 
     /**
