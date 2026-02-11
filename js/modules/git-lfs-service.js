@@ -226,11 +226,19 @@ async function uploadToLFS(url, auth, fileContent, corsProxy) {
   }
 
   const result = await response.json();
+  console.log('[LFS] Batch API response:', JSON.stringify(result, null, 2));
 
   // Check for errors in response
   if (result.objects && result.objects[0] && result.objects[0].error) {
     const lfsError = result.objects[0].error;
     throw new Error(`LFS error: ${lfsError.message} (code: ${lfsError.code})`);
+  }
+
+  // Check if upload action is present
+  // If no upload action, the object already exists in LFS storage - we can skip upload
+  if (!result.objects || !result.objects[0] || !result.objects[0].actions || !result.objects[0].actions.upload) {
+    console.log(`[LFS] Object ${oid} already exists in LFS storage, skipping upload`);
+    return { oid, size };
   }
 
   // Upload the actual file to the provided URL
