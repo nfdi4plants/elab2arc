@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LFS Upload Test</title>
+</head>
+<body>
+    <h1>LFS Upload Test via CORS Proxy</h1>
+    <p>Testing GitLab LFS upload through https://lfsproxy.cplantbox.com</p>
+
+    <h2>Steps:</h2>
+    <ol>
+        <li>Create a test file</li>
+        <li>Get LFS batch API response with upload URL</li>
+        <li>Upload file through LFS CORS proxy</li>
+    </ol>
+
+    <h2>Test Results:</h2>
+    <pre id="results">Running test...</pre>
+
+    <script>
+    async function testLFSUpload() {
+        const results = document.getElementById('results');
+        const output = [];
+
+        const TEST_CONTENT = 'Test file for LFS upload via CORS proxy';
+        const TEST_SIZE = new Blob([TEST_CONTENT]).size;
+
+        // Calculate SHA-256
+        const encoder = new TextEncoder();
+        const data = encoder.encode(TEST_CONTENT);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const oid = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        output.push(`Test file: ${TEST_CONTENT}`);
+        output.push(`Size: ${TEST_SIZE} bytes`);
+        output.push(`SHA-256: ${oid}`);
+        output.push('');
+
+        // Step 1: Get LFS batch API response
+        output.push('Step 1: Getting LFS batch API response...');
+        const batchRequest = {
+            operation: 'upload',
+            transfers: ['basic'],
+            objects: [{ oid, size: TEST_SIZE }]
+        };
+
+        const batchResponse = await fetch(
+            'https://lfsproxy.cplantbox.com/https://git.nfdi4plants.org/x.zhou/INV018_RibesPan.git/info/lfs/objects/batch',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/vnd.git-lfs+json',
+                    'Accept': 'application/vnd.git-lfs+json',
+                    'Authorization': 'Basic ' + btoa('oauth2:61009a0c06a19c01205b70d6905371115bb0b25370305a12f778ac54706b6111')
+                },
+                body: JSON.stringify(batchRequest)
+            }
+        );
+
+        if (!batchResponse.ok) {
+            output.push(`ERROR: Batch API failed (${batchResponse.status})`);
+            results.textContent = output.join('\n');
+            return;
+        }
+
+        const batchData = await batchResponse.json();
+        const uploadAction = batchData.objects[0].actions.upload;
+        const uploadUrl = uploadAction.href;
+        const authHeader = uploadAction.header.Authorization;
+
+        output.push('✅ Batch API successful!');
+        output.push(`Upload URL: ${uploadUrl.substring(0, 80)}...`);
+        output.push('');
+
+        // Step 2: Upload file through LFS CORS proxy
+        output.push('Step 2: Uploading file through LFS CORS proxy...');
+
+        const uploadResponse = await fetch(
+            'https://lfsproxy.cplantbox.com/' + uploadUrl,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/octet-stream'
+                },
+                body: TEST_CONTENT
+            }
+        );
+
+        output.push(`Upload response: ${uploadResponse.status} ${uploadResponse.statusText}`);
+
+        if (uploadResponse.ok) {
+            output.push('');
+            output.push('========================================');
+            output.push('✅✅✅ SUCCESS! LFS Upload Working! ✅✅✅');
+            output.push('========================================');
+            output.push('');
+            output.push('The LFS CORS proxy is working correctly!');
+            output.push('Files >10MB can now be uploaded via LFS.');
+        } else {
+            output.push(`ERROR: Upload failed (${uploadResponse.status})`);
+            const errorText = await uploadResponse.text();
+            output.push(`Error: ${errorText}`);
+        }
+
+        results.textContent = output.join('\n');
+    }
+
+    // Run test when page loads
+    testLFSUpload();
+    </script>
+</body>
+</html>

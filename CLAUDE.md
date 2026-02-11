@@ -51,7 +51,8 @@ elab2arc/
 │   ├── conversion-metadata.js   # Conversion tracking/metadata
 │   ├── isa-generation.js        # ISA-Tab generation logic
 │   ├── llm-service.js           # LLM/AI integration
-│   └── extra-fields-handler.js  # Custom field processing
+│   ├── extra-fields-handler.js  # Custom field processing
+│   └── git-lfs-service.js       # Git LFS for large files (>10MB)
 ├── templates/              # Excel templates for ISA metadata
 ├── images/               # Static assets (logo, help images)
 └── LICENSE               # GPL v3.0
@@ -92,6 +93,40 @@ Due to browser security restrictions, the app uses proxy fallback:
 - Primary: `corsproxy.cplantbox.com`
 - Backup: `corsproxy2.cplantbox.com`
 - Git proxy: `gitcors.cplantbox.com`
+- **LFS proxy:** `lfsproxy.cplantbox.com` (supports PUT requests for file uploads)
+
+### Git LFS (Large File Storage)
+Files larger than 10MB are automatically uploaded to Git LFS to improve repository performance and avoid hitting Git size limits.
+
+**How it works:**
+1. Files >10MB are detected during the conversion process
+2. File content is uploaded to GitLab LFS storage via the LFS Batch API
+3. A small pointer file (SHA-256 reference) is committed to the git repository instead
+4. The LFS proxy handles PUT requests with proper CORS headers
+
+**Supported file extensions (70 total):**
+
+| Category | Extensions |
+|----------|------------|
+| **Archives** | `*.zip`, `*.tar.gz`, `*.tar`, `*.rar`, `*.7z`, `*.gz`, `*.bz2`, `*.xz` |
+| **Office Documents** | `*.xlsx`, `*.xls`, `*.docx`, `*.doc`, `*.pptx`, `*.ppt`, `*.odt`, `*.ods`, `*.odp` |
+| **Images** | `*.psd`, `*.tif`, `*.tiff`, `*.png`, `*.jpg`, `*.jpeg`, `*.gif`, `*.bmp`, `*.svg`, `*.webp`, `*.ico`, `*.heic`, `*.heif`, `*.raw`, `*.cr2`, `*.nef`, `*.arw` |
+| **Videos** | `*.mp4`, `*.avi`, `*.mov`, `*.mkv`, `*.webm`, `*.flv`, `*.wmv` |
+| **Audio** | `*.mp3`, `*.wav`, `*.flac`, `*.aac`, `*.ogg`, `*.wma`, `*.m4a` |
+| **Scientific Data** | `*.fasta`, `*.fastq`, `*.bam`, `*.sam`, `*.vcf`, `*.npy`, `*.h5`, `*.hdf5` |
+| **Data/Text** | `*.csv`, `*.tsv`, `*.json`, `*.xml` |
+| **3D Models** | `*.vtp`, `*.vtk`, `*.obj`, `*.ply`, `*.stl`, `*.fbx` |
+| **Databases** | `*.sqlite`, `*.db`, `*.parquet` |
+| **Documents** | `*.pdf` |
+
+**LFS Configuration:**
+- Threshold: 10MB (`LFS_SIZE_THRESHOLD = 10 * 1024 * 1024`)
+- Config file: `.gitattributes` (auto-generated with extension patterns)
+- Upload timeout: 5 minutes
+- LFS Batch API: `/info/lfs/objects/batch` (GitLab endpoint)
+
+**Testing LFS:**
+A test page is available at `test-lfs-upload.html` to verify LFS upload functionality.
 
 ## Development Guidelines
 
@@ -105,7 +140,7 @@ npx serve
 Then open http://localhost:8000
 
 ### File Versioning
-Files use cache-busting query parameters: `?v=20260129000001`
+Files use cache-busting query parameters: `?v=YYYYMMDDHHMMSS` (e.g., `20260210120101`)
 
 ### Code Style
 - Functional JavaScript patterns
@@ -122,6 +157,7 @@ Files use cache-busting query parameters: `?v=20260129000001`
 | ISA-Tab generation | `js/modules/isa-generation.js` |
 | LLM integration | `js/modules/llm-service.js` |
 | Git operations | `js/git.js` |
+| Git LFS (large files) | `js/modules/git-lfs-service.js` |
 | UI styling | `css/custom0929.css`, `css/elabGUI1305.css` |
 | HTML structure | `index.html` |
 
@@ -189,9 +225,10 @@ Modern browsers with ES6+ support required
 - Safari: Full support
 
 ### Limitations
-- Large files may cause browser memory issues
-- CORS proxy dependencies
+- Files >10MB use Git LFS (requires LFS-enabled GitLab repository)
+- CORS proxy dependencies for cross-origin requests
 - No offline mode (requires API access)
+- Browser memory constraints for very large conversions
 
 ## Related Resources
 
@@ -203,6 +240,8 @@ Modern browsers with ES6+ support required
 
 Recent commits focus on:
 - CORS proxy improvements
+- Git LFS support for large files (>10MB)
+- LFS CORS proxy deployment (lfsproxy.cplantbox.com)
 - UI/UX enhancements
 - ISA-Tab generation fixes
 - Token authentication flow

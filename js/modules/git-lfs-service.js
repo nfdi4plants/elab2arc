@@ -179,6 +179,7 @@ async function uploadToLFS(url, auth, fileContent, corsProxy) {
     objects: [{ oid, size }]
   };
 
+  // GitLab LFS API expects Bearer token authentication (same as regular GitLab API)
   const headers = {
     'Content-Type': 'application/vnd.git-lfs+json',
     'Accept': 'application/vnd.git-lfs+json',

@@ -1270,20 +1270,20 @@ CC BY 4.0
 
       // Determine if we should use noCheckout
       let useNoCheckout = false;
-      if (repoSize !== null) {
-        useNoCheckout = repoSize > REPO_SIZE_THRESHOLD;
-      } else {
-        // If we can't determine repository size, check localStorage for user preference
-        // Default to noCheckout for safety if size is unknown (to avoid potential large file downloads)
-        const noCheckoutDefault = localStorage.getItem('noCheckoutDefault');
-        if (noCheckoutDefault === null) {
-          // First time with unknown size - ask user or default to true for safety
-          console.log('[Clone] Repository size unknown - defaulting to noCheckout mode for safety');
-          useNoCheckout = true;
-        } else {
-          useNoCheckout = noCheckoutDefault === 'true';
-        }
-      }
+      // if (repoSize !== null) {
+      //   useNoCheckout = repoSize > REPO_SIZE_THRESHOLD;
+      // } else {
+      //   // If we can't determine repository size, check localStorage for user preference
+      //   // Default to noCheckout for safety if size is unknown (to avoid potential large file downloads)
+      //   const noCheckoutDefault = localStorage.getItem('noCheckoutDefault');
+      //   if (noCheckoutDefault === null) {
+      //     // First time with unknown size - ask user or default to true for safety
+      //     console.log('[Clone] Repository size unknown - defaulting to noCheckout mode for safety');
+      //     useNoCheckout = true;
+      //   } else {
+      //     useNoCheckout = noCheckoutDefault === 'true';
+      //   }
+      // }
 
       console.log(`[Clone] Repository size: ${repoSize ? (repoSize / 1024 / 1024).toFixed(2) + ' MB' : 'unknown'}`);
       console.log(`[Clone] useNoCheckout: ${useNoCheckout} (repoSize > ${REPO_SIZE_THRESHOLD / 1024 / 1024} MB: ${repoSize > REPO_SIZE_THRESHOLD})`);
