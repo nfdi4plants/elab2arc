@@ -3619,7 +3619,8 @@ ${res.uploads && res.uploads.length > 0 ?
         await fs.promises.writeFile(fullPath, new Uint8Array(await blob.arrayBuffer()));
 
         // Add file with LFS support for large files
-        const datahubToken = localStorage.getItem('datahubToken');
+        // Get token using standardized method
+        const datahubToken = getDatahubToken();
         // Use CORS proxy for LFS API calls - it properly handles CORS headers and Authorization forwarding
         // Tested: corsproxy.cplantbox.com returns proper CORS headers for LFS batch API
         const lfsProxy = getCorsProxy() || 'https://corsproxy.cplantbox.com/';
@@ -4323,6 +4324,27 @@ ${res.uploads && res.uploads.length > 0 ?
       let value = "";
       values.forEach(e => { if (e.split("=")[0] === name) { value = e.split("=")[1] } });
       return value;
+    }
+
+    /**
+     * Standardized token getter functions
+     * Centralizes token retrieval from cookies (the app's standard storage method)
+     */
+
+    /**
+     * Get eLabFTW API token from cookies
+     * @returns {string} eLabFTW token
+     */
+    function getElabToken() {
+      return extractCookie('elabtoken');
+    }
+
+    /**
+     * Get DataHub (GitLab) token from cookies
+     * @returns {string} DataHub token
+     */
+    function getDatahubToken() {
+      return extractCookie('datahubtoken');
     }
 
     function softRoute() {

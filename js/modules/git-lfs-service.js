@@ -179,7 +179,8 @@ async function uploadToLFS(url, auth, fileContent, corsProxy) {
     objects: [{ oid, size }]
   };
 
-  // GitLab LFS API expects Bearer token authentication (same as regular GitLab API)
+  // GitLab LFS requires Basic auth with username "oauth2" and token as password
+  // The auth parameter should be: Basic base64("oauth2:token")
   const headers = {
     'Content-Type': 'application/vnd.git-lfs+json',
     'Accept': 'application/vnd.git-lfs+json',
@@ -322,36 +323,19 @@ async function addFileWithLFS(fs, git, gitRoot, filepath, url, auth, corsProxy) 
         // .gitattributes doesn't exist yet
       }
 
-      // Check session storage
-      const remembered = JSON.parse(sessionStorage.getItem('lfsRememberedExtensions') || '{}');
-      const skipped = JSON.parse(sessionStorage.getItem('lfsSkippedExtensions') || '{}');
-
-      // Show popup if not configured, not remembered, and not skipped
-      if (!isLFSConfigured && !remembered[extension] && !skipped[extension]) {
-        console.log(`[LFS] Extension .${extension} not configured for LFS, asking user...`);
-        useLFS = await askUserForLFSExtension(extension, fileSize, fileName);
-
-        if (useLFS) {
-          // Add extension to .gitattributes
-          await addLFSExtension(fs, gitRoot, extension);
-          // Stage the updated .gitattributes
-          await git.add({ fs, dir: gitRoot, filepath: '.gitattributes' });
-          console.log(`[LFS] Staged .gitattributes with new .${extension} pattern`);
-        } else {
-          console.log(`[LFS] User declined LFS for .${extension}, adding normally`);
-        }
-      } else if (!isLFSConfigured && remembered[extension]) {
-        // User said "remember" for this extension, add it automatically
+      // Auto-add extension to .gitattributes for any file >10MB
+      // No user prompts needed - always use LFS for large files
+      if (!isLFSConfigured) {
+        console.log(`[LFS] Auto-adding .${extension} to .gitattributes for file >10MB`);
         await addLFSExtension(fs, gitRoot, extension);
+        // Stage the updated .gitattributes
         await git.add({ fs, dir: gitRoot, filepath: '.gitattributes' });
-        console.log(`[LFS] Auto-added .${extension} to .gitattributes (remembered)`);
-      } else if (skipped[extension]) {
-        // User previously skipped this extension
-        useLFS = false;
-        console.log(`[LFS] User previously skipped .${extension}, adding normally`);
+        console.log(`[LFS] Staged .gitattributes with .${extension} pattern`);
       }
+      // Always use LFS for files >10MB
+      useLFS = true;
 
-      // Proceed based on user decision
+      // Proceed with LFS upload
       if (useLFS) {
         console.log(`[LFS] Using LFS for ${filepath}`);
 
