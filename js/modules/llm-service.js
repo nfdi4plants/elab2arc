@@ -69,6 +69,91 @@
 
   const DEFAULT_MODEL = 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput';
 
+  // =============================================================================
+  // API PROVIDER CONFIGURATION
+  // =============================================================================
+  const API_PROVIDERS = {
+    dataplan: {
+      name: 'DataPlan (Default)',
+      endpoint: 'https://h.dataplan.top/v1/chat/completions',
+      requiresApiKey: false,
+      headers: {
+        'Host': 'h.dataplan.top',
+        'institution': 'IBG-4'
+      }
+    },
+    together: {
+      name: 'Together.AI',
+      endpoint: 'https://api.together.xyz/v1/chat/completions',
+      requiresApiKey: true,
+      headers: {}
+    },
+    custom: {
+      name: 'Custom API (Ollama, LM Studio, etc.)',
+      endpoint: '',  // User-configured
+      requiresApiKey: false,
+      headers: {}
+    }
+  };
+
+  const DEFAULT_PROVIDER = 'dataplan';
+
+  /**
+   * Get the currently selected API provider
+   * @returns {string} - Provider identifier ('dataplan', 'together', 'custom')
+   */
+  function getSelectedProvider() {
+    return window.localStorage.getItem('llmApiProvider') || DEFAULT_PROVIDER;
+  }
+
+  /**
+   * Get the API endpoint based on selected provider
+   * @returns {string} - API endpoint URL
+   */
+  function getApiEndpoint() {
+    const provider = getSelectedProvider();
+    if (provider === 'custom') {
+      return window.localStorage.getItem('llmCustomEndpoint') || 'http://localhost:11434/v1/chat/completions';
+    }
+    return API_PROVIDERS[provider]?.endpoint || API_PROVIDERS[DEFAULT_PROVIDER].endpoint;
+  }
+
+  /**
+   * Get API headers based on selected provider
+   * @param {string} apiKey - API key (only used for Together.AI)
+   * @returns {Object} - Headers object for fetch request
+   */
+  function getApiHeaders(apiKey) {
+    const provider = getSelectedProvider();
+    const baseHeaders = {
+      'Content-Type': 'application/json'
+    };
+
+    if (provider === 'together' && apiKey) {
+      baseHeaders['Authorization'] = `Bearer ${apiKey}`;
+    } else if (provider === 'dataplan') {
+      baseHeaders['Host'] = 'h.dataplan.top';
+      baseHeaders['institution'] = 'IBG-4';
+    }
+
+    // Merge with any custom headers from provider config
+    const providerConfig = API_PROVIDERS[provider];
+    if (providerConfig?.headers) {
+      Object.assign(baseHeaders, providerConfig.headers);
+    }
+
+    return baseHeaders;
+  }
+
+  /**
+   * Check if the current provider requires an API key
+   * @returns {boolean} - True if API key is required
+   */
+  function requiresApiKey() {
+    const provider = getSelectedProvider();
+    return API_PROVIDERS[provider]?.requiresApiKey || false;
+  }
+
   /**
    * Get the currently selected LLM model from localStorage with validation
    * @returns {string} - Model identifier
@@ -580,18 +665,24 @@
         return TEST_PROTOCOL_DATA;
       }
 
-      // Get Together.AI API key from localStorage
-      let togetherAPIKey = window.localStorage.getItem('togetherAPIKey');
+      // Get provider and API configuration
+      const provider = getSelectedProvider();
+      const endpoint = getApiEndpoint();
+      const apiKey = window.localStorage.getItem('togetherAPIKey');
 
-      if (!togetherAPIKey) {
-        console.warn('[Datamap LLM] No Together.AI API key found in localStorage');
+      // Only require API key for Together.AI provider
+      if (provider === 'together' && !apiKey) {
+        console.warn('[Datamap LLM] Together.AI requires an API key');
         return null;
       }
 
-      // Get selected model
+      // Get selected model and context window
       const selectedModel = getSelectedModel();
       const contextWindow = getModelContextWindow(selectedModel);
+      const headers = getApiHeaders(apiKey);
 
+      console.log(`[Datamap LLM] Provider: ${provider}`);
+      console.log(`[Datamap LLM] Endpoint: ${endpoint}`);
       console.log(`[Datamap LLM] Using model: ${selectedModel}`);
       console.log(`[Datamap LLM] Context window: ${contextWindow} tokens`);
 
@@ -837,12 +928,9 @@ Return ONLY valid JSON, no additional text.`;
 
         // Use retry with exponential backoff and model fallback for resilience
         const { response, model: usedModel } = await retryWithBackoff(async (model) => {
-          return fetch('https://api.together.xyz/v1/chat/completions', {
+          return fetch(endpoint, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${togetherAPIKey}`
-            },
+            headers: headers,
             body: JSON.stringify({
               model: model,
               max_tokens: 8192, // Increase token limit to prevent truncation
@@ -1173,7 +1261,13 @@ Return ONLY valid JSON, no additional text.`;
     generateDatamapFromLLM: generateDatamapFromLLM,
     parseProtocolToDatamap: parseProtocolToDatamap,
     appendToLLMStream: appendToLLMStream,
-    clearLLMStream: clearLLMStream
+    clearLLMStream: clearLLMStream,
+    // API Provider functions
+    getSelectedProvider: getSelectedProvider,
+    getApiEndpoint: getApiEndpoint,
+    getApiHeaders: getApiHeaders,
+    requiresApiKey: requiresApiKey,
+    API_PROVIDERS: API_PROVIDERS
   };
 
 })(window);

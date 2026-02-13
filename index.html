@@ -275,10 +275,43 @@ video {
         </div>
       </div>
 
+      <!-- LLM API Provider Selection -->
+      <div class="row justify-content-center align-items-end">
+        <div class="my-3 col-lg-8">
+          <label for="llmApiProvider" class="form-label">
+            LLM API Provider
+          </label>
+          <select class="form-select" id="llmApiProvider" onchange="saveApiProvider()">
+            <option value="dataplan" selected>Community Server</option>
+            <option value="together">Together.AI (Requires API Key)</option>
+            <option value="custom">Custom API (Ollama, LM Studio, etc.)</option>
+          </select>
+          <small class="form-text text-muted">
+            Community server is the default and free to use with a waiting queue. Together.AI requires an API key.
+          </small>
+        </div>
+      </div>
+
+      <!-- Custom endpoint input (shown only for custom provider) -->
+      <div class="row justify-content-center align-items-end d-none" id="customEndpointContainer">
+        <div class="my-3 col-lg-8">
+          <label for="llmCustomEndpoint" class="form-label">
+            Custom API Endpoint URL
+          </label>
+          <input type="text" class="form-control" id="llmCustomEndpoint"
+                 placeholder="http://localhost:11434/v1/chat/completions"
+                 onchange="saveCustomEndpoint()">
+          <small class="form-text text-muted">
+            Examples: Ollama: <code>http://localhost:11434/v1/chat/completions</code>,
+            LM Studio: <code>http://localhost:1234/v1/chat/completions</code>
+          </small>
+        </div>
+      </div>
+
       <div class="row justify-content-center align-items-end d-none" id="togetherAPIKeyContainer">
         <div class="my-3 col-lg-8">
           <label for="togetherAPIKey" class="form-label">
-            Together.AI API Key (for LLM Datamap Generation)
+            Together.AI API Key (only required if using Together.AI provider)
           </label>
           <div class="input-group mb-3">
             <input type="password" onchange="initCookies();" name="togetherAPIKey" class="form-control" autocomplete="new-password"
@@ -1137,12 +1170,12 @@ video {
   <!-- Load modular components before core -->
   <script src="./js/modules/conversion-metadata.js?v=20260210120111" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/isa-generation.js?v=20260210120112" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/llm-service.js?v=20260210120113" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/llm-service.js?v=20260212140001" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260210120114" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/git-lfs-service.js?v=20260211120104" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core1209.js?v=20260211120106" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core1209.js?v=20260212140002" type="text/javascript" charset="utf-8"></script>
 
   <!-- Toast Notification Container -->
   <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999;">
