@@ -1628,42 +1628,56 @@ Date: ${timestamp}`;
       const enableSwitch = document.getElementById('enableDatamapSwitch');
       const apiKeyContainer = document.getElementById('togetherAPIKeyContainer');
       const editPromptBtn = document.getElementById('editPromptBtn');
+      const customContainer = document.getElementById('customEndpointContainer');
 
       if (enableSwitch && apiKeyContainer) {
         if (enableSwitch.checked) {
-          apiKeyContainer.classList.remove('d-none');
-
           // Show Edit Prompt button when LLM is enabled
           if (editPromptBtn) {
             editPromptBtn.classList.remove('d-none');
           }
 
-          // Validate API key when switch is turned ON
-          const togetherAPIKey = window.localStorage.getItem('togetherAPIKey');
+          // Get the selected provider
+          const provider = window.localStorage.getItem('llmApiProvider') || 'dataplan';
 
-          if (!togetherAPIKey || togetherAPIKey.trim() === '') {
-            showWarningToast("Together.AI API Key Required!<br><br>To use LLM Datamap Generation, you need to provide a Together.AI API key.<br><br>Please enter your API key in the field below, or go to the Token page.");
-            // Keep switch ON so user can enter key in the visible field
-            return;
-          }
+          // Show/hide fields based on provider
+          if (provider === 'together') {
+            apiKeyContainer.classList.remove('d-none');
+            customContainer?.classList.add('d-none');
 
-          // Validate API key with a test request
-          console.log('🔑 Validating Together.AI API key...');
-          const isValid = await validateTogetherAPIKey(togetherAPIKey);
+            // Validate API key only for Together.AI
+            const togetherAPIKey = window.localStorage.getItem('togetherAPIKey');
 
-          if (!isValid) {
-            showWarningToast("Together.AI API Key Invalid!<br><br>The API key you provided is not valid or has expired.<br><br>Please update your API key in the field below, or go to the Token page.<br><br>Get a free key at: https://api.together.xyz/");
-            // Keep switch ON so user can fix the key in the visible field
-
-            // Navigate to token page if user wants
-            if (confirm("Would you like to go to the Token page now to update your API key?")) {
-              window.location.hash = '#home';
+            if (!togetherAPIKey || togetherAPIKey.trim() === '') {
+              showWarningToast("Together.AI API Key Required!<br><br>To use LLM Datamap Generation with Together.AI, you need to provide an API key.<br><br>Please enter your API key in the field below, or switch to DataPlan (free, no API key).");
+              return;
             }
+
+            // Validate API key with a test request
+            console.log('🔑 Validating Together.AI API key...');
+            const isValid = await validateTogetherAPIKey(togetherAPIKey);
+
+            if (!isValid) {
+              showWarningToast("Together.AI API Key Invalid!<br><br>The API key you provided is not valid or has expired.<br><br>Please update your API key in the field below, or switch to DataPlan (free, no API key).<br><br>Get a free key at: https://api.together.xyz/");
+              if (confirm("Would you like to go to the Token page now to update your API key?")) {
+                window.location.hash = '#home';
+              }
+            } else {
+              console.log('✅ Together.AI API key validated successfully');
+            }
+          } else if (provider === 'custom') {
+            apiKeyContainer.classList.add('d-none');
+            customContainer?.classList.remove('d-none');
+            console.log('[LLM] Using custom API endpoint');
           } else {
-            console.log('✅ Together.AI API key validated successfully');
+            // DataPlan - hide both containers
+            apiKeyContainer.classList.add('d-none');
+            customContainer?.classList.add('d-none');
+            console.log('[LLM] Using DataPlan (free, no API key required)');
           }
         } else {
           apiKeyContainer.classList.add('d-none');
+          customContainer?.classList.add('d-none');
 
           // Hide Edit Prompt button when LLM is disabled
           if (editPromptBtn) {
@@ -1802,6 +1816,11 @@ Date: ${timestamp}`;
           editPromptBtn.classList.add('d-none');
         }
       }
+
+      // Load saved API provider settings
+      if (window.loadApiProvider) {
+        window.loadApiProvider();
+      }
     });
 
     // Save model selection to localStorage
@@ -1829,6 +1848,60 @@ Date: ${timestamp}`;
       if (testModeSwitch) {
         window.localStorage.setItem('llmTestMode', testModeSwitch.checked ? 'true' : 'false');
         console.log(`[Config] LLM Test Mode: ${testModeSwitch.checked ? 'ENABLED' : 'DISABLED'}`);
+      }
+    };
+
+    // Save API provider selection to localStorage
+    window.saveApiProvider = function() {
+      const providerSelect = document.getElementById('llmApiProvider');
+      if (providerSelect) {
+        const provider = providerSelect.value;
+        window.localStorage.setItem('llmApiProvider', provider);
+        console.log(`[Config] Saved API provider: ${provider}`);
+
+        // Show/hide relevant fields based on provider
+        const togetherContainer = document.getElementById('togetherAPIKeyContainer');
+        const customContainer = document.getElementById('customEndpointContainer');
+
+        if (provider === 'together') {
+          togetherContainer?.classList.remove('d-none');
+          customContainer?.classList.add('d-none');
+        } else if (provider === 'custom') {
+          togetherContainer?.classList.add('d-none');
+          customContainer?.classList.remove('d-none');
+        } else {
+          // dataplan - hide both
+          togetherContainer?.classList.add('d-none');
+          customContainer?.classList.add('d-none');
+        }
+      }
+    };
+
+    // Save custom endpoint URL to localStorage
+    window.saveCustomEndpoint = function() {
+      const endpointInput = document.getElementById('llmCustomEndpoint');
+      if (endpointInput) {
+        window.localStorage.setItem('llmCustomEndpoint', endpointInput.value);
+        console.log(`[Config] Saved custom endpoint: ${endpointInput.value}`);
+      }
+    };
+
+    // Load saved API provider and endpoint on page load
+    window.loadApiProvider = function() {
+      const savedProvider = window.localStorage.getItem('llmApiProvider') || 'dataplan';
+      const providerSelect = document.getElementById('llmApiProvider');
+
+      if (providerSelect) {
+        providerSelect.value = savedProvider;
+        // Trigger visibility update
+        window.saveApiProvider();
+      }
+
+      const savedEndpoint = window.localStorage.getItem('llmCustomEndpoint');
+      const endpointInput = document.getElementById('llmCustomEndpoint');
+
+      if (endpointInput && savedEndpoint) {
+        endpointInput.value = savedEndpoint;
       }
     };
 
