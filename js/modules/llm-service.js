@@ -73,6 +73,13 @@
   // API PROVIDER CONFIGURATION
   // =============================================================================
   const API_PROVIDERS = {
+    lmstudio: {
+      name: 'LM Studio (Local)',
+      endpoint: 'http://localhost:1234/v1/chat/completions',
+      modelsEndpoint: 'http://localhost:1234/v1/models',
+      requiresApiKey: false,
+      headers: {}
+    },
     dataplan: {
       name: 'DataPlan (Default)',
       endpoint: 'https://h.dataplan.top/v1/chat/completions',
@@ -86,6 +93,13 @@
       name: 'Together.AI',
       endpoint: 'https://api.together.xyz/v1/chat/completions',
       requiresApiKey: true,
+      headers: {}
+    },
+    ollama: {
+      name: 'Ollama (Local)',
+      endpoint: 'http://localhost:11434/v1/chat/completions',
+      modelsEndpoint: 'http://localhost:11434/v1/models',
+      requiresApiKey: false,
       headers: {}
     },
     custom: {
@@ -112,10 +126,22 @@
    */
   function getApiEndpoint() {
     const provider = getSelectedProvider();
+    console.log(`[LLM] getApiEndpoint called - provider: "${provider}"`);
+
     if (provider === 'custom') {
-      return window.localStorage.getItem('llmCustomEndpoint') || 'http://localhost:11434/v1/chat/completions';
+      const customEndpoint = window.localStorage.getItem('llmCustomEndpoint') || 'http://localhost:11434/v1/chat/completions';
+      console.log(`[LLM] Returning custom endpoint: ${customEndpoint}`);
+      return customEndpoint;
     }
-    return API_PROVIDERS[provider]?.endpoint || API_PROVIDERS[DEFAULT_PROVIDER].endpoint;
+
+    const endpoint = API_PROVIDERS[provider]?.endpoint;
+    if (!endpoint) {
+      console.warn(`[LLM] No endpoint found for provider "${provider}", using default`);
+      return API_PROVIDERS[DEFAULT_PROVIDER].endpoint;
+    }
+
+    console.log(`[LLM] Returning endpoint for ${provider}: ${endpoint}`);
+    return endpoint;
   }
 
   /**
@@ -159,6 +185,19 @@
    * @returns {string} - Model identifier
    */
   function getSelectedModel() {
+    const provider = getSelectedProvider();
+
+    // For LM Studio, use the selected local model
+    if (provider === 'lmstudio') {
+      return window.localStorage.getItem('lmstudioModel') || 'local-model';
+    }
+
+    // For Ollama, use the selected local model
+    if (provider === 'ollama') {
+      return window.localStorage.getItem('ollamaModel') || 'llama3';
+    }
+
+    // For other providers, use existing logic
     const savedModel = window.localStorage.getItem('togetherAIModel');
 
     // If no saved model, use default
@@ -670,6 +709,11 @@
       const endpoint = getApiEndpoint();
       const apiKey = window.localStorage.getItem('togetherAPIKey');
 
+      // Debug: Log raw localStorage value
+      console.log(`[Datamap LLM] Raw localStorage llmApiProvider: "${window.localStorage.getItem('llmApiProvider')}"`);
+      console.log(`[Datamap LLM] Provider: ${provider}`);
+      console.log(`[Datamap LLM] Endpoint: ${endpoint}`);
+
       // Only require API key for Together.AI provider
       if (provider === 'together' && !apiKey) {
         console.warn('[Datamap LLM] Together.AI requires an API key');
@@ -928,19 +972,31 @@ Return ONLY valid JSON, no additional text.`;
 
         // Use retry with exponential backoff and model fallback for resilience
         const { response, model: usedModel } = await retryWithBackoff(async (model) => {
+          // Build request body with provider-specific parameters
+          const requestBody = {
+            model: model,
+            max_tokens: 8192, // Increase token limit to prevent truncation
+            temperature: 0.1, // Lower temperature for more consistent JSON output
+            stream: true, // Enable streaming mode
+            messages: [{
+              role: 'user',
+              content: promptTemplate
+            }]
+          };
+
+          // Disable thinking/reasoning mode for local providers (LM Studio, Ollama)
+          // This prevents the model from generating analysis text before the JSON response
+          if (provider === 'lmstudio' || provider === 'ollama') {
+            requestBody.enable_thinking = false;
+            console.log('[Datamap LLM] Disabled thinking mode for local provider');
+          }
+
+          console.log('[Datamap LLM] Request body keys:', Object.keys(requestBody).join(', '));
+
           return fetch(endpoint, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify({
-              model: model,
-              max_tokens: 8192, // Increase token limit to prevent truncation
-              temperature: 0.1, // Lower temperature for more consistent JSON output
-              stream: true, // Enable streaming mode
-              messages: [{
-                role: 'user',
-                content: promptTemplate
-              }]
-            })
+            body: JSON.stringify(requestBody)
           });
         }, selectedModel, 3, 2000); // Start with selected model, 3 retries, 2s delay
 

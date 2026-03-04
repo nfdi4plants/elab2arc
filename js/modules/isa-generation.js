@@ -36,6 +36,26 @@
   }
 
   /**
+   * Helper: Safely convert any value to a string for ISA tables
+   * Handles objects, arrays, null, undefined, and primitives
+   * @param {any} value - Value to convert
+   * @returns {string} - String representation
+   */
+  function safeString(value) {
+    if (value === null || value === undefined) {
+      return "";
+    }
+    if (typeof value === 'object') {
+      // For arrays, join with comma; for objects, JSON stringify
+      if (Array.isArray(value)) {
+        return value.map(v => safeString(v)).join(', ');
+      }
+      return JSON.stringify(value);
+    }
+    return String(value);
+  }
+
+  /**
    * Analyze ARC directory structure
    * @param {string} gitRoot - Root directory of ARC
    * @returns {Object} - Structure with studies and assays arrays
@@ -262,13 +282,13 @@
       console.log(`  - Added ${samples.length} source names`);
 
       // Add Organism column if any sample has organism info
-      const hasOrganism = samples.some(s => s.organism && s.organism.trim() !== '');
+      const hasOrganism = samples.some(s => s.organism && safeString(s.organism).trim() !== '');
       if (hasOrganism) {
         const organismOA = new window.arctrl.OntologyAnnotation("Organism", "", "");
         const organismHeader = window.arctrl.CompositeHeader.characteristic(organismOA);
         const organismCells = samples.map(s => {
           // Characteristic columns require Term cells (OntologyAnnotation), not FreeText
-          const organismValue = s.organism || "";
+          const organismValue = safeString(s.organism);
           if (organismValue.trim() === '') {
             return window.arctrl.CompositeCell.createTerm(new window.arctrl.OntologyAnnotation("", "", ""));
           }
@@ -305,25 +325,26 @@
           // Find the characteristic value for this category in this sample
           const char = sample.characteristics?.find(c => c.category === category);
 
-          if (!char || !char.value || char.value.trim() === '') {
+          const charValueStr = safeString(char?.value);
+          if (!char || charValueStr.trim() === '') {
             return window.arctrl.CompositeCell.createTerm(new window.arctrl.OntologyAnnotation("", "", ""));
           }
 
           // Characteristic columns are term columns - values must be OntologyAnnotations
           // If LLM provided term source/accession, use them; otherwise leave empty
-          const valueTermSource = char.termSource || "";
-          const valueTermAccession = char.termAccession || "";
-          const charValue = char.value;
+          const valueTermSource = safeString(char.termSource);
+          const valueTermAccession = safeString(char.termAccession);
 
           // Check if unit is provided
-          if (char.unit && char.unit.trim() !== '') {
+          const unitStr = safeString(char.unit);
+          if (unitStr.trim() !== '') {
             // Create unitized cell with OntologyAnnotation for unit
-            const unitOA = new window.arctrl.OntologyAnnotation(char.unit, "", "");
-            return window.arctrl.CompositeCell.createUnitized(charValue, unitOA);
+            const unitOA = new window.arctrl.OntologyAnnotation(unitStr, "", "");
+            return window.arctrl.CompositeCell.createUnitized(charValueStr, unitOA);
           }
 
           // Create term cell with OntologyAnnotation (free text converted to OA with empty terms)
-          const valueOA = new window.arctrl.OntologyAnnotation(charValue, valueTermSource, valueTermAccession);
+          const valueOA = new window.arctrl.OntologyAnnotation(charValueStr, valueTermSource, valueTermAccession);
           return window.arctrl.CompositeCell.createTerm(valueOA);
         });
         sampleTable.AddColumn(charHeader, charCells);
@@ -397,7 +418,7 @@
       if (protocol.inputs && protocol.inputs.length > 0) {
         const inputHeader = window.arctrl.CompositeHeader.input(window.arctrl.IOType.source());
         const inputCells = protocol.inputs.map(inp =>
-          window.arctrl.CompositeCell.createFreeText(inp)
+          window.arctrl.CompositeCell.createFreeText(safeString(inp))
         );
         processTable.AddColumn(inputHeader, inputCells);
         console.log(`  - Added ${protocol.inputs.length} input(s)`);
@@ -443,8 +464,9 @@
             const paramHeader = window.arctrl.CompositeHeader.parameter(paramOA);
 
             // Create cells for each row with value if provided
-            const paramValue = param.value || "";
-            const paramUnit = param.unit || "";
+            // Use safeString to handle objects/arrays from LLM
+            const paramValue = safeString(param.value);
+            const paramUnit = safeString(param.unit);
 
             // Parameters are term columns - use OntologyAnnotation for values
             const paramCells = Array(rowCount).fill(null).map(() => {
@@ -477,7 +499,7 @@
 
       // Determine output type: Data if dataFiles exist, otherwise Sample
       // ARCtrl only allows ONE output column per table
-      const hasDataFiles = protocol.dataFiles && protocol.dataFiles.length > 0 && protocol.dataFiles.some(f => f && f.trim() !== '');
+      const hasDataFiles = protocol.dataFiles && protocol.dataFiles.length > 0 && protocol.dataFiles.some(f => safeString(f).trim() !== '');
 
       if (hasDataFiles) {
         // Output as Data (with file references)
@@ -485,22 +507,23 @@
 
         const dataCells = protocol.dataFiles.map(file => {
           // Handle empty strings or null/undefined
-          if (!file || file.trim() === '') {
+          const fileStr = safeString(file);
+          if (fileStr.trim() === '') {
             return window.arctrl.CompositeCell.createFreeText('');
           }
 
           // Add dataset/ prefix if not already prefixed and not a wildcard pattern
-          let filePath = file;
-          if (!file.startsWith('dataset/') && !file.startsWith('*/')) {
-            filePath = `dataset/${file}`;
+          let filePath = fileStr;
+          if (!fileStr.startsWith('dataset/') && !fileStr.startsWith('*/')) {
+            filePath = `dataset/${fileStr}`;
           }
 
           return window.arctrl.CompositeCell.createFreeText(filePath);
         });
 
         processTable.AddColumn(dataHeader, dataCells);
-        const nonEmptyCount = protocol.dataFiles.filter(f => f && f.trim() !== '').length;
-        console.log(`  - Added Output [Data] column with ${nonEmptyCount} file(s) (${protocol.dataFiles.length} row(s) total)`);
+        const nonEmptyCount = protocol.dataFiles.filter(f => safeString(f).trim() !== '').length;
+        console.log(`  - Added Output [Data] column with ${nonEmptyCount} file(s) (${protocol.dataFiles.length} row(s) total)`);;
 
       } else {
         // Output as Sample (named outputs or default)
@@ -509,7 +532,7 @@
         let outputCells;
         if (protocol.outputs && protocol.outputs.length > 0) {
           outputCells = protocol.outputs.map(out =>
-            window.arctrl.CompositeCell.createFreeText(out)
+            window.arctrl.CompositeCell.createFreeText(safeString(out))
           );
           console.log(`  - Added Output [Sample] column with ${protocol.outputs.length} output(s)`);
         } else {
@@ -692,25 +715,59 @@
     try {
       console.log(`[ISA Gen] Generating ISA study for: ${studyName}`);
       if (llmData) {
-        console.log(`[ISA Gen] LLM annotation data provided for study - Issue #42 fix`);
+        console.log(`[ISA Gen] LLM annotation data provided for study - creating annotation tables`);
       }
 
-      // Create ArcStudy using ARCtrl
-      const arcStudy = window.arctrl.ArcStudy.create(studyName);
+      // ========== SHEET 1: Sample Table ==========
+      const sampleTable = createSampleTable(llmData?.samples || []);
+      console.log(`[ISA Gen] Created sample table for study`);
 
-      // Set study metadata
-      arcStudy.Identifier = studyName;
-      arcStudy.Title = metadata.title || studyName;
-      arcStudy.Description = metadata.description || '';
-      arcStudy.SubmissionDate = new Date().toISOString().split('T')[0];
-      arcStudy.PublicReleaseDate = '';
+      // ========== SHEETS 2+: Process Tables (one per protocol) ==========
+      const allTables = [sampleTable];  // Start with sample table
 
-      // Add contact/person information
+      if (llmData && llmData.protocols && llmData.protocols.length > 0) {
+        // Link processes: ensure outputs of one process match inputs of the next
+        for (let i = 0; i < llmData.protocols.length; i++) {
+          const protocol = llmData.protocols[i];
+          const processNr = i + 1;
+
+          // If this is not the first process, link inputs to previous outputs
+          if (i > 0) {
+            const prevProtocol = llmData.protocols[i - 1];
+            // Use previous outputs as current inputs if they don't match
+            if (prevProtocol.outputs && prevProtocol.outputs.length > 0) {
+              protocol.inputs = prevProtocol.outputs;
+              console.log(`[ISA Gen] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
+            }
+          }
+
+          const processTable = createProcessTable(protocol, processNr, protocolInfo);
+          allTables.push(processTable);
+        }
+
+        console.log(`[ISA Gen] Created ${llmData.protocols.length} process table(s) for study`);
+      } else {
+        // No LLM data - create single minimal process table
+        const defaultProcessTable = createDefaultProcessTable(protocolInfo);
+        allTables.push(defaultProcessTable);
+        console.log(`[ISA Gen] Created default process table for study (no LLM data)`);
+      }
+
+      // Prepare table names and comments
+      const tableNames = allTables.map(t => t.Name);
+      console.log(`[ISA Gen] Prepared ${allTables.length} table(s) for study: ${tableNames.join(', ')}`);
+
+      // Prepare comments for the study
+      const comments = [];
+      comments.push(window.arctrl.Comment$.create("generation log", "generated by elab2arc with LLM annotation"));
+
+      // Create person for contacts
+      let person = null;
       if (metadata.firstName || metadata.lastName || metadata.email) {
         const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
         const comments_p = window.arctrl.Comment$.create("generation log", "generated by elab2arc");
 
-        const person = window.arctrl.Person.create(
+        person = window.arctrl.Person.create(
           void 0,  // ORCID
           metadata.firstName || '',
           metadata.lastName || '',
@@ -723,9 +780,24 @@
           [roles],
           [comments_p]
         );
-
-        arcStudy.Contacts = [person];
       }
+
+      // Create ArcStudy with all tables (pass tables during creation)
+      // ArcStudy.create signature: (identifier, title, description, submissionDate, publicReleaseDate, publications, contacts, studyDesignDescriptors, tables, datamap, registeredAssayIdentifiers, comments)
+      const arcStudy = window.arctrl.ArcStudy.create(
+        studyName,                                    // identifier
+        metadata.title || studyName,                  // title
+        metadata.description || '',                   // description
+        new Date().toISOString().split('T')[0],       // submissionDate
+        '',                                           // publicReleaseDate
+        [],                                           // publications
+        person ? [person] : [],                       // contacts
+        [],                                           // studyDesignDescriptors
+        allTables,                                    // tables
+        void 0,                                       // datamap
+        [],                                           // registeredAssayIdentifiers
+        comments                                      // comments
+      );
 
       // Convert ArcStudy to FsWorkbook using ARCtrl XlsxController
       // Note: Second parameter is assays list (empty for now), third is datamapSheet option
@@ -735,7 +807,7 @@
       const isaPath = memfsPathJoin(studyPath, 'isa.study.xlsx');
       await window.Xlsx.toFile(isaPath, spreadsheet);
 
-      console.log(`[ISA Gen] Created: ${isaPath}`);
+      console.log(`[ISA Gen] Created: ${isaPath} with ${allTables.length} sheet(s)`);
       return isaPath;
 
     } catch (error) {
@@ -825,6 +897,252 @@
     }
   }
 
+  /**
+   * Read existing investigation or create new one
+   * @param {string} gitRoot - Root path of the ARC
+   * @param {string} arcName - ARC identifier
+   * @param {Object} metadata - Metadata for new investigation
+   * @returns {Promise<ArcInvestigation>} - Investigation object
+   */
+  async function readOrCreateInvestigation(gitRoot, arcName, metadata = {}) {
+    const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+
+    try {
+      // Try to read existing investigation
+      const workbook = await window.Xlsx.fromXlsxFile(isaPath);
+      const investigation = window.arctrl.XlsxController.Investigation.fromFsWorkbook(workbook);
+      console.log(`[ISA Gen] Read existing investigation from: ${isaPath}`);
+      return investigation;
+    } catch (readError) {
+      // No existing investigation - create new one
+      console.log(`[ISA Gen] Creating new investigation: ${arcName}`);
+      const investigation = window.arctrl.ArcInvestigation.init(arcName);
+
+      // Set metadata
+      investigation.Identifier = arcName;
+      investigation.Title = metadata.title || arcName;
+      investigation.Description = metadata.description || '';
+      investigation.SubmissionDate = new Date().toISOString().split('T')[0];
+
+      // Add contact info
+      if (metadata.firstName || metadata.lastName || metadata.email) {
+        const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
+        const person = window.arctrl.Person.create(
+          void 0,
+          metadata.firstName || '',
+          metadata.lastName || '',
+          void 0,
+          metadata.email || '',
+          void 0, void 0, void 0,
+          metadata.affiliation || '',
+          [roles],
+          [window.arctrl.Comment$.create("generation log", "generated by elab2arc")]
+        );
+        investigation.Contacts = [person];
+      }
+
+      return investigation;
+    }
+  }
+
+  /**
+   * Save investigation to file
+   * @param {string} gitRoot - Root path
+   * @param {ArcInvestigation} investigation - Investigation object
+   * @returns {Promise<string>} - Path to saved file
+   */
+  async function saveInvestigation(gitRoot, investigation) {
+    const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+    const spreadsheet = window.arctrl.XlsxController.Investigation.toFsWorkbook(investigation);
+    await window.Xlsx.toFile(isaPath, spreadsheet);
+    console.log(`[ISA Gen] Saved investigation to: ${isaPath}`);
+    return isaPath;
+  }
+
+  /**
+   * Register a study to the investigation
+   * @param {ArcInvestigation} investigation - Investigation object
+   * @param {string} studyPath - Path to study directory
+   * @param {string} studyName - Study identifier
+   * @returns {Promise<boolean>} - True if registered successfully
+   */
+  async function registerStudyToInvestigation(investigation, studyPath, studyName) {
+    try {
+      // Create a minimal study object for registration
+      // This avoids serialization issues with full study objects read from xlsx
+      const arcStudy = window.arctrl.ArcStudy.create(studyName);
+      arcStudy.Identifier = studyName;
+      arcStudy.Name = studyName;
+      arcStudy.Title = studyName;
+      arcStudy.Description = '';
+      arcStudy.SubmissionDate = new Date().toISOString().split('T')[0];
+
+      // Comment out: Add study to investigation first
+      // investigation.AddStudy(arcStudy);
+
+      // Comment out: Then register the study (creates the reference in investigation metadata)
+      // investigation.RegisterStudy(studyName);
+
+      // console.log(`[ISA Gen] Registered study to investigation: ${studyName}`);
+      console.log(`[ISA Gen] Study registration skipped (commented out): ${studyName}`);
+      return true;
+    } catch (error) {
+      console.warn(`[ISA Gen] Could not register study ${studyName}:`, error.message || error);
+      return false;
+    }
+  }
+
+  /**
+   * Register an assay to the investigation
+   * @param {ArcInvestigation} investigation - Investigation object
+   * @param {string} assayPath - Path to assay directory
+   * @param {string} assayName - Assay identifier
+   * @param {string} parentStudyName - Parent study name (null for standalone assays)
+   * @returns {Promise<boolean>} - True if registered successfully
+   */
+  async function registerAssayToInvestigation(investigation, assayPath, assayName, parentStudyName = null) {
+    try {
+      // Create a minimal assay object for registration
+      // This avoids serialization issues with full assay objects read from xlsx
+      const arcAssay = window.arctrl.ArcAssay.create(assayName);
+      arcAssay.Identifier = assayName;
+      arcAssay.Name = assayName;
+
+      // Comment out: Add assay to investigation
+      // investigation.AddAssay(arcAssay);
+
+      // Comment out: Register assay under parent study
+      // if (parentStudyName) {
+      //   investigation.RegisterAssay(parentStudyName, assayName);
+      //   console.log(`[ISA Gen] Registered assay to investigation: ${assayName} under study: ${parentStudyName}`);
+      // } else {
+      //   console.log(`[ISA Gen] Added standalone assay to investigation: ${assayName}`);
+      // }
+      console.log(`[ISA Gen] Assay registration skipped (commented out): ${assayName}`);
+      return true;
+    } catch (error) {
+      console.warn(`[ISA Gen] Could not register assay ${assayName}:`, error.message || error);
+      return false;
+    }
+  }
+
+  /**
+   * Update isa.investigation.xlsx with study and assay linkages using ARCtrl methods
+   * Reads existing investigation, adds studies/assays with proper linkages, and writes back
+   * Reference: BreedingValue.js pattern using AddAssay, RegisterAssay, RegisterStudy
+   * @param {string} gitRoot - Root path of the ARC
+   * @param {string} arcName - ARC identifier
+   * @returns {Promise<string>} - Path to updated file
+   */
+  async function updateIsaInvestigation(gitRoot, arcName) {
+    try {
+      console.log(`[ISA Gen] Updating investigation with study/assay linkages...`);
+      const fs = window.FS.fs;
+
+      const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+
+      // Read investigation using ARCtrl (same filesystem as toFile)
+      let invWorkbook;
+      try {
+        invWorkbook = await window.Xlsx.fromXlsxFile(isaPath);
+        console.log(`[ISA Gen] Found investigation file: ${isaPath}`);
+      } catch (readError) {
+        console.warn('[ISA Gen] No investigation file found to update');
+        console.warn(`[ISA Gen] Path: ${isaPath}`);
+        console.warn(`[ISA Gen] Error:`, readError.message || readError);
+        return null;
+      }
+
+      // Parse investigation
+      const arcInvestigation = window.arctrl.XlsxController.Investigation.fromFsWorkbook(invWorkbook);
+
+      // Analyze structure to get studies and assays
+      const structure = analyzeArcStructure(gitRoot);
+      console.log(`[ISA Gen] Found ${structure.studies.length} studies, ${structure.assays.length} standalone assays`);
+
+      let studiesRegistered = 0;
+      let assaysRegistered = 0;
+
+      // Process each study
+      for (const study of structure.studies) {
+        const studyPath = memfsPathJoin(study.path, 'isa.study.xlsx');
+
+        // Read study file using ARCtrl directly
+        try {
+          const studyWorkbook = await window.Xlsx.fromXlsxFile(studyPath);
+          const arcStudy = window.arctrl.XlsxController.Study.fromFsWorkbook(studyWorkbook, []);
+
+          // Comment out: Add study to investigation and register it
+          // arcInvestigation.AddStudy(arcStudy);
+          // arcInvestigation.RegisterStudy(study.name);
+          // studiesRegistered++;
+          // console.log(`[ISA Gen] Registered study: ${study.name}`);
+          console.log(`[ISA Gen] Study registration skipped (commented out): ${study.name}`);
+
+          // Process assays within this study's assays folder
+          const studyAssaysPath = memfsPathJoin(study.path, 'assays');
+          if (fs.existsSync(studyAssaysPath)) {
+            const assayDirs = fs.readdirSync(studyAssaysPath);
+            for (const assayName of assayDirs) {
+              const assayPath = memfsPathJoin(studyAssaysPath, assayName);
+              const assayStats = fs.statSync(assayPath);
+              if (assayStats.isDirectory() && !assayName.startsWith('.')) {
+                const assayIsaPath = memfsPathJoin(assayPath, 'isa.assay.xlsx');
+
+                // Read assay file using ARCtrl directly
+                try {
+                  const assayWorkbook = await window.Xlsx.fromXlsxFile(assayIsaPath);
+                  const arcAssay = window.arctrl.XlsxController.Assay.fromFsWorkbook(assayWorkbook);
+
+                  // Comment out: Add assay to investigation and register under study
+                  // arcInvestigation.AddAssay(arcAssay);
+                  // arcInvestigation.RegisterAssay(study.name, assayName);
+                  // assaysRegistered++;
+                  // console.log(`[ISA Gen] Registered assay: ${assayName} under study: ${study.name}`);
+                  console.log(`[ISA Gen] Assay registration skipped (commented out): ${assayName} under study: ${study.name}`);
+                } catch (assayError) {
+                  console.warn(`[ISA Gen] Could not read assay ${assayName}:`, assayError.message || assayError);
+                }
+              }
+            }
+          }
+        } catch (studyError) {
+          console.warn(`[ISA Gen] Could not read study ${study.name}:`, studyError.message || studyError);
+        }
+      }
+
+      // Process standalone assays (in root /assays folder, not under a study)
+      for (const assay of structure.assays) {
+        const assayIsaPath = memfsPathJoin(assay.path, 'isa.assay.xlsx');
+
+        // Read assay file using ARCtrl directly
+        try {
+          const assayWorkbook = await window.Xlsx.fromXlsxFile(assayIsaPath);
+          const arcAssay = window.arctrl.XlsxController.Assay.fromFsWorkbook(assayWorkbook);
+
+          // Comment out: Add assay to investigation (standalone)
+          // arcInvestigation.AddAssay(arcAssay);
+          // assaysRegistered++;
+          // console.log(`[ISA Gen] Added standalone assay: ${assay.name}`);
+          console.log(`[ISA Gen] Standalone assay registration skipped (commented out): ${assay.name}`);
+        } catch (assayError) {
+          console.warn(`[ISA Gen] Could not read assay ${assay.name}:`, assayError.message || assayError);
+        }
+      }
+
+      // Write updated investigation using ARCtrl
+      const spreadsheet = window.arctrl.XlsxController.Investigation.toFsWorkbook(arcInvestigation);
+      await window.Xlsx.toFile(isaPath, spreadsheet);
+
+      console.log(`[ISA Gen] Updated investigation with ${studiesRegistered} studies, ${assaysRegistered} assays`);
+      return isaPath;
+
+    } catch (error) {
+      console.error('[ISA Gen] Error updating investigation:', error);
+      return null;
+    }
+  }
+
   // Export public API
   window.Elab2ArcISA = {
     analyzeArcStructure: analyzeArcStructure,
@@ -837,7 +1155,12 @@
     createProcessTable: createProcessTable,
     generateIsaAssayElab2arcWithDatamap: generateIsaAssayElab2arcWithDatamap,
     generateIsaStudy: generateIsaStudy,
-    generateIsaInvestigation: generateIsaInvestigation
+    generateIsaInvestigation: generateIsaInvestigation,
+    updateIsaInvestigation: updateIsaInvestigation,
+    readOrCreateInvestigation: readOrCreateInvestigation,
+    saveInvestigation: saveInvestigation,
+    registerStudyToInvestigation: registerStudyToInvestigation,
+    registerAssayToInvestigation: registerAssayToInvestigation
   };
 
 })(window);
