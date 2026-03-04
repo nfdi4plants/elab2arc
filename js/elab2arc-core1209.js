@@ -49,6 +49,28 @@ var conversionStartTime = null; // Track when conversion starts
     const PROGRESS_THROTTLE_MS = 1000; // Update at most once per second
 
     // =============================================================================
+    // HELPER FUNCTIONS
+    // =============================================================================
+
+    // Helper to manage "View ARC" button state
+    function setViewArcBtnState(enabled, url = null) {
+      const btn = document.getElementById('viewArcBtn');
+      if (!btn) return;
+      if (url) btn.dataset.url = url;
+      btn.disabled = !enabled;
+      btn.classList.toggle('disabled', !enabled);
+      if (enabled) {
+        btn.style.backgroundColor = '#28a745';
+        btn.style.color = 'white';
+        btn.style.borderColor = '#28a745';
+      } else {
+        btn.style.backgroundColor = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }
+    }
+
+    // =============================================================================
     // PROXY CONFIGURATION WITH FALLBACK
     // =============================================================================
     const proxyConfig = {
@@ -1856,24 +1878,92 @@ Date: ${timestamp}`;
       const providerSelect = document.getElementById('llmApiProvider');
       if (providerSelect) {
         const provider = providerSelect.value;
+        console.log(`%c[Config] Saving API provider: "${provider}"`, 'color: blue; font-weight: bold');
         window.localStorage.setItem('llmApiProvider', provider);
-        console.log(`[Config] Saved API provider: ${provider}`);
+
+        // Verify it was saved
+        const savedValue = window.localStorage.getItem('llmApiProvider');
+        console.log(`[Config] Verified saved value: "${savedValue}"`);
 
         // Show/hide relevant fields based on provider
         const togetherContainer = document.getElementById('togetherAPIKeyContainer');
         const customContainer = document.getElementById('customEndpointContainer');
+        const lmstudioContainer = document.getElementById('lmstudioContainer');
 
+        // Hide all first
+        togetherContainer?.classList.add('d-none');
+        customContainer?.classList.add('d-none');
+        lmstudioContainer?.classList.add('d-none');
+
+        // Show relevant container
         if (provider === 'together') {
           togetherContainer?.classList.remove('d-none');
-          customContainer?.classList.add('d-none');
+        } else if (provider === 'lmstudio') {
+          lmstudioContainer?.classList.remove('d-none');
+          // Auto-fetch models when LM Studio selected
+          window.fetchLMStudioModels();
         } else if (provider === 'custom') {
-          togetherContainer?.classList.add('d-none');
           customContainer?.classList.remove('d-none');
-        } else {
-          // dataplan - hide both
-          togetherContainer?.classList.add('d-none');
-          customContainer?.classList.add('d-none');
         }
+      }
+    };
+
+    // Fetch available models from LM Studio
+    window.fetchLMStudioModels = async function() {
+      const modelSelect = document.getElementById('lmstudioModel');
+      if (!modelSelect) return;
+
+      modelSelect.innerHTML = '<option value="">Loading...</option>';
+
+      try {
+        const response = await fetch('http://localhost:1234/v1/models', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const models = data.data || [];
+
+        if (models.length === 0) {
+          modelSelect.innerHTML = '<option value="">No models found. Load a model in LM Studio first.</option>';
+          return;
+        }
+
+        // Populate dropdown
+        modelSelect.innerHTML = models.map(m =>
+          `<option value="${m.id}">${m.id}</option>`
+        ).join('');
+
+        // Restore saved selection if exists
+        const savedModel = window.localStorage.getItem('lmstudioModel');
+        if (savedModel && models.some(m => m.id === savedModel)) {
+          modelSelect.value = savedModel;
+          console.log(`[LM Studio] Restored saved model: ${savedModel}`);
+        } else {
+          // No saved selection - save the first model as default
+          const firstModel = models[0].id;
+          modelSelect.value = firstModel;
+          window.localStorage.setItem('lmstudioModel', firstModel);
+          console.log(`[LM Studio] Auto-selected first model: ${firstModel}`);
+        }
+
+        console.log(`[LM Studio] Found ${models.length} model(s):`, models.map(m => m.id).join(', '));
+      } catch (error) {
+        modelSelect.innerHTML = '<option value="">Could not connect to LM Studio. Is it running?</option>';
+        console.error('[LM Studio] Error fetching models:', error);
+      }
+    };
+
+    // Save LM Studio model selection
+    window.saveLMStudioModel = function() {
+      const modelSelect = document.getElementById('lmstudioModel');
+      if (modelSelect) {
+        window.localStorage.setItem('lmstudioModel', modelSelect.value);
+        console.log(`[Config] Saved LM Studio model: ${modelSelect.value}`);
       }
     };
 
@@ -1889,10 +1979,20 @@ Date: ${timestamp}`;
     // Load saved API provider and endpoint on page load
     window.loadApiProvider = function() {
       const savedProvider = window.localStorage.getItem('llmApiProvider') || 'dataplan';
+      console.log(`[Config] Loading API provider from localStorage: "${savedProvider}"`);
       const providerSelect = document.getElementById('llmApiProvider');
 
       if (providerSelect) {
+        // Set the value
         providerSelect.value = savedProvider;
+
+        // Verify the value was set correctly
+        if (providerSelect.value !== savedProvider) {
+          console.warn(`[Config] Failed to set provider to "${savedProvider}", current value is "${providerSelect.value}"`);
+        } else {
+          console.log(`[Config] Successfully set provider dropdown to: "${savedProvider}"`);
+        }
+
         // Trigger visibility update
         window.saveApiProvider();
       }
@@ -2008,6 +2108,35 @@ Date: ${timestamp}`;
 
         updateInfo(`Starting conversion of ${totalEntries} entries (${totalExperiments} experiments, ${totalResources} resources)`, 0);
 
+        // ========== 1. INITIALIZE INVESTIGATION FIRST ==========
+        // Get git root from arcName
+        const gitRoot = arcName.endsWith('/') ? arcName : arcName + '/';
+
+        // Get GitLab account info for investigation metadata
+        const gitlabName = window.userId?.name || '';
+        const nameParts = gitlabName.split(' ');
+        const gitlabFirstName = nameParts[0] || '';
+        const gitlabLastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
+
+        const investigationMetadata = {
+          title: arcName,
+          description: `eLabFTW to ARC conversion for ${arcName}`,
+          lastName: gitlabLastName,
+          firstName: gitlabFirstName,
+          email: window.userId?.commit_email || '',
+          affiliation: ''
+        };
+
+        // Try to read existing investigation or create new one
+        let investigation = null;
+        try {
+          investigation = await Elab2ArcISA.readOrCreateInvestigation(gitRoot, arcName, investigationMetadata);
+          console.log(`[ISA Gen] Investigation initialized: ${investigation ? 'loaded' : 'created'}`);
+        } catch (invError) {
+          console.warn('[ISA Gen] Could not initialize investigation:', invError);
+        }
+
+        // ========== 2. PROCESS EXPERIMENTS (registers to investigation) ==========
         // Process experiments
         for (const [expIndex, expId] of Object.entries(params.elabidList.elabExperimentid)) {
           if (!expId) continue;
@@ -2043,8 +2172,8 @@ Date: ${timestamp}`;
 
           const gitName = datahubURL.slice(0, -4); // Remove .git suffix
           const dir = arcName;
-          // Process the experiment with progress tracking
-          await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'experiment');
+          // Process the experiment with progress tracking - pass investigation object
+          await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'experiment', investigation);
           completedEntries++;
         }
 
@@ -2083,85 +2212,73 @@ Date: ${timestamp}`;
 
           const gitName = datahubURL.slice(0, -4); // Remove .git suffix
           const dir = arcName;
-          // Process the resource with progress tracking
-          await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'resource');
+          // Process the resource with progress tracking - pass investigation object
+          await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'resource', investigation);
           completedEntries++;
         }
 
-        // ========== EXPERIMENTAL: Generate Investigation-level ISA files ==========
-        try {
-          console.log('[ISA Gen] Generating investigation-level ISA files...');
+        // ========== 3. SAVE AND COMMIT INVESTIGATION ==========
+        // The investigation object was created at the start and has all studies/assays registered
+        if (investigation) {
+          try {
+            console.log('[ISA Gen] Saving investigation with registered studies/assays...');
 
-          // Get git root from arcName
-          const gitRoot = arcName.endsWith('/') ? arcName : arcName + '/';
+            // Save investigation to file
+            const invIsaPath = await Elab2ArcISA.saveInvestigation(gitRoot, investigation);
 
-          // Generate investigation ISA file
-          // Use GitLab account info instead of eLabFTW users
-          const gitlabName = window.userId?.name || '';
-          const nameParts = gitlabName.split(' ');
-          const gitlabFirstName = nameParts[0] || '';
-          const gitlabLastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
-
-          const investigationMetadata = {
-            title: arcName,
-            description: `eLabFTW to ARC conversion for ${arcName}`,
-            lastName: gitlabLastName,
-            firstName: gitlabFirstName,
-            email: window.userId?.commit_email || '',
-            affiliation: ''
-          };
-
-          const invIsaPath = await Elab2ArcISA.generateIsaInvestigation(gitRoot, arcName, investigationMetadata);
-
-          if (invIsaPath) {
-            try {
+            if (invIsaPath) {
+              // Add to git
               const relativeInvPath = invIsaPath.replace(gitRoot, '');
               await git.add({ fs, dir: gitRoot, filepath: relativeInvPath });
               console.log(`[ISA Gen] Added investigation ISA to git: ${relativeInvPath}`);
-            } catch (gitError) {
-              console.warn('[ISA Gen] Could not add investigation ISA to git:', gitError);
-            }
-          }
 
-          // Analyze structure and generate study-level ISA files
-          const structure = Elab2ArcISA.analyzeArcStructure(gitRoot);
+              // Commit the investigation
+              const invCommitSha = await git.commit({
+                fs,
+                dir: gitRoot,
+                author: {
+                  name: window.userId?.name || 'elab2arc',
+                  email: window.userId?.commit_email || 'elab@dataplan.top',
+                },
+                message: `chore: Update isa.investigation.xlsx with study/assay linkages
 
-          for (const study of structure.studies) {
-            try {
-              const studyMetadata = {
-                title: study.name,
-                description: `Study: ${study.name}`,
-                lastName: gitlabLastName,
-                firstName: gitlabFirstName,
-                email: window.userId?.commit_email || '',
-                affiliation: ''
-              };
+Investigation updated with proper ARCtrl linkages to studies and assays
+Generated by elab2ARC`
+              });
+              console.log(`[ISA Gen] Committed investigation: ${invCommitSha}`);
 
-              const studyIsaPath = await Elab2ArcISA.generateIsaStudy(study.path, study.name, studyMetadata);
-
-              if (studyIsaPath) {
-                const relativeStudyPath = studyIsaPath.replace(gitRoot, '');
+              // Push the investigation commit to remote
+              if (params.datahubtoken) {
                 try {
-                  await git.add({ fs, dir: gitRoot, filepath: relativeStudyPath });
-                  console.log(`[ISA Gen] Added study ISA to git: ${relativeStudyPath}`);
-                } catch (gitError) {
-                  console.warn(`[ISA Gen] Could not add study ISA to git:`, gitError);
+                  await git.push({
+                    fs,
+                    http,
+                    dir: gitRoot,
+                    remote: 'origin',
+                    corsProxy: getGitProxy(),
+                    onAuth: () => ({ username: 'oauth2', password: params.datahubtoken }),
+                  });
+                  console.log(`[ISA Gen] Pushed investigation to remote`);
+                } catch (pushError) {
+                  console.warn('[ISA Gen] Could not push investigation:', pushError);
                 }
+              } else {
+                console.warn('[ISA Gen] No datahub token - investigation committed but not pushed');
               }
-            } catch (studyError) {
-              console.error(`[ISA Gen] Error generating ISA for study ${study.name}:`, studyError);
             }
+          } catch (invError) {
+            console.warn('[ISA Gen] Could not save/commit investigation:', invError);
           }
-
-        } catch (invIsaError) {
-          console.error('[ISA Gen] Investigation ISA generation failed (experimental feature):', invIsaError);
         }
-        // ========== END EXPERIMENTAL ==========
+        // ========== END INVESTIGATION HANDLING ==========
 
         // All conversions complete - set progress to 100%
         updateInfo(`✓ All ${totalEntries} entries converted successfully!`, 100);
         const pbarLabel = document.getElementById("pbarLabel");
         pbarLabel.innerHTML = '<strong style="color: #28a745; font-size: 1.1em;">✓ All conversions complete! You can close this window.</strong>';
+
+        // Enable "View ARC" button
+        setViewArcBtnState(true);
 
         // Save conversion to history
         const conversionEndTime = Date.now();
@@ -2340,6 +2457,9 @@ Date: ${timestamp}`;
         const tab = new bootstrap.Tab(currentTab);
         tab.show();
       }
+
+      // Initialize "View ARC" button - disabled with URL stored
+      setViewArcBtnState(false, gitlabURL.replace(/\.git$/, ''));
 
       // Get ARC information from arcInfo element (which may contain the full path)
       const arcInfo = document.getElementById("arcInfo").innerHTML;
@@ -3017,7 +3137,7 @@ Date: ${timestamp}`;
       return { deleted: deletedCount, preserved: preservedCount };
     }
 
-    async function processExperiment(completedEntries, totalEntries, elabid, params, res, users, datahubURL, arcDir, instance, entryType) {
+    async function processExperiment(completedEntries, totalEntries, elabid, params, res, users, datahubURL, arcDir, instance, entryType, investigation = null) {
       // Calculate base progress for this experiment (0-90%, leaving 90-100% for final git push)
       const baseProgress = (completedEntries / totalEntries) * 90;
       updateInfo(`Processing entry ${completedEntries + 1}/${totalEntries}: <b>${elabid}</b>`, baseProgress);
@@ -3322,30 +3442,40 @@ ${res.uploads && res.uploads.length > 0 ?
             console.log(`[ISA Gen] Extracted ${llmData.protocols?.length || 0} protocol(s) from LLM`);
             updateInfo(`✓ Extracted ${llmData.protocols?.length || 0} protocol step(s) for: <b>${assayId}</b>`, baseProgress + 0.5);
 
-            // Save LLM JSON to protocols folder
+            // Save LLM JSON with descriptive naming (matches protocol markdown filename)
+            // Both studies and assays: LLM JSON goes to protocols folder
             try {
-              const protocolJsonFilename = protocolFilename.replace('.md', '.json');
-              const protocolJsonPath = memfsPathJoin(protocolPath, protocolJsonFilename);
+              const dataFolderName = 'protocols';
+              const dataFolderPath = memfsPathJoin(baseAssayPath, dataFolderName);
+
+              // Ensure data folder exists
+              if (!fs.existsSync(dataFolderPath)) {
+                fs.mkdirSync(dataFolderPath, { recursive: true });
+              }
+
+              // Use protocol-based naming for JSON to match the protocol markdown file
+              const jsonFilename = protocolFilename.replace('.md', '.json');
+              const elab2arcJsonPath = memfsPathJoin(dataFolderPath, jsonFilename);
               const jsonContent = JSON.stringify(llmData, null, 2);
-              await fs.promises.writeFile(protocolJsonPath, jsonContent);
-              console.log(`[ISA Gen] Saved LLM JSON to: ${protocolJsonFilename}`);
+              await fs.promises.writeFile(elab2arcJsonPath, jsonContent);
+              console.log(`[ISA Gen] Saved LLM JSON to: ${dataFolderName}/${jsonFilename} for ${isStudy ? 'study' : 'assay'}`);
 
               // Verify file was written before adding to git
               try {
-                await fs.promises.access(protocolJsonPath);
-                console.log(`[ISA Gen] Verified JSON file exists: ${protocolJsonFilename}`);
+                await fs.promises.access(elab2arcJsonPath);
+                console.log(`[ISA Gen] Verified ${jsonFilename} exists in ${dataFolderName}/`);
 
                 // Add JSON file to git
-                const relativeJsonPath = protocolJsonPath.replace(gitRoot + '/', '');
+                const relativeJsonPath = elab2arcJsonPath.replace(gitRoot + '/', '');
                 await git.add({ fs, dir: gitRoot, filepath: relativeJsonPath });
-                console.log(`[ISA Gen] Added ${protocolJsonFilename} to git`);
+                console.log(`[ISA Gen] Added ${jsonFilename} to git`);
               } catch (gitError) {
-                console.error('[ISA Gen] Error adding protocol JSON to git:', gitError);
-                console.error('[ISA Gen] File path:', protocolJsonPath);
-                console.error('[ISA Gen] Relative path:', protocolJsonPath.replace(gitRoot + '/', ''));
+                console.error(`[ISA Gen] Error adding ${jsonFilename} to git:`, gitError);
+                console.error('[ISA Gen] File path:', elab2arcJsonPath);
+                console.error('[ISA Gen] Relative path:', elab2arcJsonPath.replace(gitRoot + '/', ''));
               }
             } catch (jsonError) {
-              console.error('[ISA Gen] Error saving protocol JSON:', jsonError);
+              console.error(`[ISA Gen] Error saving ${jsonFilename}:`, jsonError);
             }
           } else {
             console.warn('[ISA Gen] LLM extraction returned no data');
@@ -3412,6 +3542,32 @@ ${res.uploads && res.uploads.length > 0 ?
             console.warn(`[ISA Gen] Could not add ISA file to git:`, gitError);
             updateInfo(`⚠️ ISA file created but not added to git: <b>${assayIdentifier}</b>`, baseProgress + 0.8);
           }
+
+          // ========== REGISTER TO INVESTIGATION ==========
+          // Register the study/assay to the investigation object if provided
+          if (investigation) {
+            try {
+              if (isStudy) {
+                // Register study to investigation
+                await Elab2ArcISA.registerStudyToInvestigation(investigation, baseAssayPath, assayIdentifier);
+              } else {
+                // For assay: determine parent study from path
+                const pathParts = baseAssayPath.split('/');
+                const studiesIndex = pathParts.findIndex(p => p.toLowerCase() === 'studies');
+                let parentStudyName = null;
+
+                if (studiesIndex >= 0 && studiesIndex + 1 < pathParts.length) {
+                  // Assay is inside a study's assays folder
+                  parentStudyName = pathParts[studiesIndex + 1];
+                }
+
+                await Elab2ArcISA.registerAssayToInvestigation(investigation, baseAssayPath, assayIdentifier, parentStudyName);
+              }
+            } catch (regError) {
+              console.warn(`[ISA Gen] Could not register ${isaType} to investigation:`, regError);
+            }
+          }
+          // ========== END REGISTER TO INVESTIGATION ==========
         } else {
           updateInfo(`⚠️ ISA file generation failed for: <b>${assayIdentifier}</b>`, baseProgress + 0.8);
         }
@@ -4073,8 +4229,11 @@ ${res.uploads && res.uploads.length > 0 ?
 
 
     function normalizePathSeparators(str) {
-      const normalizedPath = path.normalize(str)
-      return normalizedPath.replace(/\\/g, '/');
+      // Simple normalize: replace backslashes and remove duplicate slashes
+      let normalizedPath = str.replace(/\\/g, '/');
+      // Remove duplicate slashes (but keep leading double slash for UNC paths)
+      normalizedPath = normalizedPath.replace(/([^/])\/+/g, '$1/');
+      return normalizedPath;
     }
 
     function memfsPathDirname(filePath) {
@@ -4200,19 +4359,78 @@ ${res.uploads && res.uploads.length > 0 ?
 
     function getAllFilePaths(basePath) {
       const filesList = []
-      function loop(dir) {
-        const files = fs.readdirSync(dir);
-        for (const file of files) {
-          const filePath = getAllFilePaths(dir, file);
+      const visitedDirs = new Set(); // Track visited directories to prevent infinite loops
 
-          if (fs.statSync(filePath).isDirectory()) {
+      // Simple path relative function
+      function getRelativePath(from, to) {
+        // Normalize paths
+        const fromParts = from.replace(/\\/g, '/').split('/').filter(p => p);
+        const toParts = to.replace(/\\/g, '/').split('/').filter(p => p);
+
+        // Find common prefix
+        let i = 0;
+        while (i < fromParts.length && i < toParts.length && fromParts[i] === toParts[i]) {
+          i++;
+        }
+
+        // Build relative path
+        const upLevels = fromParts.length - i;
+        const remaining = toParts.slice(i);
+
+        const relativeParts = [];
+        for (let j = 0; j < upLevels; j++) {
+          relativeParts.push('..');
+        }
+        relativeParts.push(...remaining);
+
+        return relativeParts.join('/') || '.';
+      }
+
+      function loop(dir) {
+        // Normalize dir for tracking (simple resolve)
+        const normalizedDir = dir.replace(/\\/g, '/').replace(/\/+/g, '/');
+
+        // Skip if already visited (prevents circular symlinks)
+        if (visitedDirs.has(normalizedDir)) {
+          return;
+        }
+        visitedDirs.add(normalizedDir);
+
+        // Skip .git directory to avoid issues with git internals
+        if (normalizedDir.endsWith('/.git') || normalizedDir === '.git' || /\/\.git(\/|$)/.test(normalizedDir)) {
+          return;
+        }
+
+        let files;
+        try {
+          files = fs.readdirSync(dir);
+        } catch (e) {
+          console.warn('Cannot read directory:', dir, e.message);
+          return;
+        }
+
+        for (const file of files) {
+          // Skip .git directory
+          if (file === '.git') continue;
+
+          const filePath = memfsPathJoin(dir, file);
+
+          let stat;
+          try {
+            stat = fs.statSync(filePath);
+          } catch (e) {
+            console.warn('Cannot stat file:', filePath, e.message);
+            continue;
+          }
+
+          if (stat.isDirectory()) {
             // If it's a directory, recursively call the function on that directory
             loop(filePath);
           } else {
             // If it's a file, calculate the relative path and add it to the list
-            const relativePath = path.relative(basePath, filePath);
-            const normalizePath = normalizePathSeparators(relativePath)
-            filesList.push(normalizePath);
+            const relativePath = getRelativePath(basePath, filePath);
+            const normalizedPath = normalizePathSeparators(relativePath)
+            filesList.push(normalizedPath);
           }
         }
       }
@@ -4258,6 +4476,90 @@ ${res.uploads && res.uploads.length > 0 ?
         }
       )
     }
+
+    /**
+     * Export ARC as ISA-JSON and trigger browser download
+     * @param {string} arcName - ARC directory name
+     */
+    window.downloadIsaJson = async function(arcName) {
+      try {
+        // Read ARC and get ISA object (reuse existing read() function)
+        const arc = await read(arcName);
+
+        // Convert to ISA-JSON string using ARCtrl
+        const jsonString = arctrl.JsonController.Investigation.toISAJsonString(arc.ISA, void 0, true);
+
+        // Trigger browser download using data URI pattern
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
+        const dl = document.createElement('a');
+        dl.setAttribute("href", dataStr);
+        dl.setAttribute("download", arcName.replace(/\/$/, '') + "_isa.json");
+        document.body.appendChild(dl);
+        dl.click();
+        dl.remove();
+
+        console.log('[ISA-JSON] Export complete:', arcName);
+      } catch (error) {
+        console.error('[ISA-JSON] Export failed:', error);
+        throw error;
+      }
+    };
+
+    /**
+     * Handle Export ISA-JSON button click
+     * Validates ARC selection, clones if needed, and triggers download
+     */
+    window.handleExportIsaJson = async function() {
+      // Validation: Check if targetPath (ARC selection) is filled
+      const targetPathInput = document.getElementById("targetPath");
+      if (!targetPathInput || !targetPathInput.value || targetPathInput.value.trim() === '') {
+        showWarningToast("Please select an ARC first!<br><br>Go to the ARC tab and select your target ARC from the list.");
+        return;
+      }
+
+      // Get ARC information from arcInfo element
+      const arcInfo = document.getElementById("arcInfo").innerHTML;
+      let gitRoot;
+
+      if (arcInfo && !arcInfo.includes("Please select")) {
+        const pathParts = arcInfo.split('/').filter(p => p);
+        gitRoot = pathParts.length > 0 ? pathParts[0] : null;
+      }
+
+      if (!gitRoot) {
+        showWarningToast("Could not determine ARC path. Please reselect your ARC.");
+        return;
+      }
+
+      // Get GitLab URL for cloning if needed
+      const gitlabURL = document.getElementById("gitlabInfo").innerHTML;
+
+      try {
+        // Check if ARC exists locally, if not clone it first
+        if (!fs.existsSync(`./${gitRoot}`)) {
+          console.log('[ISA-JSON] ARC not found locally, cloning...');
+          showConversionNotification(`Cloning ARC: ${gitRoot}...`);
+
+          if (!gitlabURL || gitlabURL.includes("Please select")) {
+            showWarningToast("ARC not found locally and no GitLab URL available. Please select the ARC again.");
+            return;
+          }
+
+          // Clear filesystem and clone
+          deleteAll();
+          await cloneARC(gitlabURL, gitRoot);
+          refreshTree("./" + gitRoot);
+          console.log('[ISA-JSON] ARC cloned successfully');
+        }
+
+        showConversionNotification('Exporting ISA-JSON...');
+        await window.downloadIsaJson(gitRoot);
+        showSuccessToast('ISA-JSON exported successfully!');
+      } catch (error) {
+        console.error('Export failed:', error);
+        showErrorToast('Failed to export ISA-JSON: ' + error.message);
+      }
+    };
 
     window.addInvestigationPerformers = async function (arcDir, firstname, familyName) {
 
