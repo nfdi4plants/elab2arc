@@ -155,7 +155,7 @@ video {
           <label for="elabExperimentid" class="form-label">
             <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas"
               data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
-              Selected eLabFTW Experiment ID &#128712;</button>
+              Selected eLabFTW Experiment ID&nbsp;ℹ️</button>
           </label>
           <textarea type="text" name="elabid" class="form-control " autocomplete="username" id="elabExperimentid"
             aria-describedby="elabexpHelp" onchange="elabCheckSync();elabListSync()"></textarea>
@@ -166,7 +166,7 @@ video {
           <label for="elabResourceid" class="form-label">
             <button class="border-0 bg-white text-success " type="button" data-bs-toggle="offcanvas"
               data-bs-target="#experimentIdCanvas" aria-controls="experimentIdCanvas">
-              Selected eLabFTW Resource ID &#128712;</button>
+              Selected eLabFTW Resource ID&nbsp;ℹ️</button>
           </label>
           <textarea type="text" name="elabid" class="form-control " autocomplete="username" id="elabResourceid"
             aria-describedby="elabresourceHelp" onchange="elabCheckSync();elabListSync()"></textarea>
@@ -205,7 +205,7 @@ video {
 
             <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas"
               data-bs-target="#instanceCanvas" aria-controls="instanceCanvas">
-              eLabFTW Instance&nbsp;&#128712; (click me to learn more)</button>
+              eLabFTW Instance&nbsp;ℹ️ (click me to learn more)</button>
 
           </label>
           <br>
@@ -234,7 +234,7 @@ video {
 
             <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas"
               data-bs-target="#elabTokenCanvas" aria-controls="elabTokenCanvas">
-              eLabFTW API Key&nbsp;&#128712; (click me to learn more)</button>
+              eLabFTW API Key&nbsp;ℹ️ (click me to learn more)</button>
           </label>
           <div class="input-group mb-3">
             <input type="password" onchange="initCookies();" name="elabtoken" class="form-control"
@@ -256,15 +256,60 @@ video {
           <label for="datahubToken" class="form-label">
             <button class="border-0 bg-white text-success" type="button" data-bs-toggle="offcanvas"
               data-bs-target="#datahubTokenCanvas" aria-controls="datahubTokenCanvas">
-              DataHub Token&nbsp;&#128712; (click me to learn more)</button>
+              DataHub Token&nbsp;ℹ️ (click me to learn more)</button>
 
           </label>
+
+          <!-- Custom DataHub Instance Configuration -->
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="customDatahubCheck"
+                   onchange="toggleCustomDatahub(this.checked)">
+            <label class="form-check-label small" for="customDatahubCheck">
+              Use custom DataHub/GitLab instance
+            </label>
+          </div>
+
+          <!-- Custom DataHub Settings (hidden by default) -->
+          <div id="customDatahubSettings" class="mb-3" style="display: none;">
+            <div class="row g-2">
+              <div class="col-md-4">
+                <label class="form-label small">
+                  GitLab URL
+                  <span class="text-muted" title="Base URL of your GitLab instance (e.g., https://gitlab.com). Do not include /api/v4 here.">ⓘ</span>
+                </label>
+                <input type="text" class="form-control form-control-sm" id="datahubURLInput"
+                       placeholder="https://gitlab.com"
+                       onchange="setDatahubBaseURL(this.value)">
+                <small class="text-muted d-block">Base URL only, no API suffix</small>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">
+                  API Suffix
+                  <span class="text-muted" title="API path suffix. Default is /api/v4 for GitLab.">ⓘ</span>
+                </label>
+                <input type="text" class="form-control form-control-sm" id="datahubAPISuffixInput"
+                       placeholder="/api/v4"
+                       onchange="setDatahubAPISuffix(this.value)">
+                <small class="text-muted d-block">Default: /api/v4</small>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">
+                  SSO/Token URL
+                  <span class="text-muted" title="URL to obtain a personal access token. For custom SSO, this should redirect back with ?datahubtoken=xxx">ⓘ</span>
+                </label>
+                <input type="text" class="form-control form-control-sm" id="datahubSSOInput"
+                       placeholder="https://gitlab.com/-/profile/personal_access_tokens"
+                       onchange="setDatahubSSOURL(this.value)">
+                <small class="text-muted d-block">Token page or SSO redirect</small>
+              </div>
+            </div>
+          </div>
 
           <div class="input-group mb-3">
             <input type="password" onchange="initCookies();" name="datahubtoken" class="form-control" autocomplete="new-password"
               id="datahubToken" required />
             <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="datahubToken"
-              onclick="location.href='https://datahublogin.dataplan.top/auth/gitlab'">
+              onclick="handleGetTokenClick()">
               get a token
             </button>
             <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="datahubToken"
@@ -1177,7 +1222,7 @@ video {
   <script src="./js/bootstrap.bundle.min.js?v=20260304120101"></script>
   <script src="./js/bs5-intro-tour.js?v=20260304120102" type="text/javascript" charset="utf-8"></script>
   <script src="./js/git.js?v=20260304120103"></script>
-  <script src="./js/main-25-07-15.js?v=20260304120104" type="text/javascript"></script>
+  <script src="./js/arctrl.bundle.js?v=20260327135806" type="text/javascript"></script>
   <script src="./js/turndown.js?v=20260304120105" type="text/javascript"></script>
   <script src="./js/exceljs.min.js?v=20260304120106"></script>
 
@@ -1195,17 +1240,17 @@ video {
   </script>
 
   <!-- Application code (order matters - load after DOM and libraries) -->
-  <script src="./js/MEMfsGUI1006.js?v=20260304120110" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/MEMfsGUI1006.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
 
   <!-- Load modular components before core -->
-  <script src="./js/modules/conversion-metadata.js?v=20260304120111" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/isa-generation.js?v=20260304120112" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/conversion-metadata.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/isa-generation.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/llm-service.js?v=20260304120113" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260304120114" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/git-lfs-service.js?v=20260304120115" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core1209.js?v=20260304120116" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core1209.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
 
   <!-- Toast Notification Container -->
   <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999;">

@@ -7,7 +7,7 @@
 // CONFIGURATION & GLOBALS
 // =============================================================================
 
-var fs = FS.fs;
+var fs = window.FS.fs;
 var elabJSON;
 var statusInfo = "";
 const version = "2025-12-04";
@@ -139,8 +139,8 @@ var conversionStartTime = null; // Track when conversion starts
             console.error('[fetchWithProxyFallback] Non-CORS error on direct fetch:', directError);
             throw directError;
           }
-          console.log('[fetchWithProxyFallback] CORS error detected, falling back to proxy');
-          console.info('[fetchWithProxyFallback] Note: CORS errors above are expected when server doesn\'t allow direct browser access. The application will use the CORS proxy instead.');
+          // CORS error is expected - fall back to proxy silently
+          console.log('[fetchWithProxyFallback] Direct access blocked (CORS), using proxy');
         }
       }
 
@@ -412,6 +412,197 @@ CC BY 4.0
       }
 
       return { valid: true, warning: '' };
+    }
+
+    // =============================================================================
+    // DATAHUB URL CONFIGURATION
+    // =============================================================================
+
+    // Default DataHub URLs
+    const DEFAULT_DATAHUB_URL = 'https://git.nfdi4plants.org';
+    const DEFAULT_DATAHUB_API_SUFFIX = '/api/v4';
+    const DEFAULT_DATAHUB_SSO_URL = 'https://datahublogin.dataplan.top/auth/gitlab';
+
+    /**
+     * Toggle custom DataHub settings visibility
+     * @param {boolean} show - Whether to show custom settings
+     */
+    function toggleCustomDatahub(show) {
+      const settings = document.getElementById('customDatahubSettings');
+      if (settings) {
+        settings.style.display = show ? 'block' : 'none';
+      }
+      if (!show) {
+        // Reset to defaults
+        localStorage.removeItem('datahubURL');
+        localStorage.removeItem('datahubAPISuffix');
+        localStorage.removeItem('datahubSSOURL');
+        const urlInput = document.getElementById('datahubURLInput');
+        const suffixInput = document.getElementById('datahubAPISuffixInput');
+        const ssoInput = document.getElementById('datahubSSOInput');
+        if (urlInput) urlInput.value = '';
+        if (suffixInput) suffixInput.value = '';
+        if (ssoInput) ssoInput.value = '';
+      }
+    }
+
+    /**
+     * Set and store DataHub base URL (e.g., https://gitlab.com)
+     * Automatically strips /api/v4 if accidentally included
+     * @param {string} url - GitLab base URL
+     */
+    function setDatahubBaseURL(url) {
+      if (!url || url === 'null' || url === 'undefined') {
+        localStorage.removeItem('datahubURL');
+        console.log('[DataHub] Base URL reset to default');
+        return;
+      }
+
+      let normalized = url.trim();
+
+      // Remove trailing slash
+      normalized = normalized.replace(/\/$/, '');
+
+      // Strip common API suffixes if accidentally included
+      normalized = normalized.replace(/\/api\/v?\d*$/, '');
+
+      localStorage.setItem('datahubURL', normalized);
+      console.log('[DataHub] Base URL set to:', normalized);
+
+      // Update input field with normalized value
+      const input = document.getElementById('datahubURLInput');
+      if (input) {
+        input.value = normalized;
+      }
+    }
+
+    /**
+     * Set and store DataHub API suffix (e.g., /api/v4)
+     * Normalizes various input formats: "api/v4", "api/v4/", "/api/v4/", "/api/v4"
+     * @param {string} suffix - API suffix
+     */
+    function setDatahubAPISuffix(suffix) {
+      if (!suffix || suffix === 'null' || suffix === 'undefined') {
+        localStorage.removeItem('datahubAPISuffix');
+        console.log('[DataHub] API suffix reset to default');
+        return;
+      }
+
+      // Normalize the suffix
+      let normalized = suffix.trim();
+
+      // Remove trailing slash
+      normalized = normalized.replace(/\/$/, '');
+
+      // Ensure suffix starts with /
+      if (!normalized.startsWith('/')) {
+        normalized = '/' + normalized;
+      }
+
+      localStorage.setItem('datahubAPISuffix', normalized);
+      console.log('[DataHub] API suffix set to:', normalized);
+
+      // Update input field with normalized value
+      const input = document.getElementById('datahubAPISuffixInput');
+      if (input) {
+        input.value = normalized;
+      }
+    }
+
+    /**
+     * Set and store DataHub SSO URL
+     * @param {string} url - SSO/Token URL
+     */
+    function setDatahubSSOURL(url) {
+      if (!url || url === 'null' || url === 'undefined') {
+        localStorage.removeItem('datahubSSOURL');
+      } else {
+        localStorage.setItem('datahubSSOURL', url);
+      }
+      console.log('[DataHub] SSO URL set to:', url || '(default)');
+    }
+
+    /**
+     * Check if SSO URL is a manual token page (no automatic redirect)
+     * Manual pages typically end with patterns like:
+     * - /personal_access_tokens
+     * - /user_settings/personal_access_tokens
+     * - /profile/personal_access_tokens
+     * @returns {boolean} True if it's a manual token page
+     */
+    function isManualTokenPage() {
+      const ssoUrl = getDatahubSSOURL();
+      const manualPatterns = [
+        '/personal_access_tokens',
+        '/user_settings/personal_access_tokens',
+        '/profile/personal_access_tokens',
+        '/-/profile/personal_access_tokens',
+        '/settings/personal_access_tokens'
+      ];
+      return manualPatterns.some(pattern => ssoUrl.includes(pattern));
+    }
+
+    /**
+     * Handle "get a token" button click
+     * - For SSO services: redirect in same window (for token return)
+     * - For manual token pages: open in new tab
+     */
+    function handleGetTokenClick() {
+      const ssoUrl = getDatahubSSOURL();
+
+      if (isManualTokenPage()) {
+        // Open in new tab for manual token creation
+        window.open(ssoUrl, '_blank');
+        console.log('[DataHub] Opened token page in new tab:', ssoUrl);
+      } else {
+        // Redirect in same window for SSO with automatic token return
+        window.location.href = ssoUrl;
+        console.log('[DataHub] Redirecting to SSO:', ssoUrl);
+      }
+    }
+
+    /**
+     * Get DataHub base URL
+     * @returns {string} GitLab base URL
+     */
+    function getDatahubURL() {
+      let url = localStorage.getItem('datahubURL');
+      if (!url) {
+        url = DEFAULT_DATAHUB_URL;
+      }
+      return url;
+    }
+
+    /**
+     * Get DataHub API suffix
+     * @returns {string} API suffix (e.g., /api/v4)
+     */
+    function getDatahubAPISuffix() {
+      let suffix = localStorage.getItem('datahubAPISuffix');
+      if (!suffix) {
+        suffix = DEFAULT_DATAHUB_API_SUFFIX;
+      }
+      return suffix;
+    }
+
+    /**
+     * Get DataHub API URL (base URL + suffix)
+     * @returns {string} Full GitLab API URL
+     */
+    function getDatahubAPIURL() {
+      return getDatahubURL() + getDatahubAPISuffix();
+    }
+
+    /**
+     * Get DataHub SSO URL
+     * @returns {string} SSO/Token URL
+     */
+    function getDatahubSSOURL() {
+      let url = localStorage.getItem('datahubSSOURL');
+      if (!url) {
+        url = DEFAULT_DATAHUB_SSO_URL;
+      }
+      return url;
     }
 
     /**
@@ -699,7 +890,7 @@ CC BY 4.0
 
     // Function to check connection to GitLab API
     async function checkGitLabConnection() {
-      const targetUrl = 'https://git.nfdi4plants.org/api/v4/projects';
+      const targetUrl = getDatahubAPIURL() + '/projects';
 
       try {
         const response = await fetchWithProxyFallback(targetUrl, {
@@ -747,7 +938,7 @@ CC BY 4.0
     const fetchUser = async (accessToken) => {
       try {
         // Define the API endpoint for fetching user-related projects
-        const targetUrl = 'https://git.nfdi4plants.org/api/v4/user';
+        const targetUrl = getDatahubAPIURL() + '/user';
 
         // Fetch the data from the API with the access token in the headers
         const response = await fetchWithProxyFallback(targetUrl, {
@@ -791,7 +982,7 @@ CC BY 4.0
 
         const accessToken = document.getElementById("datahubToken").value;
         await createGitLabRepo(projectName, projectDescription, accessToken);
-        const url = `https://git.nfdi4plants.org/${username}/${projectName}.git`;
+        const url = `${getDatahubURL()}/${username}/${projectName}.git`;
         await cloneARC(url, projectName);
         newARC = new arctrl.ARC();
         const name = window.userId.name;
@@ -851,7 +1042,7 @@ CC BY 4.0
     const createGitLabRepo = async (projectName, projectDescription, accessToken) => {
       try {
         // Define the API endpoint for creating a new project
-        const targetUrl = 'https://git.nfdi4plants.org/api/v4/projects';
+        const targetUrl = getDatahubAPIURL() + '/projects';
 
         // Prepare request configuration
         const response = await fetchWithProxyFallback(targetUrl, {
@@ -889,7 +1080,7 @@ CC BY 4.0
     const fetchUserProjects = async (userId, accessToken, apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
       try {
         // Define the API endpoint for fetching user-related projects
-        const targetUrl = 'https://git.nfdi4plants.org/api/v4/projects' + apiParameter;
+        const targetUrl = getDatahubAPIURL() + '/projects' + apiParameter;
 
         // Fetch the data from the API with the access token in the headers
         const response = await fetchWithProxyFallback(targetUrl, {
@@ -2077,11 +2268,12 @@ Date: ${timestamp}`;
     }
 
     function deleteAll() {
-      const vol = FS.Volume.fromJSON({
+      const vol = window.FS.Volume.fromJSON({
         '/': null, // Create root directory
 
       });
       fs = vol;
+      window.FS.fs = vol; // Keep singleton synchronized
       // const fileList = fs.readdirSync(".");
       // fileList.forEach(file => {
       //   deletePath(file);
@@ -4193,6 +4385,26 @@ ${res.uploads && res.uploads.length > 0 ?
       document.getElementById("elabURLInput1").value = instance;
       document.getElementById("elabURLInput1").innerHTML = "instance: " + instance;
 
+      // Load saved DataHub settings
+      const savedDatahubURL = localStorage.getItem('datahubURL');
+      const savedDatahubAPISuffix = localStorage.getItem('datahubAPISuffix');
+      const savedDatahubSSOURL = localStorage.getItem('datahubSSOURL');
+
+      if (savedDatahubURL || savedDatahubAPISuffix || savedDatahubSSOURL) {
+        document.getElementById('customDatahubCheck').checked = true;
+        document.getElementById('customDatahubSettings').style.display = 'block';
+
+        if (savedDatahubURL) {
+          document.getElementById('datahubURLInput').value = savedDatahubURL;
+        }
+        if (savedDatahubAPISuffix) {
+          document.getElementById('datahubAPISuffixInput').value = savedDatahubAPISuffix;
+        }
+        if (savedDatahubSSOURL) {
+          document.getElementById('datahubSSOInput').value = savedDatahubSSOURL;
+        }
+      }
+
       document.getElementById("elabSearch").addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
           document.getElementById("elabSearchBtn").click()
@@ -4261,8 +4473,11 @@ ${res.uploads && res.uploads.length > 0 ?
       return len === 0 ? '/' : result.slice(0, len);
     }
     function memfsPathJoin(...segments) {
-      // Filter out empty/null segments and join with '/'
-      const joined = segments.filter(s => s != null && s !== '').join('/');
+      // Filter out empty/null segments, strip leading slashes, and join with '/'
+      const joined = segments
+        .filter(s => s != null && s !== '')
+        .map(s => s.startsWith('/') ? s.substring(1) : s) // Strip leading slashes
+        .join('/');
 
       // Split into components and normalize
       const stack = [];
@@ -4282,9 +4497,9 @@ ${res.uploads && res.uploads.length > 0 ?
         normalized = normalized.slice(0, -1);
       }
 
-      // Handle absolute paths
-      const isAbsolute = joined.startsWith('/');
-      return isAbsolute ? `/${normalized}` : normalized || '.';
+      // For memfs, never use absolute paths (starting with /)
+      // memfs paths are always relative to the memfs volume root
+      return normalized || '.';
     }
 
     // Expose path utilities globally for use by other modules
@@ -4568,7 +4783,7 @@ ${res.uploads && res.uploads.length > 0 ?
 
       const roles = new arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
       const comment = "generated by elab2arc"
-      let comments_p = arctrl.Comment$.create("generation log", comment);
+      let comments_p = arctrl.Comment.create("generation log", comment);
       const newContact = arctrl.Person.create(void 0, firstname, familyName, void 0, void 0, void 0, void 0, void 0, void 0, void 0);
 
 
@@ -4611,10 +4826,10 @@ ${res.uploads && res.uploads.length > 0 ?
         //const mplat = new arctrl.OntologyAnnotation("technology platform", "1", "2");
         const roles = new arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
 
-        let comments_p = arctrl.Comment$.create("generation log", comment);
+        let comments_p = arctrl.Comment.create("generation log", comment);
         const person = arctrl.Person.create(void 0, firstName, familyName, void 0, email, void 0, void 0, void 0, affiliation, [roles], [comments_p]);
-        let comments_m = arctrl.Comment$.create("name", "value");
-        let comments_datahub_url = arctrl.Comment$.create("datahub_url", "arctest");
+        let comments_m = arctrl.Comment.create("name", "value");
+        let comments_datahub_url = arctrl.Comment.create("datahub_url", "arctest");
 
         // Create annotation table
         if (fs.existsSync(dir + "/assays/" + assayName + "/isa.assay.xlsx")) {

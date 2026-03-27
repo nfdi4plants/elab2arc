@@ -46,13 +46,13 @@
         };
 
         const batchResponse = await fetch(
-            'https://lfsproxy.cplantbox.com/https://git.nfdi4plants.org/x.zhou/INV018_RibesPan.git/info/lfs/objects/batch',
+            'https://lfsproxy.cplantbox.com/https://git.nfdi4plants.org/x.zhou/inv-018-ribes-pan-xz.git/info/lfs/objects/batch',
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/vnd.git-lfs+json',
                     'Accept': 'application/vnd.git-lfs+json',
-                    'Authorization': 'Basic ' + btoa('oauth2:61009a0c06a19c01205b70d6905371115bb0b25370305a12f778ac54706b6111')
+                    'Authorization': 'Basic ' + btoa('oauth2:e69ec133609fe3a0329975c99375edf04ed5b6455315a98fe93e30d6d86afc88')
                 },
                 body: JSON.stringify(batchRequest)
             }

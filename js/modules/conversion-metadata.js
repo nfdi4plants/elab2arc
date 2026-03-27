@@ -144,12 +144,12 @@
    */
   async function saveMetadataToARC(metadata, assayPath) {
     try {
-      if (!window.fs) {
-        console.warn('[Metadata] memfs not available, cannot save metadata');
+      if (!window.FS || !window.FS.fs) {
+        console.warn('[Metadata] window.FS.fs not available, cannot save metadata');
         return null;
       }
 
-      const fs = window.fs;  // Use global fs from elab2arc-core line 10
+      const fs = window.FS.fs;
 
       // Validate and log the assayPath input
       console.log(`[Metadata] AssayPath parameter received: ${assayPath}`);
@@ -230,12 +230,12 @@
    */
   function cleanupOldConversions(metadataDir, keepCount = 10) {
     try {
-      if (!window.fs) {
-        console.warn('[Metadata] memfs not available, skipping cleanup');
+      if (!window.FS || !window.FS.fs) {
+        console.warn('[Metadata] window.FS.fs not available, skipping cleanup');
         return { deleted: 0, kept: 0 };
       }
 
-      const fs = window.fs;
+      const fs = window.FS.fs;
 
       if (!fs.existsSync(metadataDir)) {
         return { deleted: 0, kept: 0 };
@@ -303,12 +303,12 @@
    */
   function loadConversionHistory(assayPath) {
     try {
-      if (!window.fs) {
-        console.warn('[Metadata] memfs not available');
+      if (!window.FS || !window.FS.fs) {
+        console.warn('[Metadata] window.FS.fs not available');
         return [];
       }
 
-      const fs = window.fs;  // Use global fs from elab2arc-core
+      const fs = window.FS.fs;
       const metadataDir = `${assayPath}/elab2arc-metadata`;
 
       if (!fs.existsSync(metadataDir)) {
@@ -347,11 +347,11 @@
    */
   function loadLatestMetadata(assayPath) {
     try {
-      if (!window.fs) {
+      if (!window.FS || !window.FS.fs) {
         return null;
       }
 
-      const fs = window.fs;  // Use global fs from elab2arc-core
+      const fs = window.FS.fs;
       const latestPath = `${assayPath}/elab2arc-metadata/latest.json`;
 
       if (!fs.existsSync(latestPath)) {
@@ -392,11 +392,11 @@
    */
   function findConversionByExperimentId(elabId, arcRoot) {
     try {
-      if (!window.fs) {
+      if (!window.FS || !window.FS.fs) {
         return [];
       }
 
-      const fs = window.fs;  // Use global fs from elab2arc-core
+      const fs = window.FS.fs;
       const results = [];
 
       // Recursively search for elab2arc-metadata folders
