@@ -135,7 +135,7 @@ for (ele of [... new Set(mmm)]){
                 collaborators_address[i] ??= " ";
                 const roles = new arctrl.OntologyAnnotation(collaborators_role[i], " ", "");
                 const empty = new arctrl.OntologyAnnotation(" ", " ", "");
-                let comments_p = arctrl.Comment$.create(" ", " ");
+                let comments_p = arctrl.Comment.create(" ", " ");
                 const firstName = collaborators_first_name[i];
                 const familyName = ele;
                 const email = collaborators_email[i];

@@ -555,7 +555,7 @@ async function cloneARCIfNeeded(targetPath) {
         const arcName = pathParts.length > 0 ? pathParts[0] : gitlabURL.split("/").slice(-1)[0].replace(".git", "");
 
         // Check if ARC is already cloned
-        if (window.fs && window.fs.existsSync(`./${arcName}`)) {
+        if (fs && fs.existsSync(`./${arcName}`)) {
             console.log(`ARC ${arcName} already exists, skipping clone`);
             showARCExistsNotification(arcName);
             return true;

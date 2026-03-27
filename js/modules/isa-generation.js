@@ -6,34 +6,9 @@
 (function(window) {
   'use strict';
 
-  // Note: This module loads before elab2arc-core1006c.js, so we need a local implementation
-  // Helper function for path joining (copied from core)
-  function memfsPathJoin(...segments) {
-    // Filter out empty/null segments and join with '/'
-    const joined = segments.filter(s => s != null && s !== '').join('/');
-
-    // Split into components and normalize
-    const stack = [];
-    joined.split('/').forEach(segment => {
-      if (segment === '.' || segment === '') return; // Skip no-ops
-      if (segment === '..') {
-        // Handle parent directory (if not at root)
-        if (stack.length > 0 && stack[stack.length - 1] !== '') stack.pop();
-      } else {
-        stack.push(segment);
-      }
-    });
-
-    // Rebuild path and remove trailing slash (except for root)
-    let normalized = stack.join('/');
-    if (normalized.endsWith('/') && normalized !== '') {
-      normalized = normalized.slice(0, -1);
-    }
-
-    // Handle absolute paths
-    const isAbsolute = joined.startsWith('/');
-    return isAbsolute ? `/${normalized}` : normalized || '.';
-  }
+  // Use global memfsPathJoin from elab2arc-core1209.js
+  // This function is available after core module loads
+  // Path joining strips leading slashes for memfs compatibility
 
   /**
    * Helper: Safely convert any value to a string for ISA tables
@@ -66,11 +41,11 @@
       const fs = window.FS.fs;
 
       // Check for studies folder
-      const studiesPath = memfsPathJoin(gitRoot, 'studies');
+      const studiesPath = window.memfsPathJoin(gitRoot, 'studies');
       if (fs.existsSync(studiesPath)) {
         const studyDirs = fs.readdirSync(studiesPath);
         studyDirs.forEach(studyName => {
-          const studyPath = memfsPathJoin(studiesPath, studyName);
+          const studyPath = window.memfsPathJoin(studiesPath, studyName);
           const stats = fs.statSync(studyPath);
           if (stats.isDirectory() && !studyName.startsWith('.')) {
             structure.studies.push({ name: studyName, path: studyPath });
@@ -79,11 +54,11 @@
       }
 
       // Check for assays folder
-      const assaysPath = memfsPathJoin(gitRoot, 'assays');
+      const assaysPath = window.memfsPathJoin(gitRoot, 'assays');
       if (fs.existsSync(assaysPath)) {
         const assayDirs = fs.readdirSync(assaysPath);
         assayDirs.forEach(assayName => {
-          const assayPath = memfsPathJoin(assaysPath, assayName);
+          const assayPath = window.memfsPathJoin(assaysPath, assayName);
           const stats = fs.statSync(assayPath);
           if (stats.isDirectory() && !assayName.startsWith('.')) {
             structure.assays.push({ name: assayName, path: assayPath });
@@ -120,7 +95,7 @@
       });
 
       // Try to read README.md for sample information
-      const readmePath = memfsPathJoin(datasetPath, 'README.md');
+      const readmePath = window.memfsPathJoin(datasetPath, 'README.md');
       if (fs.existsSync(readmePath)) {
         const readmeContent = fs.readFileSync(readmePath, 'utf8');
         // Extract sample names from README (simple pattern matching)
@@ -157,7 +132,7 @@
           info.files.push(file);
           // Read first protocol file for title/description
           if (!info.title) {
-            const filePath = memfsPathJoin(protocolPath, file);
+            const filePath = window.memfsPathJoin(protocolPath, file);
             const content = fs.readFileSync(filePath, 'utf8');
             const lines = content.split('\n');
             info.title = file.replace('.md', '');
@@ -204,8 +179,8 @@
       const worksheet = workbook.addWorksheet('isa_assay');
 
       // Extract dataset and protocol information
-      const datasetPath = memfsPathJoin(assayPath, 'dataset');
-      const protocolPath = memfsPathJoin(assayPath, 'protocols');
+      const datasetPath = window.memfsPathJoin(assayPath, 'dataset');
+      const protocolPath = window.memfsPathJoin(assayPath, 'protocols');
       const datasetInfo = extractDatasetInfo(datasetPath);
       const protocolInfo = extractProtocolInfo(protocolPath);
 
@@ -242,7 +217,7 @@
       // Write the file
       const buffer = await workbook.xlsx.writeBuffer();
       const uint8Array = new Uint8Array(buffer);
-      const isaPath = memfsPathJoin(assayPath, 'isa.assay.xlsx');
+      const isaPath = window.memfsPathJoin(assayPath, 'isa.assay.xlsx');
       window.FS.fs.writeFileSync(isaPath, uint8Array);
 
       console.log(`[ISA Gen] Created: ${isaPath}`);
@@ -412,7 +387,7 @@
       const tableName = `process nr. ${processNr}`;
       const processTable = window.arctrl.ArcTable.init(tableName);
 
-      console.log(`[ISA Elab2Arc] Creating process table "${tableName}" for: ${protocol.name}`);
+      console.log(`[ISA Elab2Arc] Creating process table "${tableName}" for: ${protocol?.name || 'unnamed protocol'}`);
 
       // Add Input column(s)
       if (protocol.inputs && protocol.inputs.length > 0) {
@@ -459,8 +434,9 @@
 
         for (const param of protocol.parameters) {
           try {
-            // Create parameter header
-            const paramOA = new window.arctrl.OntologyAnnotation(param.name, "", "");
+            // Create parameter header - use safeString to ensure name is valid
+            const paramName = safeString(param.name) || `Parameter`;
+            const paramOA = new window.arctrl.OntologyAnnotation(paramName, "", "");
             const paramHeader = window.arctrl.CompositeHeader.parameter(paramOA);
 
             // Create cells for each row with value if provided
@@ -489,9 +465,9 @@
             processTable.AddColumn(paramHeader, paramCells);
             const valueInfo = paramValue ? ` = ${paramValue}` : '';
             const unitInfo = paramUnit ? ` ${paramUnit}` : '';
-            console.log(`  - Added parameter: ${param.name}${valueInfo}${unitInfo} (${rowCount} row(s))`);
+            console.log(`  - Added parameter: ${paramName}${valueInfo}${unitInfo} (${rowCount} row(s))`);
           } catch (paramError) {
-            console.error(`[ISA Elab2Arc] Error adding parameter "${param.name}":`, paramError);
+            console.error(`[ISA Elab2Arc] Error adding parameter "${safeString(param?.name)}":`, paramError);
             // Skip this parameter and continue with others
           }
         }
@@ -597,92 +573,121 @@
     try {
       console.log(`[ISA Elab2Arc] Generating multi-sheet ISA assay for: ${assayName}`);
 
-      // ========== SHEET 1: Sample Table ==========
-      const sampleTable = createSampleTable(llmData?.samples || []);
+      // Strip leading slash from assayPath to avoid ENOENT errors
+      if (assayPath.startsWith('/')) {
+        assayPath = assayPath.substring(1);
+        console.log(`[ISA Elab2Arc] Stripped leading slash from assayPath: ${assayPath}`);
+      }
 
-      // Create person with roles and comments
-      const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
-      let comments_p = window.arctrl.Comment$.create("generation log", "generated by elab2arc");
-      const person = window.arctrl.Person.create(
-        void 0,
-        metadata.firstName,
-        metadata.familyName,
-        void 0,
-        metadata.email,
-        void 0, void 0, void 0,
-        metadata.affiliation,
-        [roles],
-        [comments_p]
-      );
+      // Ensure metadata is an object and all fields have fallback values
+      const safeMetadata = metadata || {};
+      const firstName = (safeMetadata.firstName || '').toString();
+      const familyName = (safeMetadata.familyName || '').toString();
+      const email = (safeMetadata.email || '').toString();
+      const affiliation = (safeMetadata.affiliation || '').toString();
+
+      console.log(`[ISA Elab2Arc] Metadata values: firstName="${firstName}", familyName="${familyName}", email="${email}", affiliation="${affiliation}"`);
+
+      // Create person with roles and comments - add defensive checks
+      let person = null;
+      try {
+        const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
+        console.log(`[ISA Elab2Arc] Created roles:`, roles);
+        const comments_p = window.arctrl.Comment.create("generation log", "generated by elab2arc");
+        console.log(`[ISA Elab2Arc] Created comments_p:`, comments_p);
+
+        person = window.arctrl.Person.create(
+          void 0,
+          firstName,
+          familyName,
+          void 0,
+          email,
+          void 0, void 0, void 0,
+          affiliation,
+          [roles],
+          [comments_p]
+        );
+        console.log(`[ISA Elab2Arc] Created person successfully:`, person);
+      } catch (personError) {
+        console.error(`[ISA Elab2Arc] Error creating person:`, personError);
+        // Continue without person if creation fails
+        person = null;
+      }
 
       // Add protocol/dataset info as comments
       let comments = [];
       if (protocolInfo) {
-        comments.push(window.arctrl.Comment$.create("protocol_name", protocolInfo.title || assayName));
-        comments.push(window.arctrl.Comment$.create("protocol_files", protocolInfo.files.join(', ')));
-        comments.push(window.arctrl.Comment$.create("protocol_description", protocolInfo.description || ''));
+        comments.push(window.arctrl.Comment.create("protocol_name", protocolInfo.title || assayName));
+        comments.push(window.arctrl.Comment.create("protocol_files", protocolInfo.files.join(', ')));
+        comments.push(window.arctrl.Comment.create("protocol_description", protocolInfo.description || ''));
       }
       if (datasetInfo) {
-        comments.push(window.arctrl.Comment$.create("dataset_files", datasetInfo.files.join(', ')));
-        comments.push(window.arctrl.Comment$.create("number_of_samples", datasetInfo.samples.length.toString()));
+        comments.push(window.arctrl.Comment.create("dataset_files", datasetInfo.files.join(', ')));
+        comments.push(window.arctrl.Comment.create("number_of_samples", datasetInfo.samples.length.toString()));
       }
 
-      // ========== SHEETS 2+: Process Tables (one per protocol) ==========
-      const allTables = [sampleTable];  // Start with sample table
+      // Only create sample/process tables when LLM data is available
+      let allTables = [];
 
-      if (llmData && llmData.protocols && llmData.protocols.length > 0) {
-        // Link processes: ensure outputs of one process match inputs of the next
-        for (let i = 0; i < llmData.protocols.length; i++) {
-          const protocol = llmData.protocols[i];
-          const processNr = i + 1;
+      if (llmData && (llmData.samples?.length > 0 || llmData.protocols?.length > 0)) {
+        // ========== SHEET 1: Sample Table ==========
+        const sampleTable = createSampleTable(llmData.samples || []);
+        allTables = [sampleTable];
 
-          // If this is not the first process, link inputs to previous outputs
-          if (i > 0) {
-            const prevProtocol = llmData.protocols[i - 1];
-            // Use previous outputs as current inputs if they don't match
-            if (prevProtocol.outputs && prevProtocol.outputs.length > 0) {
-              protocol.inputs = prevProtocol.outputs;
-              console.log(`[ISA Elab2Arc] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
+        // ========== SHEETS 2+: Process Tables (one per protocol) ==========
+        if (llmData.protocols && llmData.protocols.length > 0) {
+          for (let i = 0; i < llmData.protocols.length; i++) {
+            const protocol = llmData.protocols[i];
+            const processNr = i + 1;
+
+            // If this is not the first process, link inputs to previous outputs
+            if (i > 0) {
+              const prevProtocol = llmData.protocols[i - 1];
+              if (prevProtocol.outputs && prevProtocol.outputs.length > 0) {
+                protocol.inputs = prevProtocol.outputs;
+                console.log(`[ISA Elab2Arc] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
+              }
             }
+
+            const processTable = createProcessTable(protocol, processNr, protocolInfo);
+            allTables.push(processTable);
+
+            comments.push(window.arctrl.Comment.create(
+              `process_${processNr}_name`,
+              protocol.name || `Process ${processNr}`
+            ));
+            comments.push(window.arctrl.Comment.create(
+              `process_${processNr}_description`,
+              protocol.description || ''
+            ));
           }
 
-          const processTable = createProcessTable(protocol, processNr, protocolInfo);
-          allTables.push(processTable);
-
-          // Add protocol info as comments
-          comments.push(window.arctrl.Comment$.create(
-            `process_${processNr}_name`,
-            protocol.name || `Process ${processNr}`
-          ));
-          comments.push(window.arctrl.Comment$.create(
-            `process_${processNr}_description`,
-            protocol.description || ''
-          ));
+          console.log(`[ISA Elab2Arc] Created ${llmData.protocols.length} process table(s)`);
         }
-
-        console.log(`[ISA Elab2Arc] Created ${llmData.protocols.length} process table(s)`);
       } else {
-        // No LLM data - create single minimal process table
-        const defaultProcessTable = createDefaultProcessTable(protocolInfo);
-        allTables.push(defaultProcessTable);
-        console.log(`[ISA Elab2Arc] Created default process table (no LLM data)`);
+        console.log(`[ISA Elab2Arc] No LLM data - skipping sample/process tables`);
       }
 
       // ========== Create ArcAssay with all tables ==========
-      const myAssay = window.arctrl.ArcAssay.create(
-        assayName,
-        void 0,  // measurementType
-        void 0,  // technologyType
-        void 0,  // technologyPlatform
-        allTables,  // ALL TABLES: samples + process 1 + process 2 + ...
-        void 0,
-        [person],
-        comments
-      );
+      // ARCtrl 3.0.1: Use .init() instead of .create() for ArcAssay
+      const safeAssayName = (assayName || 'unnamed_assay').toString();
+      const safeComments = comments || [];
+      const contacts = person ? [person] : [];
+      console.log(`[ISA Elab2Arc] Creating ArcAssay: name="${safeAssayName}", contacts=${contacts.length}, tables=${allTables.length}`);
+
+      // Use .init() to create ArcAssay, then set properties
+      const myAssay = window.arctrl.ArcAssay.init(safeAssayName);
+      myAssay.Tables = allTables;
+      myAssay.Contacts = contacts;
+      myAssay.Comments = safeComments;
+
+      console.log(`[ISA Elab2Arc] ArcAssay created successfully with ${allTables.length} tables`);
 
       // ========== Export to Excel ==========
       let spreadsheet = window.arctrl.XlsxController.Assay.toFsWorkbook(myAssay);
-      const isaPath = memfsPathJoin(assayPath, 'isa.assay.xlsx');
+      const isaPath = window.memfsPathJoin(assayPath, 'isa.assay.xlsx');
+
+      // Write using window.Xlsx.toFile() which handles the correct fs instance
       await window.Xlsx.toFile(isaPath, spreadsheet);
 
       console.log(`[ISA Elab2Arc] Created: ${isaPath} with ${allTables.length} sheet(s)`);
@@ -713,44 +718,44 @@
     llmData = null
   ) {
     try {
-      console.log(`[ISA Gen] Generating ISA study for: ${studyName}`);
-      if (llmData) {
-        console.log(`[ISA Gen] LLM annotation data provided for study - creating annotation tables`);
-      }
+      // Ensure studyName and metadata are valid
+      const safeStudyName = studyName || 'unnamed_study';
+      const safeMetadata = metadata || {};
 
-      // ========== SHEET 1: Sample Table ==========
-      const sampleTable = createSampleTable(llmData?.samples || []);
-      console.log(`[ISA Gen] Created sample table for study`);
+      console.log(`[ISA Gen] Generating ISA study for: ${safeStudyName}`);
 
-      // ========== SHEETS 2+: Process Tables (one per protocol) ==========
-      const allTables = [sampleTable];  // Start with sample table
+      // Only create sample/process tables when LLM data is available
+      let allTables = [];
 
-      if (llmData && llmData.protocols && llmData.protocols.length > 0) {
-        // Link processes: ensure outputs of one process match inputs of the next
-        for (let i = 0; i < llmData.protocols.length; i++) {
-          const protocol = llmData.protocols[i];
-          const processNr = i + 1;
+      if (llmData && (llmData.samples?.length > 0 || llmData.protocols?.length > 0)) {
+        // ========== SHEET 1: Sample Table ==========
+        const sampleTable = createSampleTable(llmData.samples || []);
+        allTables = [sampleTable];
+        console.log(`[ISA Gen] Created sample table for study`);
 
-          // If this is not the first process, link inputs to previous outputs
-          if (i > 0) {
-            const prevProtocol = llmData.protocols[i - 1];
-            // Use previous outputs as current inputs if they don't match
-            if (prevProtocol.outputs && prevProtocol.outputs.length > 0) {
-              protocol.inputs = prevProtocol.outputs;
-              console.log(`[ISA Gen] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
+        // ========== SHEETS 2+: Process Tables (one per protocol) ==========
+        if (llmData.protocols && llmData.protocols.length > 0) {
+          for (let i = 0; i < llmData.protocols.length; i++) {
+            const protocol = llmData.protocols[i];
+            const processNr = i + 1;
+
+            // If this is not the first process, link inputs to previous outputs
+            if (i > 0) {
+              const prevProtocol = llmData.protocols[i - 1];
+              if (prevProtocol.outputs && prevProtocol.outputs.length > 0) {
+                protocol.inputs = prevProtocol.outputs;
+                console.log(`[ISA Gen] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
+              }
             }
+
+            const processTable = createProcessTable(protocol, processNr, protocolInfo);
+            allTables.push(processTable);
           }
 
-          const processTable = createProcessTable(protocol, processNr, protocolInfo);
-          allTables.push(processTable);
+          console.log(`[ISA Gen] Created ${llmData.protocols.length} process table(s) for study`);
         }
-
-        console.log(`[ISA Gen] Created ${llmData.protocols.length} process table(s) for study`);
       } else {
-        // No LLM data - create single minimal process table
-        const defaultProcessTable = createDefaultProcessTable(protocolInfo);
-        allTables.push(defaultProcessTable);
-        console.log(`[ISA Gen] Created default process table for study (no LLM data)`);
+        console.log(`[ISA Gen] No LLM data - skipping sample/process tables for study`);
       }
 
       // Prepare table names and comments
@@ -759,59 +764,53 @@
 
       // Prepare comments for the study
       const comments = [];
-      comments.push(window.arctrl.Comment$.create("generation log", "generated by elab2arc with LLM annotation"));
+      comments.push(window.arctrl.Comment.create("generation log", "generated by elab2arc with LLM annotation"));
 
       // Create person for contacts
       let person = null;
-      if (metadata.firstName || metadata.lastName || metadata.email) {
+      if (safeMetadata.firstName || safeMetadata.lastName || safeMetadata.email) {
         const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
-        const comments_p = window.arctrl.Comment$.create("generation log", "generated by elab2arc");
+        const comments_p = window.arctrl.Comment.create("generation log", "generated by elab2arc");
 
         person = window.arctrl.Person.create(
           void 0,  // ORCID
-          metadata.firstName || '',
-          metadata.lastName || '',
+          safeMetadata.firstName || '',
+          safeMetadata.lastName || '',
           void 0,  // MidInitials
-          metadata.email || '',
+          safeMetadata.email || '',
           void 0,  // Phone
           void 0,  // Fax
           void 0,  // Address
-          metadata.affiliation || '',
+          safeMetadata.affiliation || '',
           [roles],
           [comments_p]
         );
       }
 
       // Create ArcStudy with all tables (pass tables during creation)
-      // ArcStudy.create signature: (identifier, title, description, submissionDate, publicReleaseDate, publications, contacts, studyDesignDescriptors, tables, datamap, registeredAssayIdentifiers, comments)
-      const arcStudy = window.arctrl.ArcStudy.create(
-        studyName,                                    // identifier
-        metadata.title || studyName,                  // title
-        metadata.description || '',                   // description
-        new Date().toISOString().split('T')[0],       // submissionDate
-        '',                                           // publicReleaseDate
-        [],                                           // publications
-        person ? [person] : [],                       // contacts
-        [],                                           // studyDesignDescriptors
-        allTables,                                    // tables
-        void 0,                                       // datamap
-        [],                                           // registeredAssayIdentifiers
-        comments                                      // comments
-      );
+      // ARCtrl 3.0.1: Use .init() instead of .create()
+      const arcStudy = window.arctrl.ArcStudy.init(safeStudyName);
+      arcStudy.Title = safeMetadata.title || safeStudyName;
+      arcStudy.Description = safeMetadata.description || '';
+      arcStudy.SubmissionDate = new Date().toISOString().split('T')[0];
+      arcStudy.PublicReleaseDate = '';
+      arcStudy.Contacts = person ? [person] : [];
+      arcStudy.Tables = allTables;
+      arcStudy.Comments = comments;
 
       // Convert ArcStudy to FsWorkbook using ARCtrl XlsxController
       // Note: Second parameter is assays list (empty for now), third is datamapSheet option
       const spreadsheet = window.arctrl.XlsxController.Study.toFsWorkbook(arcStudy, [], true);
 
-      // Write file using window.Xlsx.toFile (same as assay generation)
-      const isaPath = memfsPathJoin(studyPath, 'isa.study.xlsx');
+      // Write using window.Xlsx.toFile() which handles the correct fs instance
+      const isaPath = window.memfsPathJoin(studyPath, 'isa.study.xlsx');
       await window.Xlsx.toFile(isaPath, spreadsheet);
 
       console.log(`[ISA Gen] Created: ${isaPath} with ${allTables.length} sheet(s)`);
       return isaPath;
 
     } catch (error) {
-      console.error(`[ISA Gen] Error generating ISA study for ${studyName}:`, error);
+      console.error(`[ISA Gen] Error generating ISA study for ${safeStudyName}:`, error);
       return null;
     }
   }
@@ -843,7 +842,7 @@
       // Add contact/person information
       if (metadata.firstName || metadata.lastName || metadata.email) {
         const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
-        const comments_p = window.arctrl.Comment$.create("generation log", "generated by elab2arc");
+        const comments_p = window.arctrl.Comment.create("generation log", "generated by elab2arc");
 
         const person = window.arctrl.Person.create(
           void 0,  // ORCID
@@ -865,18 +864,18 @@
       // Add comments with tool version and structure info
       const version = window.version || '2025-06-03';
       const comments = [
-        window.arctrl.Comment$.create("tool", `elab2ARC v${version}`),
-        window.arctrl.Comment$.create("generated_date", new Date().toISOString()),
-        window.arctrl.Comment$.create("number_of_studies", structure.studies.length.toString()),
-        window.arctrl.Comment$.create("number_of_assays", structure.assays.length.toString())
+        window.arctrl.Comment.create("tool", `elab2ARC v${version}`),
+        window.arctrl.Comment.create("generated_date", new Date().toISOString()),
+        window.arctrl.Comment.create("number_of_studies", structure.studies.length.toString()),
+        window.arctrl.Comment.create("number_of_assays", structure.assays.length.toString())
       ];
 
       if (structure.studies.length > 0) {
-        comments.push(window.arctrl.Comment$.create("study_identifiers", structure.studies.map(s => s.name).join(', ')));
+        comments.push(window.arctrl.Comment.create("study_identifiers", structure.studies.map(s => s.name).join(', ')));
       }
 
       if (structure.assays.length > 0) {
-        comments.push(window.arctrl.Comment$.create("assay_identifiers", structure.assays.map(a => a.name).join(', ')));
+        comments.push(window.arctrl.Comment.create("assay_identifiers", structure.assays.map(a => a.name).join(', ')));
       }
 
       arcInvestigation.Comments = comments;
@@ -885,7 +884,7 @@
       const spreadsheet = window.arctrl.XlsxController.Investigation.toFsWorkbook(arcInvestigation);
 
       // Write file using window.Xlsx.toFile (same as assay and study generation)
-      const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+      const isaPath = window.memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
       await window.Xlsx.toFile(isaPath, spreadsheet);
 
       console.log(`[ISA Gen] Created: ${isaPath}`);
@@ -905,7 +904,7 @@
    * @returns {Promise<ArcInvestigation>} - Investigation object
    */
   async function readOrCreateInvestigation(gitRoot, arcName, metadata = {}) {
-    const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+    const isaPath = window.memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
 
     try {
       // Try to read existing investigation
@@ -936,7 +935,7 @@
           void 0, void 0, void 0,
           metadata.affiliation || '',
           [roles],
-          [window.arctrl.Comment$.create("generation log", "generated by elab2arc")]
+          [window.arctrl.Comment.create("generation log", "generated by elab2arc")]
         );
         investigation.Contacts = [person];
       }
@@ -952,7 +951,16 @@
    * @returns {Promise<string>} - Path to saved file
    */
   async function saveInvestigation(gitRoot, investigation) {
-    const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+    const isaPath = window.memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+
+    // Ensure directory exists before writing
+    const fs = window.FS.fs;
+    const dir = window.memfsPathJoin(gitRoot);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Write using window.Xlsx.toFile() which handles the correct fs instance
     const spreadsheet = window.arctrl.XlsxController.Investigation.toFsWorkbook(investigation);
     await window.Xlsx.toFile(isaPath, spreadsheet);
     console.log(`[ISA Gen] Saved investigation to: ${isaPath}`);
@@ -970,7 +978,7 @@
     try {
       // Create a minimal study object for registration
       // This avoids serialization issues with full study objects read from xlsx
-      const arcStudy = window.arctrl.ArcStudy.create(studyName);
+      const arcStudy = window.arctrl.ArcStudy.init(studyName);
       arcStudy.Identifier = studyName;
       arcStudy.Name = studyName;
       arcStudy.Title = studyName;
@@ -1004,7 +1012,7 @@
     try {
       // Create a minimal assay object for registration
       // This avoids serialization issues with full assay objects read from xlsx
-      const arcAssay = window.arctrl.ArcAssay.create(assayName);
+      const arcAssay = window.arctrl.ArcAssay.init(assayName);
       arcAssay.Identifier = assayName;
       arcAssay.Name = assayName;
 
@@ -1039,7 +1047,7 @@
       console.log(`[ISA Gen] Updating investigation with study/assay linkages...`);
       const fs = window.FS.fs;
 
-      const isaPath = memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
+      const isaPath = window.memfsPathJoin(gitRoot, 'isa.investigation.xlsx');
 
       // Read investigation using ARCtrl (same filesystem as toFile)
       let invWorkbook;
@@ -1065,7 +1073,7 @@
 
       // Process each study
       for (const study of structure.studies) {
-        const studyPath = memfsPathJoin(study.path, 'isa.study.xlsx');
+        const studyPath = window.memfsPathJoin(study.path, 'isa.study.xlsx');
 
         // Read study file using ARCtrl directly
         try {
@@ -1080,14 +1088,14 @@
           console.log(`[ISA Gen] Study registration skipped (commented out): ${study.name}`);
 
           // Process assays within this study's assays folder
-          const studyAssaysPath = memfsPathJoin(study.path, 'assays');
+          const studyAssaysPath = window.memfsPathJoin(study.path, 'assays');
           if (fs.existsSync(studyAssaysPath)) {
             const assayDirs = fs.readdirSync(studyAssaysPath);
             for (const assayName of assayDirs) {
-              const assayPath = memfsPathJoin(studyAssaysPath, assayName);
+              const assayPath = window.memfsPathJoin(studyAssaysPath, assayName);
               const assayStats = fs.statSync(assayPath);
               if (assayStats.isDirectory() && !assayName.startsWith('.')) {
-                const assayIsaPath = memfsPathJoin(assayPath, 'isa.assay.xlsx');
+                const assayIsaPath = window.memfsPathJoin(assayPath, 'isa.assay.xlsx');
 
                 // Read assay file using ARCtrl directly
                 try {
@@ -1113,7 +1121,7 @@
 
       // Process standalone assays (in root /assays folder, not under a study)
       for (const assay of structure.assays) {
-        const assayIsaPath = memfsPathJoin(assay.path, 'isa.assay.xlsx');
+        const assayIsaPath = window.memfsPathJoin(assay.path, 'isa.assay.xlsx');
 
         // Read assay file using ARCtrl directly
         try {
