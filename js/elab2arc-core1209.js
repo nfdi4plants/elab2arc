@@ -984,15 +984,18 @@ CC BY 4.0
         await createGitLabRepo(projectName, projectDescription, accessToken);
         const url = `${getDatahubURL()}/${username}/${projectName}.git`;
         await cloneARC(url, projectName);
-        newARC = new arctrl.ARC();
         const name = window.userId.name;
 
-        // Create investigation and write directly (skip arcWrite - new ARC has no ISA property)
+        // Create investigation first, then build ARC from it
         let inv = arctrl.ArcInvestigation.init(projectName);
+        inv.Title = projectName;
+        inv.Description = '';
+        inv.SubmissionDate = new Date().toISOString().split('T')[0];
         const newContact = arctrl.Person.create(void 0, name.split(" ")[0], name.split(" ").slice(-1)[0], window.userId.commit_email, void 0, void 0, void 0, void 0, void 0, void 0);
         inv.Contacts = [newContact];
-        let invXlsx = arctrl.XlsxController.Investigation.toFsWorkbook(inv);
-        await Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
+        newARC = arctrl.ARC.fromArcInvestigation(inv);
+
+        await arcWrite(projectName, newARC);
         await git.add({ fs, dir: projectName, filepath: '.' });
         const gitRoot = projectName + "/";
         await commitPush(
