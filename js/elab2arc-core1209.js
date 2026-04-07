@@ -987,22 +987,12 @@ CC BY 4.0
         newARC = new arctrl.ARC();
         const name = window.userId.name;
 
-        await arcWrite(projectName, newARC);
+        // Create investigation and write directly (skip arcWrite - new ARC has no ISA property)
         let inv = arctrl.ArcInvestigation.init(projectName);
         const newContact = arctrl.Person.create(void 0, name.split(" ")[0], name.split(" ").slice(-1)[0], window.userId.commit_email, void 0, void 0, void 0, void 0, void 0, void 0);
-
-
-        // for (const ee of isa_inv.Contacts){
-        //     if (ee.toString() != ccc.toString()){
-        //         console.log("no same person");
-        //     }else{
-        //         console.log("same person");
-        //         break;
-        //     };
-        // }
         inv.Contacts = [newContact];
         let invXlsx = arctrl.XlsxController.Investigation.toFsWorkbook(inv);
-        Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
+        await Xlsx.toFile(`${projectName}/isa.investigation.xlsx`, invXlsx);
         await git.add({ fs, dir: projectName, filepath: '.' });
         const gitRoot = projectName + "/";
         await commitPush(
@@ -4527,11 +4517,11 @@ ${res.uploads && res.uploads.length > 0 ?
       }
 
       const p = memfsPathJoin(basePath, contract.Path)
-      if (contract.Operation = "CREATE") {
+      if (contract.Operation === "CREATE") {
         if (contract.DTO == undefined) {
           ensureDirectory(p)
           fs.writeFileSync(p, "")
-        } else if (contract.DTOType == "ISA_Assay" || contract.DTOType == "ISA_Assay" || contract.DTOType == "ISA_Investigation") {
+        } else if (contract.DTOType == "ISA_Assay" || contract.DTOType == "ISA_Study" || contract.DTOType == "ISA_Investigation") {
           ensureDirectory(p)
           await Xlsx.toFile(p, contract.DTO)
         } else if (contract.DTOType == "PlainText") {
