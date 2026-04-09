@@ -303,6 +303,22 @@ video {
                 <small class="text-muted d-block">Token page or SSO redirect</small>
               </div>
             </div>
+            <!-- Git CORS Proxy -->
+            <div class="row g-2 mt-1">
+              <div class="col-md-8">
+                <label class="form-label small">
+                  Git CORS Proxy
+                  <span class="text-muted" title="A CORS proxy that forwards git HTTP requests to your GitLab instance. Required when your GitLab does not have CORS headers configured. Use the local proxy script (local-cors-proxy.py) or any CORS proxy service.">ⓘ</span>
+                </label>
+                <input type="text" class="form-control form-control-sm" id="gitProxyInput"
+                       placeholder="http://localhost:8333"
+                       onchange="setGitProxyURL(this.value)">
+                <small class="text-muted d-block">
+                  Leave empty to use default proxy. For local proxy:
+                  <code>python3 local-cors-proxy.py</code>
+                </small>
+              </div>
+            </div>
           </div>
 
           <div class="input-group mb-3">
@@ -1250,7 +1266,7 @@ video {
   <script src="./js/modules/git-lfs-service.js?v=20260304120115" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core0407b.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core0409b.js" type="text/javascript" charset="utf-8"></script>
 
   <!-- Toast Notification Container -->
   <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999;">
