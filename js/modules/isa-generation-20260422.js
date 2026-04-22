@@ -677,11 +677,49 @@
 
       // Use .init() to create ArcAssay, then set properties
       const myAssay = window.arctrl.ArcAssay.init(safeAssayName);
+
+      // Set Title with fallback chain for both LLM and non-LLM cases
+      let assayTitle = '';
+      if (llmData && llmData.protocols && llmData.protocols.length > 0) {
+        // LLM case: Use first protocol name or assayName for multiple protocols
+        if (llmData.protocols.length === 1) {
+          assayTitle = llmData.protocols[0].name || safeAssayName;
+        } else {
+          // Multiple protocols: use assayName as primary title
+          assayTitle = safeAssayName;
+        }
+      } else if (protocolInfo && protocolInfo.title) {
+        // Non-LLM case: Use protocol filename as title
+        assayTitle = protocolInfo.title;
+      } else {
+        // Fallback: Use assay name
+        assayTitle = safeAssayName;
+      }
+      myAssay.Title = assayTitle;
+
+      // Set Description with fallback chain for both LLM and non-LLM cases
+      let assayDescription = '';
+      if (llmData && llmData.protocols && llmData.protocols.length > 0) {
+        // LLM case: Combine protocol descriptions
+        const protocolDescriptions = llmData.protocols
+          .map(p => p.description || '')
+          .filter(d => d.length > 0)
+          .join(' | ');
+        assayDescription = protocolDescriptions || '';
+      } else if (protocolInfo && protocolInfo.description) {
+        // Non-LLM case: Use protocol markdown excerpt
+        assayDescription = protocolInfo.description;
+      } else if (datasetInfo && datasetInfo.files && datasetInfo.files.length > 0) {
+        // Fallback: Describe dataset files
+        assayDescription = `Dataset contains: ${datasetInfo.files.join(', ')}`;
+      }
+      myAssay.Description = assayDescription;
+
       myAssay.Tables = allTables;
       myAssay.Contacts = contacts;
       myAssay.Comments = safeComments;
 
-      console.log(`[ISA Elab2Arc] ArcAssay created successfully with ${allTables.length} tables`);
+      console.log(`[ISA Elab2Arc] ArcAssay created with Title="${assayTitle}", Description="${assayDescription.substring(0, 50)}...", ${allTables.length} tables`);
 
       // ========== Export to Excel ==========
       let spreadsheet = window.arctrl.XlsxController.Assay.toFsWorkbook(myAssay);

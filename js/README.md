@@ -147,4 +147,4 @@ window.arctrl.JsonController.Investigation.toISAJsonString(investigation)
 - `../CLAUDE.md` - Project-level documentation
 - `../index.html` - Loads this bundle via script tag
 - `../js/elab2arc-core1209.js` - Uses exports from this bundle
-- `../js/modules/isa-generation.js` - ISA-Tab generation using ARCtrl
+- `../js/modules/isa-generation-20260422.js` - ISA-Tab generation using ARCtrl
