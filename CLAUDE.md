@@ -164,12 +164,49 @@ Both studies and assays support multi-sheet annotation tables when LLM data is a
 - `createProcessTable(protocol, processNr, protocolInfo)` - Create process table
 - `createDefaultProcessTable(protocolInfo)` - Fallback when no LLM data
 
+### Assay Title and Description (Fixed April 2026)
+Previously, assays only stored metadata in Comment fields, leaving Title and Description empty. This has been fixed to set proper Title and Description properties on ArcAssay objects.
+
+**Title Fallback Chain:**
+| Scenario | Title Source |
+|----------|-------------|
+| LLM enabled, single protocol | `llmData.protocols[0].name` |
+| LLM enabled, multiple protocols | `assayName` (experiment identifier) |
+| LLM disabled, protocol file exists | `protocolInfo.title` (filename) |
+| LLM disabled, no protocol file | `assayName` |
+
+**Description Fallback Chain:**
+| Scenario | Description Source |
+|----------|-------------------|
+| LLM enabled | Combined protocol descriptions (` | ` separator) |
+| LLM disabled, protocol file exists | `protocolInfo.description` (markdown excerpt) |
+| LLM disabled, no protocol file | Dataset file list description |
+| No data | Empty string |
+
+**Key Functions:** `js/modules/isa-generation.js`
+- `generateIsaAssayElab2arcWithDatamap()` - Sets Title and Description with fallback logic (lines 681-716)
+
 ### CORS Proxy System
 Due to browser security restrictions, the app uses proxy fallback:
 - Primary: `corsproxy.cplantbox.com`
 - Backup: `corsproxy2.cplantbox.com`
 - Git proxy: `gitcors.cplantbox.com`
 - **LFS proxy:** `lfsproxy.cplantbox.com` (supports PUT requests for file uploads)
+
+#### Local Python CORS Proxy (cors-proxy-py)
+A Python port of the Node.js CORS proxy is available at `/Users/xr/git/elab2arc/cors-proxy-py/` for local development:
+
+```bash
+# Install and run locally
+cd cors-proxy-py
+pip install -e .
+cors-proxy start -p 8333
+
+# Configure in browser console
+localStorage.setItem('gitProxyURL', 'http://localhost:8333')
+```
+
+**Git Protocol Support:** Handles OPTIONS preflight, GET info/refs, POST git-upload-pack (fetch), and POST git-receive-pack (push) with proper CORS headers and request filtering. Pass GitLab PAT via `onAuth` in isomorphic-git — the proxy forwards the `Authorization` header as-is without modification.
 
 ### Git LFS (Large File Storage)
 Files larger than 10MB in `dataset/` directories are automatically uploaded to Git LFS to improve repository performance and avoid hitting Git size limits.
