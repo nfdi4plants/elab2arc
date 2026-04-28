@@ -1977,7 +1977,7 @@ Date: ${timestamp}`;
 
             // Validate API key with a test request
             console.log('🔑 Validating Together.AI API key...');
-            const isValid = await validateTogetherAPIKey(togetherAPIKey);
+            const isValid = await validateTogetherAPIKeyAsync(togetherAPIKey);
 
             if (!isValid) {
               showWarningToast("Together.AI API Key Invalid!<br><br>The API key you provided is not valid or has expired.<br><br>Please update your API key in the field below, or switch to DataPlan (free, no API key).<br><br>Get a free key at: https://api.together.xyz/");
@@ -2010,7 +2010,7 @@ Date: ${timestamp}`;
     }
 
     // Validate Together.AI API key with a test request
-    async function validateTogetherAPIKey(apiKey) {
+    async function validateTogetherAPIKeyAsync(apiKey) {
       try {
         const testResponse = await fetch('https://api.together.xyz/v1/chat/completions', {
           method: 'POST',
@@ -2019,7 +2019,7 @@ Date: ${timestamp}`;
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
+            model: 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',
             messages: [{
               role: 'user',
               content: 'test'
@@ -2115,17 +2115,6 @@ Date: ${timestamp}`;
         }
       }
 
-      // Load saved LLM test mode setting
-      const savedTestMode = window.localStorage.getItem('llmTestMode');
-      const testModeSwitch = document.getElementById('llmTestModeSwitch');
-
-      if (testModeSwitch) {
-        testModeSwitch.checked = (savedTestMode === 'true');
-        if (testModeSwitch.checked) {
-          console.log('[Config] LLM Test Mode is ENABLED - will use sample data');
-        }
-      }
-
       // Initialize Edit Prompt button visibility based on LLM checkbox state
       const enableDatamapSwitch = document.getElementById('enableDatamapSwitch');
       const editPromptBtn = document.getElementById('editPromptBtn');
@@ -2151,25 +2140,6 @@ Date: ${timestamp}`;
       if (modelSelect) {
         window.localStorage.setItem('togetherAIModel', modelSelect.value);
         console.log(`[Config] Saved model selection: ${modelSelect.value}`);
-      }
-    };
-
-    // Save fallback model selection to localStorage
-    window.saveFallbackModelSelection = function() {
-      const fallbackSelect = document.getElementById('togetherAIFallbackModels');
-      if (fallbackSelect) {
-        const selectedOptions = Array.from(fallbackSelect.selectedOptions).map(opt => opt.value);
-        window.localStorage.setItem('togetherAIFallbackModels', JSON.stringify(selectedOptions));
-        console.log(`[Config] Saved fallback models: ${selectedOptions.join(', ')}`);
-      }
-    };
-
-    // Save LLM test mode setting to localStorage
-    window.saveLLMTestMode = function() {
-      const testModeSwitch = document.getElementById('llmTestModeSwitch');
-      if (testModeSwitch) {
-        window.localStorage.setItem('llmTestMode', testModeSwitch.checked ? 'true' : 'false');
-        console.log(`[Config] LLM Test Mode: ${testModeSwitch.checked ? 'ENABLED' : 'DISABLED'}`);
       }
     };
 
@@ -3723,7 +3693,7 @@ ${res.uploads && res.uploads.length > 0 ?
             assayId: assayId
           };
 
-          llmData = await Elab2ArcLLM.callTogetherAI(markdown, false, protocolMetadata);  // Now returns multi-protocol structure
+          llmData = await window.Elab2ArcLLM.callTogetherAI(markdown, false, protocolMetadata);  // Now returns multi-protocol structure
 
           if (llmData) {
             // Validate structure (backward compatibility with old format)
@@ -3876,7 +3846,7 @@ ${res.uploads && res.uploads.length > 0 ?
       } catch (isaError) {
         // Log error but continue conversion
         console.error('[ISA Gen] ISA generation failed (experimental feature):', isaError);
-        updateInfo(`⚠️ ISA generation error for: <b>${assayIdentifier}</b>`, baseProgress + 0.8);
+        updateInfo(`⚠️ ISA generation error for: <b>${assayId}</b>`, baseProgress + 0.8);
       }
       // ========== END EXPERIMENTAL ==========
 
@@ -4485,15 +4455,18 @@ ${res.uploads && res.uploads.length > 0 ?
       keyboard: true, show: false
     });
 
-    addEventListener("load", (event) => {
+    addEventListener("load", async (event) => {
 
       //showError("sorry there is currently a connection problem between this tool and DataHUB, please try again later.")
       const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
       const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
-      softRoute();
-      const instance = window.localStorage.getItem("instance");
-      document.getElementById("elabURLInput1").value = instance;
-      document.getElementById("elabURLInput1").innerHTML = "instance: " + instance;
+      await softRoute();
+
+      // Sync button text with the instance value set by softRoute (from URL param or localStorage fallback)
+      const instanceBtn = document.getElementById("elabURLInput1");
+      if (instanceBtn && instanceBtn.value) {
+        instanceBtn.innerHTML = "instance: " + instanceBtn.value;
+      }
 
       // Load saved DataHub settings
       const savedDatahubURL = localStorage.getItem('datahubURL');
@@ -4530,9 +4503,20 @@ ${res.uploads && res.uploads.length > 0 ?
         }
       });
 
-      checkElabFTWConnection();
-      checkGitLabConnection();
+      const elabConn = checkElabFTWConnection();
+      const gitlabConn = checkGitLabConnection();
 
+      // If a prepared conversion was requested via URL, wait for content to load then execute
+      if (window._pendingAutoConvert) {
+        try {
+          await Promise.all([elabConn, gitlabConn]);
+          await executePreparedConversion(window._pendingAutoConvert);
+        } catch (error) {
+          console.error('[AutoConvert] Error during prepared conversion:', error);
+          showErrorToast('Failed to prepare conversion: ' + error.message);
+        }
+        delete window._pendingAutoConvert;
+      }
 
     }
     );
@@ -5017,7 +5001,7 @@ ${res.uploads && res.uploads.length > 0 ?
       return extractCookie('datahubtoken');
     }
 
-    function softRoute() {
+    async function softRoute() {
       const urlRoute = window.location.href.split("#");
       const url1 = urlRoute[0].split("?")[1];
 
@@ -5029,27 +5013,28 @@ ${res.uploads && res.uploads.length > 0 ?
           let submitJSON = {};
           submitData.forEach(e => { submitJSON[e.split("=")[0]] = e.split("=")[1] }
           );
-          getParameters(submitJSON.elabid, submitJSON.elabResourceid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL);
+          await getParameters(submitJSON.elabid, submitJSON.elabResourceid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL);
           //updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
+
+          // Store prepared conversion config if requested
+          if (submitJSON.confirmConvert || submitJSON.autoConvert) {
+            window._pendingAutoConvert = {
+              elabid: submitJSON.elabid,
+              elabResourceid: submitJSON.elabResourceid,
+              targetPath: submitJSON.targetPath ? decodeURIComponent(submitJSON.targetPath) : undefined,
+              arcURL: submitJSON.arcURL ? decodeURIComponent(submitJSON.arcURL) : undefined,
+              llmDatamap: submitJSON.llmDatamap,
+              autoConvert: !!submitJSON.autoConvert
+            };
+            console.log('[AutoConvert] Prepared conversion config stored:', {
+              ...window._pendingAutoConvert,
+              arcURL: window._pendingAutoConvert.arcURL ? '(set)' : '(not set)'
+            });
+          }
 
         } else {
           console.log("[Submission] No URL parameters found. If url is undefined, switch tab to token tab");
           showTab("tokenTab");
-        }
-        try {
-          const cookie = document.cookie;
-          // const cookieElabid= decodeURIComponent(decodeURIComponent(extractCookie("elabid")));
-          // if (cookieElabid){
-          //   document.getElementById("elabExperimentid").value = cookieElabid;
-          //   elabListSync()
-
-          // }
-
-          document.getElementById("elabToken").value = extractCookie("elabtoken");
-          document.getElementById("datahubToken").value = extractCookie("datahubtoken");
-        } catch (error) {
-          console.error(error);
-
         }
       } catch (error) {
         showError("submission URL is wrong, error is " + error + ". Please check your URL or remove everything after /elab2arc/")
@@ -5060,6 +5045,7 @@ ${res.uploads && res.uploads.length > 0 ?
       switch (para) {
         case "home":
           showTab("homeTab");
+          break;
 
         case "elabftw":
           showTab("elabftwTab");
@@ -5087,6 +5073,112 @@ ${res.uploads && res.uploads.length > 0 ?
 
         default:
 
+      }
+    }
+
+    /**
+     * Execute a prepared conversion from URL parameters.
+     * Called after eLabFTW and DataHub content has loaded.
+     * @param {Object} config - Configuration from window._pendingAutoConvert
+     */
+    async function executePreparedConversion(config) {
+      console.log('[AutoConvert] Executing prepared conversion...');
+
+      // 1. Set experiment/resource IDs
+      if (config.elabid) {
+        document.getElementById("elabExperimentid").value = config.elabid;
+      }
+      if (config.elabResourceid) {
+        document.getElementById("elabResourceid").value = config.elabResourceid;
+      }
+      if (config.elabid || config.elabResourceid) {
+        elabListSync();
+        await elabCheckSync();
+      }
+
+      // 2. Set target path
+      if (config.targetPath) {
+        setTargetPath(config.targetPath);
+      }
+
+      // 3. Set ARC info
+      if (config.arcURL) {
+        document.getElementById("gitlabInfo").innerHTML = config.arcURL;
+      }
+      if (config.targetPath) {
+        const pathParts = config.targetPath.split('/').filter(p => p);
+        if (pathParts.length > 0) {
+          document.getElementById("arcInfo").innerHTML = pathParts[0];
+        }
+      }
+      // Fallback: try to discover arcURL from loaded project list
+      if (!config.arcURL && config.targetPath) {
+        const pathParts = config.targetPath.split('/').filter(p => p);
+        const projectName = pathParts[0];
+        const projectLinks = document.querySelectorAll('#userProjectsTable button[onclick*="setTargetPath"]');
+        for (const btn of projectLinks) {
+          const onclick = btn.getAttribute('onclick');
+          if (onclick && onclick.includes(`'${projectName}/`)) {
+            const urlMatch = onclick.match(/gitlabInfo\).innerHTML=\s*'([^']+)'/);
+            if (urlMatch) {
+              document.getElementById("gitlabInfo").innerHTML = urlMatch[1];
+              break;
+            }
+          }
+        }
+      }
+
+      // 4. Set LLM datamap switch
+      if (config.llmDatamap !== undefined) {
+        const switchEl = document.getElementById('enableDatamapSwitch');
+        if (switchEl) {
+          switchEl.checked = config.llmDatamap === 'true' || config.llmDatamap === true;
+          toggleTogetherAPIKeyField();
+        }
+      }
+
+      // 5. Trigger conversion
+      if (config.autoConvert) {
+        console.log('[AutoConvert] Starting conversion immediately...');
+        multiConvert();
+      } else {
+        console.log('[AutoConvert] Showing confirmation modal...');
+        showConfirmConvertModal(config);
+      }
+    }
+
+    /**
+     * Show the prepared conversion confirmation modal.
+     * @param {Object} config - Conversion configuration
+     */
+    function showConfirmConvertModal(config) {
+      const instance = document.getElementById("elabURLInput1")?.value || "";
+      const elabid = config.elabid || "(none)";
+      const elabResourceid = config.elabResourceid || "(none)";
+      const targetPath = config.targetPath || "(none)";
+      const arcURL = document.getElementById("gitlabInfo")?.innerHTML || config.arcURL || "(none)";
+      const llmStatus = (config.llmDatamap === 'true' || config.llmDatamap === true) ? "Enabled" : "Disabled";
+
+      const body = document.getElementById('confirmConvertBody');
+      if (body) {
+        body.innerHTML = `
+          <table class="table table-borderless">
+            <tr><td><strong>eLabFTW Instance:</strong></td><td>${instance}</td></tr>
+            <tr><td><strong>Experiment ID(s):</strong></td><td>${elabid}</td></tr>
+            <tr><td><strong>Resource ID(s):</strong></td><td>${elabResourceid}</td></tr>
+            <tr><td><strong>Target Path:</strong></td><td>${targetPath}</td></tr>
+            <tr><td><strong>ARC URL:</strong></td><td>${arcURL}</td></tr>
+            <tr><td><strong>LLM Annotation Table:</strong></td><td>${llmStatus}</td></tr>
+          </table>
+        `;
+      }
+
+      const modalEl = document.getElementById('confirmConvertModal');
+      if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+        modal.show();
+      } else {
+        console.error('[AutoConvert] confirmConvertModal not found in DOM');
       }
     }
 
@@ -6690,8 +6782,8 @@ ${version.sections.examples}
 
     // ========== END METADATA VIEWER HANDLERS ==========
 
-    addEventListener("hashchange", (event) => {
+    addEventListener("hashchange", async (event) => {
       if (true) {
-        softRoute();
+        await softRoute();
       }
     });
