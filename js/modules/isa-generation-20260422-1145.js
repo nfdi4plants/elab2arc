@@ -127,19 +127,19 @@
       }
 
       const files = fs.readdirSync(protocolPath);
-      files.forEach(file => {
-        if (file.endsWith('.md')) {
-          info.files.push(file);
-          // Read first protocol file for title/description
-          if (!info.title) {
-            const filePath = window.memfsPathJoin(protocolPath, file);
-            const content = fs.readFileSync(filePath, 'utf8');
-            const lines = content.split('\n');
-            info.title = file.replace('.md', '');
-            info.description = lines.slice(0, 3).join(' ').substring(0, 200);
-          }
+      const mdFiles = files.filter(file => file.endsWith('.md'));
+
+      if (mdFiles.length > 0) {
+        info.files = mdFiles;
+        // Use first file name as title (without .md extension)
+        info.title = mdFiles[0].replace('.md', '');
+        // Create description referencing all protocol files
+        if (mdFiles.length === 1) {
+          info.description = `See details in: ${mdFiles[0]}`;
+        } else {
+          info.description = `See details in: ${mdFiles.join(', ')}`;
         }
-      });
+      }
 
       return info;
     } catch (error) {

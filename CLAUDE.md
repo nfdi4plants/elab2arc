@@ -53,7 +53,7 @@ elab2arc/
 │   └── bs5-intro-tour.js        # User tour functionality
 ├── js/modules/
 │   ├── conversion-metadata.js   # Conversion tracking/metadata
-│   ├── isa-generation.js        # ISA-Tab generation logic
+│   ├── isa-generation-20260422-1145.js  # ISA-Tab generation logic
 │   ├── llm-service.js           # LLM/AI integration
 │   ├── extra-fields-handler.js  # Custom field processing
 │   └── git-lfs-service.js       # Git LFS for large files (>10MB)
@@ -116,7 +116,7 @@ The investigation is now created BEFORE processing experiments to ensure proper 
 - `arcInvestigation.AddAssay(arcAssay)` - Add assay object to investigation
 - `arcInvestigation.RegisterAssay(studyName, assayName)` - Register assay under study
 
-**Key Functions:** `js/modules/isa-generation.js`
+**Key Functions:** `js/modules/isa-generation-20260422-1145.js`
 - `readOrCreateInvestigation()` - Initialize investigation at start
 - `saveInvestigation()` - Save investigation to file
 - `registerStudyToInvestigation()` - Register study during conversion
@@ -159,7 +159,7 @@ Both studies and assays support multi-sheet annotation tables when LLM data is a
 
 **Process Linking:** Outputs from process N-1 automatically become inputs for process N.
 
-**Key Functions:** `js/modules/isa-generation.js`
+**Key Functions:** `js/modules/isa-generation-20260422-1145.js`
 - `createSampleTable(samples)` - Create sample table from LLM-extracted data
 - `createProcessTable(protocol, processNr, protocolInfo)` - Create process table
 - `createDefaultProcessTable(protocolInfo)` - Fallback when no LLM data
@@ -183,8 +183,8 @@ Previously, assays only stored metadata in Comment fields, leaving Title and Des
 | LLM disabled, no protocol file | Dataset file list description |
 | No data | Empty string |
 
-**Key Functions:** `js/modules/isa-generation.js`
-- `generateIsaAssayElab2arcWithDatamap()` - Sets Title and Description with fallback logic (lines 681-716)
+**Key Functions:** `js/modules/isa-generation-20260422-1145.js`
+- `generateIsaAssayElab2arcWithDatamap()` - Sets Title and Description with fallback logic (lines 681-722)
 
 ### CORS Proxy System
 Due to browser security restrictions, the app uses proxy fallback:
@@ -301,7 +301,7 @@ await window.Xlsx.toFile(path, spreadsheet);
 - Directory operations: `fs.readdirSync()`, `fs.statSync()`, `fs.existsSync(dirPath)`
 - Git operations
 
-**Key file:** `js/modules/isa-generation.js` - `readOrCreateInvestigation()`, `saveInvestigation()`, `registerStudyToInvestigation()`, `registerAssayToInvestigation()` functions
+**Key file:** `js/modules/isa-generation-20260422-1145.js` - `readOrCreateInvestigation()`, `saveInvestigation()`, `registerStudyToInvestigation()`, `registerAssayToInvestigation()` functions
 
 ### Filesystem Instance Consistency (CRITICAL - March 2026)
 
@@ -371,8 +371,8 @@ async function saveInvestigation(gitRoot, investigation) {
 ```
 
 **Files modified for 3.0.1 compatibility:**
-- `js/modules/isa-generation.js` - Added `|| ''` fallbacks for all Person.create calls
-- `js/modules/isa-generation.js` - Added directory creation in saveInvestigation()
+- `js/modules/isa-generation-20260422-1145.js` - Added `|| ''` fallbacks for all Person.create calls
+- `js/modules/isa-generation-20260422-1145.js` - Added directory creation in saveInvestigation()
 - `js/src/index.js` - Uses `Comment.create` (not `Comment$`) for ARCtrl 3.0.1
 
 ## Core Function Parameters
@@ -409,7 +409,7 @@ The `params` object is returned by `getParameters()` and contains all authentica
 |------|------|
 | Main UI flow | `js/arctrl.bundle.js` |
 | Core conversion logic | `js/elab2arc-core1209.js` |
-| ISA-Tab generation | `js/modules/isa-generation.js` |
+| ISA-Tab generation | `js/modules/isa-generation-20260422-1145.js` |
 | LLM integration | `js/modules/llm-service.js` |
 | Git operations | `js/git.js` |
 | Git LFS (large files) | `js/modules/git-lfs-service.js` |

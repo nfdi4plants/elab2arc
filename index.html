@@ -239,12 +239,12 @@ video {
           <div class="input-group mb-3">
             <input type="password" onchange="initCookies();" name="elabtoken" class="form-control"
               autocomplete="password" id="elabToken" required />
-            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="elabtoken"
+            <button class="btn btn-secondary" type="button" data-show-id="elabtoken"
               onclick="setelabURL('https://elab.dataplan.top/api/v2/'); document.getElementById('elabToken').value = '20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320'; initCookies(); "
               title="Load demo/test API key for eLabFTW">
               get a test api key
             </button>
-            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="elabToken"
+            <button class="btn btn-secondary" type="button" data-show-id="elabToken"
               onclick="showPassword(this)">
               👁️
             </button>
@@ -324,11 +324,11 @@ video {
           <div class="input-group mb-3">
             <input type="password" onchange="initCookies();" name="datahubtoken" class="form-control" autocomplete="new-password"
               id="datahubToken" required />
-            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="datahubToken"
+            <button class="btn btn-secondary" type="button" data-show-id="datahubToken"
               onclick="handleGetTokenClick()">
               get a token
             </button>
-            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="datahubToken"
+            <button class="btn btn-secondary" type="button" data-show-id="datahubToken"
               onclick="showPassword(this)">
               👁️
             </button>
@@ -399,106 +399,26 @@ video {
           <div class="input-group mb-3">
             <input type="password" onchange="initCookies();" name="togetherAPIKey" class="form-control" autocomplete="new-password"
               id="togetherAPIKey" placeholder="Enter Together.AI API key" />
-            <button class="btn btn-secondary" type="button" name="togglePassword" data-show-id="togetherAPIKey"
+            <button class="btn btn-secondary" type="button" data-show-id="togetherAPIKey"
               onclick="showPassword(this)">
               👁️
             </button>
           </div>
 
           <label for="togetherAIModel" class="form-label mt-2">
-            Primary LLM Model
+            LLM Model
           </label>
           <select class="form-select" id="togetherAIModel" onchange="saveModelSelection()">
-            <optgroup label="Meta Llama Models">
-              <option value="meta-llama/Llama-3.2-3B-Instruct-Turbo">
-                Llama 3.2 3B Turbo (8K context)
-              </option>
-              <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free">
-                Llama 3.3 70B Turbo (131K context)
-              </option>
-            </optgroup>
-            <optgroup label="OpenAI Models">
-              <option value="openai/gpt-oss-20b">
-                OpenAI GPT OSS 20B (16K context)
-              </option>
-              <option value="openai/gpt-oss-120b">
-                OpenAI GPT OSS 120B (32K context)
-              </option>
-            </optgroup>
-            <optgroup label="Other Models">
-              <option value="Qwen/Qwen3-235B-A22B-Instruct-2507-tput" selected>
-                Qwen 3 235B A22B (131K context, recommended)
-              </option>
-              <option value="google/gemma-3n-E4B-it">
-                Google Gemma 3n E4B (32K context)
-              </option>
-              <option value="lgai/exaone-deep-32b">
-                LG EXAONE Deep 32B (32K context)
-              </option>
-              <option value="ServiceNow-AI/Apriel-1.5-15b-Thinker">
-                ServiceNow Apriel 1.5 15B Thinker (32K context)
-              </option>
-              <option value="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free">
-                DeepSeek R1 Distill 70B (64K context)
-              </option>
-            </optgroup>
+            <option value="Qwen/Qwen3-235B-A22B-Instruct-2507-tput" selected>
+              Qwen 3 235B A22B (131K context, recommended)
+            </option>
+            <option value="openai/gpt-oss-120b">
+              OpenAI GPT OSS 120B (32K context)
+            </option>
           </select>
           <small class="form-text text-muted">
-            Primary model for protocol analysis
+            Model for protocol analysis. OSS 120B is used as fallback when rate limited.
           </small>
-
-          <label for="togetherAIFallbackModels" class="form-label mt-3">
-            Fallback Models (for rate limits)
-          </label>
-          <select class="form-select" id="togetherAIFallbackModels" multiple size="8" onchange="saveFallbackModelSelection()">
-            <optgroup label="Meta Llama Models">
-              <option value="meta-llama/Llama-3.2-3B-Instruct-Turbo">
-                Llama 3.2 3B Turbo (8K context)
-              </option>
-              <option value="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free">
-                Llama 3.3 70B Turbo (131K context)
-              </option>
-            </optgroup>
-            <optgroup label="OpenAI Models">
-              <option value="openai/gpt-oss-20b">
-                OpenAI GPT OSS 20B (16K context)
-              </option>
-              <option value="openai/gpt-oss-120b" selected>
-                OpenAI GPT OSS 120B (32K context)
-              </option>
-            </optgroup>
-            <optgroup label="Other Models">
-              <option value="Qwen/Qwen3-235B-A22B-Instruct-2507-tput" selected>
-                Qwen 3 235B A22B (262K context, recommended)
-              </option>
-              <option value="google/gemma-3n-E4B-it" selected>
-                Google Gemma 3n E4B (32K context)
-              </option>
-              <option value="lgai/exaone-deep-32b" selected>
-                LG EXAONE Deep 32B (32K context)
-              </option>
-              <option value="ServiceNow-AI/Apriel-1.5-15b-Thinker">
-                ServiceNow Apriel 1.5 15B Thinker (32K context)
-              </option>
-              <option value="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free">
-                DeepSeek R1 Distill 70B (64K context)
-              </option>
-            </optgroup>
-          </select>
-          <small class="form-text text-muted">
-            Hold Ctrl/Cmd to select multiple. These models will be tried if primary hits rate limit.
-          </small>
-
-          <div class="form-check mt-3">
-            <input class="form-check-input" type="checkbox" id="llmTestModeSwitch" onchange="saveLLMTestMode()">
-            <label class="form-check-label" for="llmTestModeSwitch">
-              <strong>Test Mode</strong> - Use sample data instead of API calls
-            </label>
-            <br>
-            <small class="form-text text-muted">
-              Enable this to test ISA generation without consuming API credits. Uses predefined E. coli sequencing workflow.
-            </small>
-          </div>
         </div>
       </div>
 
@@ -1066,6 +986,27 @@ video {
       </div>
     </div>
 
+    <!-- Confirm Prepared Conversion Modal -->
+    <div class="modal fade" id="confirmConvertModal" tabindex="-1" aria-labelledby="confirmConvertModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="confirmConvertModalLabel">Confirm Prepared Conversion</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" id="confirmConvertBody">
+            <p class="text-muted">Loading conversion details...</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="multiConvert()" data-bs-dismiss="modal">
+              <span class="lead">Confirm & Start Conversion</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Prompt Editor Modal -->
     <div class="modal fade" id="promptEditorModal" tabindex="-1" aria-labelledby="promptEditorModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-fullscreen">
@@ -1260,13 +1201,13 @@ video {
 
   <!-- Load modular components before core -->
   <script src="./js/modules/conversion-metadata.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/isa-generation-20260422.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/isa-generation-20260422-1145.js" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/llm-service.js?v=20260304120113" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260304120114" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/git-lfs-service.js?v=20260304120115" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core0409b.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core0409b.js?v=20260428b" type="text/javascript" charset="utf-8"></script>
 
   <!-- Toast Notification Container -->
   <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999;">

@@ -6,25 +6,6 @@
 (function(window) {
   'use strict';
 
-  // Test data for ISA assay generation (bypasses API calls)
-  const TEST_PROTOCOL_DATA = {
-    "samples": [
-      {"name": "CAM 76-1", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-16", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "1", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.4", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
-      {"name": "CAM 76-2", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-16", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "1", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.55", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
-      {"name": "CAM 31", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "2", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.57", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
-      {"name": "CAM 37", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "1", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.52", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
-      {"name": "CAM 78", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "2", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.59", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]},
-      {"name": "CAM 269", "organism": "Plant", "characteristics": [{"category": "sample type", "value": "CAM", "unit": "", "termSource": "", "termAccession": ""}, {"category": "collection date", "value": "2025-05-22", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}, {"category": "plant number", "value": "2", "unit": "", "termSource": "", "termAccession": ""}, {"category": "weight", "value": "1.55", "unit": "g", "termSource": "UO", "termAccession": "UO:0000009"}]}
-    ],
-    "protocols": [
-      {"name": "DNA Extraction", "description": "DNA extraction using Macherey & Nagel HMW NucleoBond kit with extended lysis time. Elution in HE buffer.", "inputs": ["CAM 76-1", "CAM 76-2", "CAM 31", "CAM 37", "CAM 78", "CAM 269"], "parameters": [{"name": "Kit", "value": "Macherey & Nagel, HMW NucleoBond", "unit": "", "description": "Extraction kit used"}, {"name": "Artikelnummer", "value": "740160.20", "unit": "", "description": "Kit catalog number"}, {"name": "Lysis time", "value": "60", "unit": "min", "description": "Extended lysis duration"}, {"name": "Elution buffer", "value": "HE Buffer", "unit": "", "description": "Buffer used for DNA elution"}, {"name": "Elution volume", "value": "33", "unit": "µl", "description": "Volume of elution buffer used for initial extractions"}], "outputs": ["DNA_CAM76-1", "DNA_CAM76-2", "DNA_CAM31", "DNA_CAM37", "DNA_CAM78", "DNA_CAM269"], "dataFiles": ["5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg", "5_CAM-269.jpg"]},
-      {"name": "Size Selection", "description": "Size selection using Circulomics Short Read Eliminator Kit followed by sodium acetate precipitation.", "inputs": ["DNA_CAM76-1", "DNA_CAM76-2", "DNA_CAM31", "DNA_CAM37", "DNA_CAM78", "DNA_CAM269"], "parameters": [{"name": "Method", "value": "MTH0004", "unit": "", "description": "Circulomics Short Read Eliminator Kit protocol"}, {"name": "Precipitation method", "value": "MTH0017", "unit": "", "description": "Sodium acetate precipitation protocol"}, {"name": "Input volume", "value": "21", "unit": "µl", "description": "Volume used per size selection reaction for CAM76"}, {"name": "EB volume added", "value": "45", "unit": "µl", "description": "Volume of elution buffer added to samples"}, {"name": "LTE volume", "value": "33", "unit": "µl", "description": "Volume of LTE buffer added to supernatants"}], "outputs": ["SizeSelected_CAM76", "SizeSelected_CAM76", "SizeSelected_CAM31", "SizeSelected_CAM37", "SizeSelected_CAM78", "SizeSelected_CAM269"], "dataFiles": ["6_12_grafik.png", "6_12_grafik.png", "8_11_grafik.png", "8_11_grafik.png", "8_11_grafik.png", "8_11_grafik.png"]},
-      {"name": "FFPE Repair and A-tailing", "description": "DNA repair and end preparation using NEBNext FFPE DNA Repair Mix.", "inputs": ["SizeSelected_CAM76", "SizeSelected_CAM76", "SizeSelected_CAM31", "SizeSelected_CAM37", "SizeSelected_CAM78", "SizeSelected_CAM269"], "parameters": [{"name": "Method", "value": "MTH0005", "unit": "", "description": "NEBNext FFPE DNA Repair Mix protocol"}, {"name": "Target DNA amount", "value": "1500", "unit": "ng", "description": "Approximate amount of DNA used per reaction"}, {"name": "Reaction volume", "value": "60", "unit": "µl", "description": "Final volume of repair reaction"}], "outputs": ["FFPE_Repaired_CAM76_A", "FFPE_Repaired_CAM76_B", "FFPE_Repaired_CAM31", "FFPE_Repaired_CAM37", "FFPE_Repaired_CAM78", "FFPE_Repaired_CAM269"], "dataFiles": ["", "", "", "", "", ""]},
-      {"name": "Adapter Ligation", "description": "Adapter ligation using Oxford Nanopore SQK-LSK114XL Kit.", "inputs": ["FFPE_Repaired_CAM76_A", "FFPE_Repaired_CAM76_B", "FFPE_Repaired_CAM31", "FFPE_Repaired_CAM37", "FFPE_Repaired_CAM78", "FFPE_Repaired_CAM269"], "parameters": [{"name": "Kit", "value": "SQK-LSK114XL", "unit": "", "description": "ONT ligation kit used"}, {"name": "Kit manufacturer", "value": "ONT", "unit": "", "description": "Oxford Nanopore Technologies"}, {"name": "Elution buffer added", "value": "20", "unit": "µl", "description": "Volume of EB added after ligation"}], "outputs": ["Ligated_CAM76_A", "Ligated_CAM76_B", "Ligated_CAM31", "Ligated_CAM37", "Ligated_CAM78", "Ligated_CAM269"], "dataFiles": ["", "", "", "", "", ""]},
-      {"name": "Sequencing", "description": "ONT sequencing on PromethION platform with specified run parameters.", "inputs": ["Ligated_CAM76_A", "Ligated_CAM76_B", "Ligated_CAM31", "Ligated_CAM37", "Ligated_CAM78", "Ligated_CAM269"], "parameters": [{"name": "Sequencing platform", "value": "PromethION", "unit": "", "description": "Sequencing instrument used"}, {"name": "Run time", "value": "100", "unit": "h", "description": "Duration of sequencing run"}, {"name": "Pore count", "value": "various", "unit": "", "description": "Number of active pores per flow cell"}], "outputs": ["Sequencing_CAM76_run1", "Sequencing_CAM76_run2", "Sequencing_CAM31_run1", "Sequencing_CAM37_run1", "Sequencing_CAM78_run1", "Sequencing_CAM269_run1"], "dataFiles": ["20250528_CAM76_prom", "20250602_CAM76_run2_prom", "20250602_CAM31_run1_prom", "20250602_CAM37_run1_prom", "20250602_CAM78_run1_prom", "20250602_CAM269_run1_prom"]}
-    ]
-  };
-
   // Note: This module loads before elab2arc-core1006c.js, so we need a local implementation
   // Helper function for path joining (used in generateDatamapFromLLM)
   function memfsPathJoin(...segments) {
@@ -56,15 +37,8 @@
 
   // Valid model IDs available in Together AI
   const VALID_MODELS = [
-    'meta-llama/Llama-3.2-3B-Instruct-Turbo',
-    'meta-llama/Llama-3.3-70B-Instruct-Turbo-Free',
-    'openai/gpt-oss-20b',
-    'openai/gpt-oss-120b',
     'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',
-    'google/gemma-3n-E4B-it',
-    'lgai/exaone-deep-32b',
-    'ServiceNow-AI/Apriel-1.5-15b-Thinker',
-    'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free'
+    'openai/gpt-oss-120b'
   ];
 
   const DEFAULT_MODEL = 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput';
@@ -217,50 +191,13 @@
   }
 
   /**
-   * Get fallback models to try when rate limited
-   * Reads from localStorage or returns default fallbacks
-   * ALWAYS includes Qwen and gpt-oss-120b as mandatory fallbacks
-   * @returns {Array<string>} - Array of fallback model identifiers
+   * Get fallback model when rate limited
+   * @returns {string} - Fallback model identifier
    */
   function getFallbackModels() {
-    // Mandatory fallback models (always included for reliability)
-    const mandatoryFallbacks = [
-      'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',  // 262K context, largest window
-      'openai/gpt-oss-120b'             // 32K context, OpenAI's largest
-    ];
-
-    // Try to get user-configured fallback models from localStorage
-    const savedFallbackModels = window.localStorage.getItem('togetherAIFallbackModels');
-
-    if (savedFallbackModels) {
-      try {
-        const fallbackList = JSON.parse(savedFallbackModels);
-        if (Array.isArray(fallbackList) && fallbackList.length > 0) {
-          // Ensure mandatory fallbacks are included
-          const combined = [...mandatoryFallbacks];
-
-          // Add user-selected models that aren't already in mandatory list
-          for (const model of fallbackList) {
-            if (!combined.includes(model)) {
-              combined.push(model);
-            }
-          }
-
-          console.log(`[Fallback Models] User-configured + mandatory: ${combined.join(', ')}`);
-          return combined;
-        }
-      } catch (e) {
-        console.warn('[Fallback Models] Could not parse saved fallback models, using defaults');
-      }
-    }
-
-    // Default fallback models if none configured (ordered by context window size)
-    console.log('[Fallback Models] Using default fallback models');
     return [
-      'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',  // 262K context, largest window
-      'openai/gpt-oss-120b',            // 32K context, OpenAI's largest
-      'google/gemma-3n-E4B-it',         // 32K context, Google efficient
-      'lgai/exaone-deep-32b'            // 32K context, good for complex reasoning
+      'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',
+      'openai/gpt-oss-120b'
     ];
   }
 
@@ -270,26 +207,12 @@
    * @returns {number} - Context window size in tokens
    */
   function getModelContextWindow(model) {
-    if (model.includes('Llama-3.3-70B')) {
+    if (model.includes('Qwen3-235B-A22B')) {
       return 131072; // 131K tokens
-    } else if (model.includes('Qwen3-235B-A22B')) {
-      return 131072; // 131K tokens
-    } else if (model.includes('DeepSeek-R1')) {
-      return 64000; // ~64K tokens
     } else if (model.includes('gpt-oss-120b')) {
       return 32768; // 32K tokens
-    } else if (model.includes('exaone-deep-32b')) {
-      return 32768; // 32K tokens
-    } else if (model.includes('Apriel-1.5-15b')) {
-      return 32768; // 32K tokens
-    } else if (model.includes('gemma-3n-E4B')) {
-      return 32768; // 32K tokens
-    } else if (model.includes('gpt-oss-20b')) {
-      return 16384; // 16K tokens
-    } else if (model.includes('Llama-3.2-3B')) {
-      return 8192; // 8K tokens
     }
-    return 100000; // Default fallback
+    return 131072; // Default fallback
   }
 
   /**
@@ -695,15 +618,6 @@
    */
   async function callTogetherAI(protocolText, useTestData = false, metadata = {}) {
     try {
-      // TEST MODE: Return test data directly without API call
-      if (useTestData || window.localStorage.getItem('llmTestMode') === 'true') {
-        console.log('[Datamap LLM] Using TEST DATA - bypassing API call');
-        console.log('[Datamap LLM] Test data:', TEST_PROTOCOL_DATA);
-        // Simulate API delay for realism
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return TEST_PROTOCOL_DATA;
-      }
-
       // Get provider and API configuration
       const provider = getSelectedProvider();
       const endpoint = getApiEndpoint();

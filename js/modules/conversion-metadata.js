@@ -122,7 +122,7 @@
         modules: [
           'llm-service1007.js',
           'conversion-metadata1000.js',
-          'isa-generation-20260422.js'
+          'isa-generation-20260422-1145.js'
         ]
       }
     };
