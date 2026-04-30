@@ -63,6 +63,15 @@
         'institution': 'IBG-4'
       }
     },
+    'dataplan-gemma': {
+      name: 'DataPlan Gemma',
+      endpoint: 'https://h.dataplan.top/v1/chat/completions',
+      requiresApiKey: false,
+      headers: {
+        'Host': 'h.dataplan.top',
+        'institution': 'IBG-4'
+      }
+    },
     together: {
       name: 'Together.AI',
       endpoint: 'https://api.together.xyz/v1/chat/completions',
@@ -169,6 +178,11 @@
     // For Ollama, use the selected local model
     if (provider === 'ollama') {
       return window.localStorage.getItem('ollamaModel') || 'llama3';
+    }
+
+    // For dataplan-gemma provider, hard-wire the Gemma model
+    if (provider === 'dataplan-gemma') {
+      return 'google/gemma-4-31B-it';
     }
 
     // For other providers, use existing logic
@@ -616,7 +630,9 @@
    * @param {string} protocolText - Protocol markdown text
    * @returns {Promise<Object>} - Extracted parameters, inputs, outputs
    */
-  async function callTogetherAI(protocolText, useTestData = false, metadata = {}) {
+  async function callTogetherAI(protocolText, useTestData = false, metadata = {}, options = {}) {
+    // Allow callers to redirect the streaming output to a different container
+    currentStreamContainerId = options.streamContainerId || 'llmStreamContent';
     try {
       // Get provider and API configuration
       const provider = getSelectedProvider();
@@ -695,8 +711,11 @@
         }
 
         // Build prompt template (use custom if available, otherwise use default)
+        // If options.rawPrompt is set, send the input text directly without wrapping
         let promptTemplate;
-        if (customPrompt) {
+        if (options.rawPrompt) {
+          promptTemplate = chunk;
+        } else if (customPrompt) {
           // Assemble custom prompt
           promptTemplate = `${customPrompt.systemRole}${chunks.length > 1 ? ' Analyze this experimental protocol section and extract structured information.' : ''}
 ${contextInfo}
@@ -889,8 +908,8 @@ Return ONLY valid JSON, no additional text.`;
           // Build request body with provider-specific parameters
           const requestBody = {
             model: model,
-            max_tokens: 8192, // Increase token limit to prevent truncation
-            temperature: 0.1, // Lower temperature for more consistent JSON output
+            max_tokens: options.maxTokens || 8192,
+            temperature: options.temperature !== undefined ? options.temperature : 0.1,
             stream: true, // Enable streaming mode
             messages: [{
               role: 'user',
@@ -961,6 +980,12 @@ Return ONLY valid JSON, no additional text.`;
 
         console.log(`[Datamap LLM] Raw response${chunkInfo} (full):`, content);
 
+        // If raw prompt mode, return the full content without JSON extraction
+        if (options.rawPrompt) {
+          chunkResults.push(content);
+          continue;
+        }
+
         // Parse JSON from response
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
@@ -1008,6 +1033,9 @@ Return ONLY valid JSON, no additional text.`;
       } else if (chunkResults.length === 1) {
         return chunkResults[0];
       } else {
+        if (options.rawPrompt) {
+          return chunkResults.join('\n\n');
+        }
         return mergeChunkResults(chunkResults);
       }
 
@@ -1195,12 +1223,15 @@ Return ONLY valid JSON, no additional text.`;
     }
   }
 
+  // Configurable stream container ID (defaults to status-modal accordion)
+  let currentStreamContainerId = 'llmStreamContent';
+
   /**
    * Append text to LLM stream UI accordion with auto-scroll
    * @param {string} text - Text to append
    */
   function appendToLLMStream(text) {
-    const streamContent = document.getElementById('llmStreamContent');
+    const streamContent = document.getElementById(currentStreamContainerId);
     if (streamContent) {
       streamContent.textContent += text;
       // Auto-scroll to bottom
@@ -1210,9 +1241,11 @@ Return ONLY valid JSON, no additional text.`;
 
   /**
    * Clear LLM stream UI accordion
+   * @param {string} [containerId] - Optional container to clear; falls back to current stream target
    */
-  function clearLLMStream() {
-    const streamContent = document.getElementById('llmStreamContent');
+  function clearLLMStream(containerId) {
+    const id = containerId || currentStreamContainerId;
+    const streamContent = document.getElementById(id);
     if (streamContent) {
       streamContent.textContent = '';
     }
@@ -1237,7 +1270,80 @@ Return ONLY valid JSON, no additional text.`;
     getApiEndpoint: getApiEndpoint,
     getApiHeaders: getApiHeaders,
     requiresApiKey: requiresApiKey,
-    API_PROVIDERS: API_PROVIDERS
+    API_PROVIDERS: API_PROVIDERS,
+    // Graph builder helper
+    buildProcessGraphData: function(llmData) {
+      const nodes = [];
+      const edges = [];
+      let nodeId = 0;
+      const sampleNodeIds = {};
+      const outputNodeIds = {};
+
+      if (llmData.samples) {
+        llmData.samples.forEach((sample, idx) => {
+          const id = 'sample_' + idx;
+          sampleNodeIds[sample.name] = id;
+          const tooltipParts = [];
+          if (sample.organism) tooltipParts.push('Organism: ' + sample.organism);
+          if (sample.characteristics && sample.characteristics.length) {
+            tooltipParts.push('Characteristics:\n' + sample.characteristics.map(c =>
+              '• ' + c.category + ': ' + c.value + (c.unit ? ' ' + c.unit : '')
+            ).join('\n'));
+          }
+          nodes.push({
+            id: id, label: sample.name || 'Sample', shape: 'dot',
+            color: { background: '#28a745', border: '#1e7e34' },
+            font: { color: '#fff', size: 14 },
+            title: tooltipParts.join('\n') || undefined, size: 20
+          });
+        });
+      }
+
+      if (llmData.protocols) {
+        llmData.protocols.forEach((protocol, pIdx) => {
+          const pid = 'protocol_' + pIdx;
+          const paramTooltip = protocol.parameters && protocol.parameters.length
+            ? 'Parameters:\n' + protocol.parameters.map(p =>
+                '• ' + p.name + ': ' + (p.value || '-') + (p.unit ? ' ' + p.unit : '')
+              ).join('\n')
+            : undefined;
+
+          nodes.push({
+            id: pid, label: protocol.name || 'Protocol', shape: 'box',
+            color: { background: '#0d6efd', border: '#0a58ca' },
+            font: { color: '#fff', size: 14 },
+            title: paramTooltip, margin: 10
+          });
+
+          if (protocol.inputs) {
+            protocol.inputs.forEach((inputName) => {
+              const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName];
+              if (sourceId) {
+                edges.push({ from: sourceId, to: pid, label: 'input', arrows: 'to', color: { color: '#6c757d' }, font: { size: 10 } });
+              } else {
+                const adHocId = 'input_' + (nodeId++);
+                nodes.push({ id: adHocId, label: inputName, shape: 'ellipse', color: { background: '#6f42c1', border: '#59359a' }, font: { color: '#fff', size: 12 } });
+                edges.push({ from: adHocId, to: pid, label: 'input', arrows: 'to', color: { color: '#6c757d' }, font: { size: 10 } });
+              }
+            });
+          }
+
+          if (protocol.outputs) {
+            protocol.outputs.forEach((outputName) => {
+              let oid = outputNodeIds[outputName];
+              if (!oid) {
+                oid = 'output_' + (nodeId++);
+                outputNodeIds[outputName] = oid;
+                nodes.push({ id: oid, label: outputName, shape: 'diamond', color: { background: '#fd7e14', border: '#e56b0a' }, font: { color: '#fff', size: 12 }, size: 18 });
+              }
+              edges.push({ from: pid, to: oid, label: 'output', arrows: 'to', color: { color: '#6c757d' }, font: { size: 10 } });
+            });
+          }
+        });
+      }
+
+      return { nodes, edges };
+    }
   };
 
 })(window);
