@@ -882,6 +882,555 @@ CC BY 4.0
       loading.hide();
     };
 
+    // =============================================================================
+    // PRE-CONVERSION LLM GRAPH
+    // Runs LLM extraction on the currently previewed experiment and visualizes
+    // the resulting process graph as an interactive vis-network diagram.
+    // =============================================================================
+    // =============================================================================
+    // UNIFIED LLM GRAPH HELPERS
+    // =============================================================================
+
+    /**
+     * Normalize old-format LLM data and cache it.
+     * @param {Object} llmData - Raw LLM response data
+     * @param {string} cacheKey - Key for caching (usually elabid)
+     * @param {string} assayId - Formatted assay ID
+     * @param {string} title - Experiment title
+     * @returns {Object} Normalized llmData
+     */
+    function normalizeAndCacheLLMData(llmData, cacheKey, assayId, title) {
+      // Normalize old format (backward compatibility)
+      if (llmData && !llmData.protocols && llmData.inputs) {
+        console.log('[LLM Helper] Converting old LLM format to multi-protocol structure');
+        llmData = {
+          protocols: [{
+            name: 'Main Protocol',
+            description: '',
+            inputs: llmData.inputs || [],
+            parameters: llmData.parameters || [],
+            outputs: llmData.outputs || []
+          }]
+        };
+      }
+
+      // Cache LLM data keyed by experiment ID for reuse
+      // Preserve existing pngDataUrl so pre-conversion captures are not lost
+      if (cacheKey) {
+        if (!window._previewLLMCache) window._previewLLMCache = {};
+        const existingPng = window._previewLLMCache[cacheKey] && window._previewLLMCache[cacheKey].pngDataUrl;
+        window._previewLLMCache[cacheKey] = {
+          llmData: JSON.parse(JSON.stringify(llmData)),
+          assayId: assayId,
+          title: title,
+          timestamp: Date.now(),
+          pngDataUrl: existingPng || null
+        };
+      }
+
+      return llmData;
+    }
+
+    /**
+     * Generate a self-contained interactive HTML file for the LLM graph.
+     * @param {Object} llmData - Normalized LLM data
+     * @param {string} title - Graph title
+     * @returns {string} HTML content
+     */
+    function generateLLMGraphHTML(llmData, title) {
+      const nodes = [];
+      const edges = [];
+      let nodeId = 0;
+      const sampleNodeIds = {};
+      const outputNodeIds = {};
+
+      if (llmData.samples) {
+        llmData.samples.forEach((sample, idx) => {
+          const id = 'sample_' + idx;
+          sampleNodeIds[sample.name] = id;
+          const tooltipParts = [];
+          if (sample.organism) tooltipParts.push('Organism: ' + sample.organism);
+          if (sample.characteristics && sample.characteristics.length) {
+            tooltipParts.push('Characteristics:\n' + sample.characteristics.map(c =>
+              '• ' + c.category + ': ' + c.value + (c.unit ? ' ' + c.unit : '')
+            ).join('\n'));
+          }
+          nodes.push({
+            id: id, label: sample.name || 'Sample', shape: 'dot',
+            color: { background: '#28a745', border: '#1e7e34' },
+            font: { color: '#212529', size: 14, bold: true },
+            title: tooltipParts.join('\n') || undefined, size: 20
+          });
+        });
+      }
+
+      if (llmData.protocols) {
+        llmData.protocols.forEach((protocol, pIdx) => {
+          const pid = 'protocol_' + pIdx;
+          const paramTooltip = protocol.parameters && protocol.parameters.length
+            ? 'Parameters:\n' + protocol.parameters.map(p =>
+                '• ' + p.name + ': ' + (p.value || '-') + (p.unit ? ' ' + p.unit : '')
+              ).join('\n')
+            : undefined;
+
+          const paramLines = protocol.parameters && protocol.parameters.length
+            ? protocol.parameters.map(p => `${p.name}: ${p.value || '-'}${p.unit ? ' ' + p.unit : ''}`)
+            : [];
+          const labelText = paramLines.length
+            ? [protocol.name || 'Protocol', '──────────', ...paramLines].join('\n')
+            : (protocol.name || 'Protocol');
+
+          nodes.push({
+            id: pid, label: labelText, shape: 'box',
+            color: { background: '#dbeafe', border: '#93c5fd' },
+            font: { color: '#212529', size: 13, bold: true, multi: true },
+            title: paramTooltip,
+            margin: { top: 12, right: 15, bottom: 12, left: 15 },
+            widthConstraint: { maximum: 320 }
+          });
+
+          if (protocol.inputs) {
+            protocol.inputs.forEach((inputName) => {
+              const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName];
+              if (sourceId) {
+                edges.push({ from: sourceId, to: pid, label: 'input', arrows: 'to', color: { color: '#6c757d' }, font: { color: '#212529', size: 10 } });
+              } else {
+                const adHocId = 'input_' + (nodeId++);
+                nodes.push({ id: adHocId, label: inputName, shape: 'ellipse', color: { background: '#6f42c1', border: '#59359a' }, font: { color: '#212529', size: 12 } });
+                edges.push({ from: adHocId, to: pid, label: 'input', arrows: 'to', color: { color: '#6c757d' }, font: { color: '#212529', size: 10 } });
+              }
+            });
+          }
+
+          if (protocol.outputs) {
+            protocol.outputs.forEach((outputName) => {
+              let oid = outputNodeIds[outputName];
+              if (!oid) {
+                oid = 'output_' + (nodeId++);
+                outputNodeIds[outputName] = oid;
+                nodes.push({ id: oid, label: outputName, shape: 'diamond', color: { background: '#fd7e14', border: '#e56b0a' }, font: { color: '#212529', size: 12 }, size: 18 });
+              }
+              edges.push({ from: pid, to: oid, label: 'output', arrows: 'to', color: { color: '#6c757d' }, font: { color: '#212529', size: 10 } });
+            });
+          }
+        });
+      }
+
+      const nodesJson = JSON.stringify(nodes);
+      const edgesJson = JSON.stringify(edges);
+
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title} — Protocol Graph</title>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style>
+  body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; }
+  h1 { margin: 0 0 12px; font-size: 1.4rem; color: #212529; }
+  .subtitle { color: #6c757d; font-size: 0.9rem; margin-bottom: 16px; }
+  #graph { width: 100%; height: 85vh; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; }
+  .legend { margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+  .box { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+  .diamond { width: 10px; height: 10px; transform: rotate(45deg); display: inline-block; }
+</style>
+</head>
+<body>
+<h1>🔮 ${title}</h1>
+<div class="subtitle">Interactive protocol graph — scroll to zoom, drag to pan, hover for details.</div>
+<div id="graph"></div>
+<div class="legend">
+  <span><span class="dot" style="background:#28a745;"></span> Sample</span>
+  <span><span class="box" style="background:#dbeafe;border:1px solid #93c5fd;"></span> Protocol</span>
+  <span><span class="diamond" style="background:#fd7e14;"></span> Output</span>
+  <span><span class="dot" style="background:#6f42c1;"></span> Ad-hoc Input</span>
+</div>
+<script>
+  const nodes = new vis.DataSet(${nodesJson});
+  const edges = new vis.DataSet(${edgesJson});
+  const container = document.getElementById('graph');
+  const options = {
+    layout: { hierarchical: { direction: 'LR', sortMethod: 'directed', levelSeparation: 200, nodeSpacing: 150 } },
+    physics: { enabled: true, hierarchicalRepulsion: { centralGravity: 0, springLength: 150, springConstant: 0.01, nodeDistance: 150, damping: 0.09 }, solver: 'hierarchicalRepulsion' },
+    interaction: { hover: true, tooltipDelay: 100, zoomView: true, dragView: true },
+    nodes: { borderWidth: 2, shadow: true },
+    edges: { width: 2, shadow: true, smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.4 } }
+  };
+  new vis.Network(container, { nodes, edges }, options);
+</script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Render LLM graph to a container and capture PNG.
+     * Returns a Promise that resolves with the PNG data URL when captured.
+     * @param {Object} llmData - Normalized LLM data
+     * @param {string} cacheKey - Key to store PNG in cache
+     * @param {string} containerId - vis-network container element ID
+     * @param {boolean} visible - Whether the container should be visible
+     * @returns {Promise<string|null>} PNG data URL or null
+     */
+    function renderLLMGraphAndCapturePNG(llmData, cacheKey, containerId, visible) {
+      return new Promise((resolve) => {
+        if (!llmData) {
+          resolve(null);
+          return;
+        }
+
+        const container = document.getElementById(containerId);
+        if (!container) {
+          console.warn('[LLM Helper] Graph container not found:', containerId);
+          resolve(null);
+          return;
+        }
+
+        container.style.display = 'block';
+        renderLLMGraph(llmData, containerId);
+
+        // Capture graph as PNG after vis-network stabilization
+        // Use multiple attempts: quick check at 800ms, fallback at 2000ms
+        let captured = false;
+
+        const attemptCapture = (attempt) => {
+          try {
+            const canvas = container.querySelector('canvas');
+            if (!canvas) {
+              console.warn(`[LLM Helper] Attempt ${attempt}: No canvas found in`, containerId);
+              return false;
+            }
+            console.log(`[LLM Helper] Attempt ${attempt}: Canvas size ${canvas.width}x${canvas.height}`);
+            if (canvas.width < 10 || canvas.height < 10) {
+              console.warn(`[LLM Helper] Attempt ${attempt}: Canvas too small, waiting longer...`);
+              return false;
+            }
+            if (cacheKey && window._previewLLMCache && window._previewLLMCache[cacheKey]) {
+              const pngDataUrl = canvas.toDataURL('image/png');
+              window._previewLLMCache[cacheKey].pngDataUrl = pngDataUrl;
+              console.log('[LLM Helper] Captured graph PNG for', cacheKey, `(${pngDataUrl.length} chars)`);
+              captured = true;
+              resolve(pngDataUrl);
+              return true;
+            }
+          } catch (capErr) {
+            console.warn('[LLM Helper] Could not capture graph PNG:', capErr);
+          }
+          return false;
+        };
+
+        setTimeout(() => {
+          if (!captured) attemptCapture(1);
+        }, 800);
+
+        setTimeout(() => {
+          if (!captured) {
+            if (attemptCapture(2)) return;
+            console.warn('[LLM Helper] Failed to capture PNG after 2 attempts for', cacheKey);
+            resolve(null);
+          }
+        }, 2200);
+      });
+    }
+
+    window.runPreviewLLM = async function() {
+      const btn = document.getElementById('preConvertLLMBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+      }
+
+      try {
+        const data = window.elabJSON;
+        if (!data) {
+          showWarningToast('No experiment loaded. Please open an experiment preview first.');
+          return;
+        }
+
+        // 1. Enable LLM switch
+        const datamapSwitch = document.getElementById('enableDatamapSwitch');
+        if (datamapSwitch) {
+          datamapSwitch.checked = true;
+          toggleTogetherAPIKeyField();
+        }
+
+        // 2. Convert HTML body to markdown
+        const protocolHTML = data.body || '';
+        const markdown = turndownService.turndown(protocolHTML);
+
+        // 3. Build metadata
+        const assayId = (data.title || 'untitled').replace(/\//g, '|').replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const protocolMetadata = {
+          assayId: assayId,
+          protocolPath: `protocols/${assayId}.md`
+        };
+
+        // 4. Show modal with loading state
+        const graphModalEl = document.getElementById('llmGraphModal');
+        const graphModal = bootstrap.Modal.getOrCreateInstance(graphModalEl);
+        document.getElementById('llmGraphLoading').classList.remove('d-none');
+        document.getElementById('llmGraphError').classList.add('d-none');
+        document.getElementById('llmGraphContainer').style.display = 'none';
+        document.getElementById('llmGraphLegend').classList.add('d-none');
+
+        // Prepare streaming output area in the modal so users can see progress
+        const graphStream = document.getElementById('llmGraphStream');
+        if (graphStream) {
+          graphStream.textContent = '';
+          graphStream.style.display = 'block';
+        }
+        if (window.Elab2ArcLLM && window.Elab2ArcLLM.clearLLMStream) {
+          window.Elab2ArcLLM.clearLLMStream('llmGraphStream');
+        }
+
+        graphModal.show();
+
+        // 5. Call LLM (redirect stream to the graph modal)
+        let llmData = null;
+        if (window.Elab2ArcLLM && window.Elab2ArcLLM.callTogetherAI) {
+          llmData = await window.Elab2ArcLLM.callTogetherAI(markdown, false, protocolMetadata, { streamContainerId: 'llmGraphStream' });
+        } else {
+          throw new Error('LLM service not available');
+        }
+
+        if (!llmData) {
+          throw new Error('LLM extraction returned no data');
+        }
+
+        // 6. Normalize, cache, render graph, capture PNG
+        llmData = normalizeAndCacheLLMData(llmData, data.id, assayId, data.title);
+        await renderLLMGraphAndCapturePNG(llmData, data.id, 'llmGraphContainer', true);
+
+        // Reveal the 🔮 graph button for this experiment in the table
+        if (data.id) {
+          const graphBtn = document.getElementById(`graphExp${data.id}`) || document.getElementById(`graphRes${data.id}`);
+          if (graphBtn) graphBtn.classList.remove('d-none');
+        }
+
+        // Hide the stream container on success — the graph is ready
+        const graphStreamAfter = document.getElementById('llmGraphStream');
+        if (graphStreamAfter) graphStreamAfter.style.display = 'none';
+
+      } catch (error) {
+        console.error('[Preview LLM] Error:', error);
+        document.getElementById('llmGraphLoading').classList.add('d-none');
+        const errorEl = document.getElementById('llmGraphError');
+        errorEl.classList.remove('d-none');
+        errorEl.textContent = 'LLM extraction failed: ' + (error.message || error);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🔮 Pre-conversion with LLM';
+        }
+      }
+    };
+
+    /**
+     * Re-open the LLM graph modal for a given experiment ID using cached data.
+     */
+    window.openPreviewGraph = async function(experimentId) {
+      // Try to find the experiment data if not already loaded
+      if (!window._previewLLMCache || !window._previewLLMCache[experimentId]) {
+        showWarningToast('No pre-conversion graph available. Please preview the experiment first and run LLM analysis.');
+        return;
+      }
+
+      const cache = window._previewLLMCache[experimentId];
+      const graphModalEl = document.getElementById('llmGraphModal');
+      const graphModal = bootstrap.Modal.getOrCreateInstance(graphModalEl);
+
+      document.getElementById('llmGraphLoading').classList.add('d-none');
+      document.getElementById('llmGraphError').classList.add('d-none');
+      document.getElementById('llmGraphStream').style.display = 'none';
+      document.getElementById('llmGraphContainer').style.display = 'block';
+      document.getElementById('llmGraphLegend').classList.remove('d-none');
+
+      renderLLMGraph(cache.llmData);
+      graphModal.show();
+    };
+
+    function renderLLMGraph(llmData, targetContainerId = 'llmGraphContainer') {
+      const container = document.getElementById(targetContainerId);
+      const nodes = new vis.DataSet([]);
+      const edges = new vis.DataSet([]);
+
+      let nodeId = 0;
+      const sampleNodeIds = {};
+      const outputNodeIds = {};
+      const protocolNodeIds = {};
+
+      // --- Create sample nodes ---
+      if (llmData.samples) {
+        llmData.samples.forEach((sample, idx) => {
+          const id = `sample_${idx}`;
+          sampleNodeIds[sample.name] = id;
+          const tooltipParts = [];
+          if (sample.organism) tooltipParts.push(`Organism: ${sample.organism}`);
+          if (sample.characteristics && sample.characteristics.length) {
+            tooltipParts.push('Characteristics:<br>' + sample.characteristics.map(c =>
+              `• ${c.category}: ${c.value}${c.unit ? ' ' + c.unit : ''}`
+            ).join('<br>'));
+          }
+          nodes.add({
+            id: id,
+            label: sample.name || 'Sample',
+            shape: 'dot',
+            color: { background: '#28a745', border: '#1e7e34' },
+            font: { color: '#212529', size: 14, bold: true },
+            title: tooltipParts.join('<br>') || undefined,
+            size: 20
+          });
+        });
+      }
+
+      // --- Create protocol nodes and edges ---
+      if (llmData.protocols) {
+        llmData.protocols.forEach((protocol, pIdx) => {
+          const pid = `protocol_${pIdx}`;
+          protocolNodeIds[protocol.name] = pid;
+
+          // Build multiline label: name + separator + parameters
+          const paramLines = protocol.parameters && protocol.parameters.length
+            ? protocol.parameters.map(p =>
+                `${p.name}: ${p.value || '-'}${p.unit ? ' ' + p.unit : ''}`
+              )
+            : [];
+          const labelText = paramLines.length
+            ? [protocol.name || 'Protocol', '──────────', ...paramLines].join('\n')
+            : (protocol.name || 'Protocol');
+
+          // Build plain-text tooltip (vis-network title does not render HTML)
+          const paramTooltip = protocol.parameters && protocol.parameters.length
+            ? 'Parameters:\n' + protocol.parameters.map(p =>
+                `  ${p.name}: ${p.value || '-'}${p.unit ? ' ' + p.unit : ''}`
+              ).join('\n')
+            : undefined;
+
+          nodes.add({
+            id: pid,
+            label: labelText,
+            shape: 'box',
+            color: { background: '#dbeafe', border: '#93c5fd' },
+            font: { color: '#212529', size: 13, bold: true, multi: true, face: 'Segoe UI, Roboto, Helvetica, Arial, sans-serif' },
+            title: paramTooltip,
+            margin: { top: 12, right: 15, bottom: 12, left: 15 },
+            widthConstraint: { maximum: 320 }
+          });
+
+          // Inputs → Protocol
+          if (protocol.inputs) {
+            protocol.inputs.forEach((inputName) => {
+              const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName];
+              if (sourceId) {
+                edges.add({
+                  from: sourceId,
+                  to: pid,
+                  label: 'input',
+                  arrows: 'to',
+                  color: { color: '#6c757d' },
+                  font: { color: '#212529', size: 10 }
+                });
+              } else {
+                // Create ad-hoc input node if not seen before
+                const adHocId = `input_${nodeId++}`;
+                nodes.add({
+                  id: adHocId,
+                  label: inputName,
+                  shape: 'ellipse',
+                  color: { background: '#6f42c1', border: '#59359a' },
+                  font: { color: '#212529', size: 12 }
+                });
+                edges.add({
+                  from: adHocId,
+                  to: pid,
+                  label: 'input',
+                  arrows: 'to',
+                  color: { color: '#6c757d' },
+                  font: { color: '#212529', size: 10 }
+                });
+              }
+            });
+          }
+
+          // Protocol → Outputs
+          if (protocol.outputs) {
+            protocol.outputs.forEach((outputName) => {
+              let oid = outputNodeIds[outputName];
+              if (!oid) {
+                oid = `output_${nodeId++}`;
+                outputNodeIds[outputName] = oid;
+                nodes.add({
+                  id: oid,
+                  label: outputName,
+                  shape: 'diamond',
+                  color: { background: '#fd7e14', border: '#e56b0a' },
+                  font: { color: '#212529', size: 12 },
+                  size: 18
+                });
+              }
+              edges.add({
+                from: pid,
+                to: oid,
+                label: 'output',
+                arrows: 'to',
+                color: { color: '#6c757d' },
+                font: { color: '#212529', size: 10 }
+              });
+            });
+          }
+        });
+      }
+
+      // Layout hint: use hierarchical layout for left-to-right flow
+      const options = {
+        layout: {
+          hierarchical: {
+            direction: 'LR',
+            sortMethod: 'directed',
+            levelSeparation: 200,
+            nodeSpacing: 150
+          }
+        },
+        physics: {
+          enabled: true,
+          hierarchicalRepulsion: {
+            centralGravity: 0.0,
+            springLength: 150,
+            springConstant: 0.01,
+            nodeDistance: 150,
+            damping: 0.09
+          },
+          solver: 'hierarchicalRepulsion'
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 100,
+          zoomView: true,
+          dragView: true
+        },
+        nodes: {
+          borderWidth: 2,
+          shadow: true
+        },
+        edges: {
+          width: 2,
+          shadow: true,
+          smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.4 }
+        }
+      };
+
+      container.innerHTML = '';
+      new vis.Network(container, { nodes, edges }, options);
+
+      const loadingEl = document.getElementById('llmGraphLoading');
+      if (loadingEl) loadingEl.classList.add('d-none');
+      container.style.display = 'block';
+      const legendEl = document.getElementById('llmGraphLegend');
+      if (legendEl) legendEl.classList.remove('d-none');
+    }
+
 
     // const startStepByStep= async ()=>{
     //   document.getElementById("ftwBtn").click();
@@ -1143,6 +1692,34 @@ CC BY 4.0
       }
     };
 
+    const updateGitLabProjectDescription = async (projectPath, description, accessToken) => {
+      try {
+        const encodedPath = encodeURIComponent(projectPath);
+        const targetUrl = getDatahubAPIURL() + '/projects/' + encodedPath;
+
+        const response = await fetchWithProxyFallback(targetUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ description: description })
+        });
+
+        if (response.status >= 400) {
+          const errorDetails = await response.json().catch(() => ({}));
+          console.warn('[GitLab] Could not update project description:', errorDetails.message || response.status);
+          return false;
+        }
+
+        console.log('[GitLab] Project description updated for:', projectPath);
+        return true;
+      } catch (error) {
+        console.warn('[GitLab] Failed to update project description:', error.message);
+        return false;
+      }
+    };
+
     const fetchUserProjects = async (userId, accessToken, apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
       try {
         // Define the API endpoint for fetching user-related projects
@@ -1184,13 +1761,14 @@ CC BY 4.0
               </tr>
             `
         projects.forEach((project) => {
+          if (project.name && project.name.includes("deletion_scheduled")) return;
           if (project.name) { // Ensure the project has a valid name
             newIndex += 1;
 
             tableHTML += `
               <tr>
                 <th scope="row">${newIndex}</th>
-                <td>${project.name}</td>
+                <td><a href="${project.web_url}" target="_blank">${project.name}</a></td>
                 <td><a href="${project.web_url}" target="_blank">View</a></td>
                 <td>
                   <div class="" role="group" aria-label="Basic example">
@@ -1322,6 +1900,19 @@ CC BY 4.0
                     </button>`
                 : '';
 
+              const hasCachedGraph = window._previewLLMCache && window._previewLLMCache[entry.id];
+              const graphBtn = config.hasPreview
+                ? `<button class="btn btn-sm btn-outline-primary ms-1${hasCachedGraph ? '' : ' d-none'}" type="button"
+                            data-id="${entry.id}"
+                            data-type="${typeKey}"
+                            id="graph${config.short}${entry.id}"
+                            onclick="openPreviewGraph(${entry.id})"
+                            title="View pre-conversion LLM graph"
+                            >
+                      🔮
+                    </button>`
+                : '';
+
               const extraDiv = config.hasPreview
                 ? `<div id="linked${typeKey}${entry.id}"></div>`
                 : '';
@@ -1330,7 +1921,7 @@ CC BY 4.0
                   <tr>
                     <th scope="row">${config.displayName}</th>
                     <td>${entry.id}</td>
-                    <td>${entry.title}</td>
+                    <td><a href="javascript:void(0)" onclick="elabPreview(this)" data-id="${entry.id}" data-type="${typeKey}">${entry.title}</a></td>
 
                     <td>${entry.date}</td>
                     <td>${entry.fullname}</td>
@@ -1345,6 +1936,7 @@ CC BY 4.0
                         <label class="form-check-label" for="${checkboxId}"></label>
                         ${extraDiv}
                           ${previewBtn}
+                          ${graphBtn}
                       </div>
                     </td>
                   </tr>
@@ -1528,7 +2120,8 @@ CC BY 4.0
         console.log('[DataHub Clone] Attempting clone with proxy:', initialProxy || '(direct)', 'branch: main');
         await cloneWithProxy(initialProxy, 'main');
         cacheGitProxyResult(proxyStrategy.cacheKey, initialProxy ? 'proxy' : 'direct');
-        updateInfo(`✓ Clone complete: ${repoName} (main branch${initialProxy ? '' : ', direct'})`, 1);
+        const arcWebUrl = datahubURL.replace(/\.git$/, '');
+        updateInfo(`✓ Clone complete: ${repoName} (main branch${initialProxy ? '' : ', direct'})`, 1, [{ label: '🔗 View ARC', url: arcWebUrl }]);
         mainOrMaster = "main";
       } catch (error) {
         console.error('[DataHub Clone] Clone failed:', error.name, error.message);
@@ -1546,7 +2139,8 @@ CC BY 4.0
           cacheGitProxyResult(proxyStrategy.cacheKey, 'proxy');
           try {
             await cloneWithProxy(getGitProxy(), 'main');
-            updateInfo(`✓ Clone complete: ${repoName} (main branch via proxy)`, 1);
+            const arcWebUrl = datahubURL.replace(/\.git$/, '');
+            updateInfo(`✓ Clone complete: ${repoName} (main branch via proxy)`, 1, [{ label: '🔗 View ARC', url: arcWebUrl }]);
             mainOrMaster = "main";
             return;
           } catch (proxyError) {
@@ -1560,7 +2154,8 @@ CC BY 4.0
           if (switchToBackupProxy('git')) {
             try {
               await cloneWithProxy(getGitProxy(), 'main');
-              updateInfo(`✓ Clone complete: ${repoName} (main branch via backup proxy)`, 1);
+              const arcWebUrl = datahubURL.replace(/\.git$/, '');
+              updateInfo(`✓ Clone complete: ${repoName} (main branch via backup proxy)`, 1, [{ label: '🔗 View ARC', url: arcWebUrl }]);
               mainOrMaster = "main";
               return;
             } catch (backupError) {
@@ -1573,13 +2168,15 @@ CC BY 4.0
         console.log("[DataHub Clone] Branch 'main' not found, trying 'master' branch...");
         try {
           await cloneWithProxy(getGitProxy(), 'master');
-          updateInfo(`✓ Clone complete: ${repoName} (master branch)`, 1);
+          const arcWebUrl = datahubURL.replace(/\.git$/, '');
+          updateInfo(`✓ Clone complete: ${repoName} (master branch)`, 1, [{ label: '🔗 View ARC', url: arcWebUrl }]);
           mainOrMaster = "master";
         } catch (masterError) {
           // Try backup proxy for master branch
           if (switchToBackupProxy('git')) {
             await cloneWithProxy(getGitProxy(), 'master');
-            updateInfo(`✓ Clone complete: ${repoName} (master branch via backup proxy)`, 1);
+            const arcWebUrl = datahubURL.replace(/\.git$/, '');
+            updateInfo(`✓ Clone complete: ${repoName} (master branch via backup proxy)`, 1, [{ label: '🔗 View ARC', url: arcWebUrl }]);
             mainOrMaster = "master";
           } else {
             throw masterError;
@@ -1687,17 +2284,24 @@ CC BY 4.0
       return count;
     }
 
-    async function commitPush(datahubtoken, datahubURL, fullname, email, dir, gitRoot, elabid, experimentTitle, assayId, isStudy, fileCount, targetPath, protocolFilename, teamName, sourceInstance, completedEntries, totalEntries, entryType) {
+    async function commitPush(datahubtoken, datahubURL, fullname, email, dir, gitRoot, elabid, experimentTitle, assayId, isStudy, fileCount, targetPath, protocolFilename, teamName, sourceInstance, completedEntries, totalEntries, entryType, specificFileUrl = null) {
       // Create structured commit message following Git best practices
       const timestamp = new Date().toISOString();
       let commitMessage;
 
-      // Check if this is an initial ARC setup or an experiment conversion
-      if (elabid === "N/A" || experimentTitle === "Initial ARC setup") {
+      // Check if this is an initial ARC setup, README update, or experiment conversion
+      if (experimentTitle === "Initial ARC setup") {
         // Simple commit message for ARC initialization
         commitMessage = `chore: Initialize ARC structure
 
 Created investigation file: ${protocolFilename}
+Conversion tool: elab2ARC v${version}
+Date: ${timestamp}`;
+      } else if (elabid === "N/A" && (experimentTitle || '').toLowerCase().includes('readme')) {
+        // README update commit message
+        commitMessage = `docs: ${experimentTitle}
+
+Updated README files for the ARC repository.
 Conversion tool: elab2ARC v${version}
 Date: ${timestamp}`;
       } else {
@@ -1812,7 +2416,9 @@ Date: ${timestamp}`;
           console.log(`[PUSH DIAGNOSTIC] Memory after push: ${usedMB}MB`);
         }
         console.log('[PUSH DIAGNOSTIC] ========== PUSH COMPLETE ==========');
-        updateInfo("PLANTDataHUB has been updated.  <br>", pushProgressEnd);
+        const arcWebUrl = datahubURL.replace(/\.git$/, '');
+        const pushLinkUrl = specificFileUrl || arcWebUrl;
+        updateInfo("PLANTDataHUB has been updated.  <br>", pushProgressEnd, [{ label: '🔗 View ARC', url: pushLinkUrl }]);
         //
       } catch (error) {
         console.error('[PUSH DIAGNOSTIC] ========== PUSH ERROR ==========');
@@ -1838,7 +2444,9 @@ Date: ${timestamp}`;
               corsProxy: getGitProxy(),
               onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
             });
-            updateInfo("PLANTDataHUB has been updated (via proxy).  <br>", pushProgressEnd);
+            const arcWebUrl = datahubURL.replace(/\.git$/, '');
+            const proxyLinkUrl = specificFileUrl || arcWebUrl;
+            updateInfo("PLANTDataHUB has been updated (via proxy).  <br>", pushProgressEnd, [{ label: '🔗 View ARC', url: proxyLinkUrl }]);
             return;
           } catch (proxyError) {
             console.warn('[DataHub Push] Proxy fallback also failed');
@@ -1869,7 +2477,9 @@ Date: ${timestamp}`;
           onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
         });
         console.log(pushResult);
-        updateInfo("PLANTDataHUB has been updated (master branch).  <br>", pushProgressEnd);
+        const arcWebUrl = datahubURL.replace(/\.git$/, '');
+        const masterLinkUrl = specificFileUrl || arcWebUrl;
+        updateInfo("PLANTDataHUB has been updated (master branch).  <br>", pushProgressEnd, [{ label: '🔗 View ARC', url: masterLinkUrl }]);
         //showError( "push to git failed. The error is "+ error)
       }
     }
@@ -2054,6 +2664,27 @@ Date: ${timestamp}`;
 
     // Load saved Together.AI API key and model on page load
     window.addEventListener('DOMContentLoaded', function() {
+      // Force-reset LLM settings on first run (only once per browser)
+      if (!window.localStorage.getItem('llm-refreshed')) {
+        const llmKeys = [
+          'llmApiProvider',
+          'togetherAIModel',
+          'togetherAPIKey',
+          'togetherAIFallbackModels',
+          'lmstudioModel',
+          'ollamaModel',
+          'llmCustomEndpoint',
+          'customLLMPrompt'
+        ];
+        llmKeys.forEach(key => window.localStorage.removeItem(key));
+
+        window.localStorage.setItem('llmApiProvider', 'dataplan');
+        window.localStorage.setItem('togetherAIModel', 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput');
+
+        window.localStorage.setItem('llm-refreshed', 'true');
+        console.log('[LLM Init] Reset LLM settings to Community Server defaults');
+      }
+
       const savedAPIKey = window.localStorage.getItem('togetherAPIKey');
       const apiKeyInput = document.getElementById('togetherAPIKey');
 
@@ -2284,7 +2915,7 @@ Date: ${timestamp}`;
 
     }
 
-    function updateInfo(text, percent) {
+    function updateInfo(text, percent, links) {
       // Update label with percentage
       const percentRounded = Math.round(percent);
       updateLabel(`${text} (${percentRounded}%)`);
@@ -2320,6 +2951,9 @@ Date: ${timestamp}`;
         color = '#17a2b8';
       }
 
+      // Build optional link badges
+      const linksHtml = (links || []).map(l => `<a href="${l.url}" target="_blank" class="badge bg-light text-dark border ms-1" style="text-decoration:none;font-size:0.75em;">${l.label}</a>`).join('');
+
       statusInfo += `<div style="margin-bottom: 8px; padding: 6px; border-left: 3px solid ${color}; background-color: rgba(0,0,0,0.02);">
         <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
           <tr>
@@ -2330,7 +2964,7 @@ Date: ${timestamp}`;
               <span style="color: #6c757d; font-size: 0.85em;">[${timestamp}]</span>
             </td>
             <td style="padding: 0 8px; vertical-align: top; word-wrap: break-word;">
-              ${text}
+              ${text}${linksHtml}
             </td>
             <td style="width: 50px; padding: 0; text-align: right; vertical-align: top; white-space: nowrap;">
               <span style="color: ${color}; font-weight: bold;">${percentRounded}%</span>
@@ -2545,12 +3179,15 @@ Generated by elab2ARC`
         // ========== END INVESTIGATION HANDLING ==========
 
         // All conversions complete - set progress to 100%
-        updateInfo(`✓ All ${totalEntries} entries converted successfully!`, 100);
+        const arcWebUrl = (gitlabURL || '').replace(/\.git$/, '');
+        const finalFileUrl = window._lastConversionFileUrl || arcWebUrl;
+        const successLinks = finalFileUrl ? [{ label: '🔗 View ARC', url: finalFileUrl }] : [];
+        updateInfo(`✓ All ${totalEntries} entries converted successfully!`, 100, successLinks);
         const pbarLabel = document.getElementById("pbarLabel");
         pbarLabel.innerHTML = '<strong style="color: #28a745; font-size: 1.1em;">✓ All conversions complete! You can close this window.</strong>';
 
-        // Enable "View ARC" button
-        setViewArcBtnState(true);
+        // Enable "View ARC" button with specific file URL
+        setViewArcBtnState(true, finalFileUrl);
 
         // Save conversion to history
         const conversionEndTime = Date.now();
@@ -2731,6 +3368,7 @@ Generated by elab2ARC`
       }
 
       // Initialize "View ARC" button - disabled with URL stored
+      window._lastConversionFileUrl = null;
       setViewArcBtnState(false, gitlabURL.replace(/\.git$/, ''));
 
       // Get ARC information from arcInfo element (which may contain the full path)
@@ -2784,6 +3422,261 @@ Generated by elab2ARC`
       window.arcClonedViaFolderSelector = false;
     }
 
+    // =============================================================================
+    // README GENERATOR UI
+    // =============================================================================
+
+    window.generateARCReadmesUI = async function() {
+      try {
+        // Determine gitRoot from arcInfo
+        const arcInfo = document.getElementById("arcInfo").innerHTML;
+        let gitRoot;
+        if (arcInfo && !arcInfo.includes("Please select")) {
+          const pathParts = arcInfo.split('/').filter(p => p);
+          gitRoot = pathParts.length > 0 ? pathParts[0] : '';
+        }
+
+        if (!gitRoot || gitRoot.includes("Please select")) {
+          showWarningToast("Please select or clone an ARC first.");
+          return;
+        }
+
+        // Check if ARC exists in MEMfs
+        if (!fs || !fs.existsSync(`./${gitRoot}`)) {
+          showWarningToast("ARC not found in workspace. Please clone it first.");
+          return;
+        }
+
+        if (!window.Elab2ArcReadmeGen) {
+          showErrorToast("README generator module not loaded. Please refresh the page.");
+          return;
+        }
+
+        // Show status modal for progress
+        const statusModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('statusModal'));
+        statusModal.show();
+        updateInfo('📝 Starting README generation with AI...', 1);
+
+        const summary = await window.Elab2ArcReadmeGen.generateARCReadmes(gitRoot, {
+          stageGit: true,
+          onProgress: (msg) => updateInfo(msg, 50)
+        });
+
+        const studyList = summary.studies.length > 0 ? summary.studies.join(', ') : 'none';
+        const assayList = summary.assays.length > 0 ? summary.assays.join(', ') : 'none';
+        updateInfo(`✓ README generation complete!<br>Root: ${summary.root ? 'Yes' : 'No'} | Studies: ${studyList} | Assays: ${assayList}`, 100);
+
+        showToast(`Generated ${summary.writtenPaths.length} README.md file(s)`, 'success', 5000);
+        refreshTree(gitRoot);
+
+        // Auto-commit and push generated README files
+        if (summary.writtenPaths.length > 0) {
+          updateInfo('⬆️ Committing and pushing README files...', 95);
+          const gitlabURL = document.getElementById('gitlabInfo').innerHTML;
+          const datahubtoken = document.getElementById('datahubToken').value;
+          if (gitlabURL && datahubtoken && gitlabURL !== 'GitLab URL') {
+            await commitPush(
+              datahubtoken,
+              gitlabURL + '.git',
+              window.userId?.name || 'elab2arc',
+              window.userId?.commit_email || '',
+              gitRoot,
+              gitRoot + '/',
+              'N/A',
+              'README Generation',
+              gitRoot,
+              false,
+              summary.writtenPaths.length,
+              '',
+              'README.md',
+              '',
+              '',
+              0,
+              1,
+              null,
+              gitlabURL.replace(/\.git$/, '') + '/-/blob/' + mainOrMaster + '/README.md'
+            );
+            updateInfo('✓ README files committed and pushed!', 100);
+
+            // Update GitLab project description with generated abstract
+            if (summary.abstract) {
+              try {
+                const projectPath = gitlabURL.replace(/^https?:\/\//, '').replace(/\.git$/, '').replace(/^.*?\//, '');
+                await updateGitLabProjectDescription(projectPath, summary.abstract, datahubtoken);
+              } catch (descError) {
+                console.warn('[ReadmeGen] Could not update GitLab description:', descError);
+              }
+            }
+          } else {
+            showWarningToast('READMEs generated but not pushed: GitLab URL or token missing.');
+          }
+        }
+      } catch (error) {
+        console.error('[ReadmeGen UI] Error:', error);
+        showErrorToast('README generation failed: ' + (error.message || error));
+        updateInfo('❌ README generation failed: ' + (error.message || error), 0);
+      }
+    };
+
+    // Helper to resolve gitRoot from arcInfo
+    function resolveGitRootFromArcInfo() {
+      const arcInfo = document.getElementById("arcInfo").innerHTML;
+      let gitRoot;
+      if (arcInfo && !arcInfo.includes("Please select")) {
+        const pathParts = arcInfo.split('/').filter(p => p);
+        gitRoot = pathParts.length > 0 ? pathParts[0] : '';
+      }
+      return gitRoot;
+    }
+
+    window.generateARCReadmesFromModal = async function() {
+      try {
+        const gitRoot = resolveGitRootFromArcInfo();
+        if (!gitRoot || gitRoot.includes("Please select")) {
+          showWarningToast("Please select or clone an ARC first.");
+          return;
+        }
+        if (!fs || !fs.existsSync(`./${gitRoot}`)) {
+          showWarningToast("ARC not found in workspace. Please clone it first.");
+          return;
+        }
+        if (!window.Elab2ArcReadmeGen) {
+          showErrorToast("README generator module not loaded.");
+          return;
+        }
+
+        // Close folder modal, open status modal
+        const folderModal = bootstrap.Modal.getInstance(document.getElementById('folderModal'));
+        if (folderModal) folderModal.hide();
+        const statusModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('statusModal'));
+        statusModal.show();
+
+        statusInfo = "";
+        const detailedInfo = document.getElementById("detailedStatus");
+        if (detailedInfo) detailedInfo.innerHTML = "";
+        updateInfo('📝 Starting README generation with AI...', 1);
+
+        const summary = await window.Elab2ArcReadmeGen.generateARCReadmes(gitRoot, {
+          stageGit: true,
+          onProgress: (msg) => updateInfo(msg, 50)
+        });
+
+        const studyList = summary.studies.length > 0 ? summary.studies.join(', ') : 'none';
+        const assayList = summary.assays.length > 0 ? summary.assays.join(', ') : 'none';
+        updateInfo(`✓ README generation complete!<br>Root: ${summary.root ? 'Yes' : 'No'} | Studies: ${studyList} | Assays: ${assayList}`, 100);
+
+        showToast(`Generated ${summary.writtenPaths.length} README.md file(s)`, 'success', 5000);
+        refreshTree(gitRoot);
+
+        // Auto-commit and push generated README files
+        if (summary.writtenPaths.length > 0) {
+          updateInfo('⬆️ Committing and pushing README files...', 95);
+          const gitlabURL = document.getElementById('gitlabInfo').innerHTML;
+          const datahubtoken = document.getElementById('datahubToken').value;
+          if (gitlabURL && datahubtoken && gitlabURL !== 'GitLab URL') {
+            await commitPush(
+              datahubtoken,
+              gitlabURL + '.git',
+              window.userId?.name || 'elab2arc',
+              window.userId?.commit_email || '',
+              gitRoot,
+              gitRoot + '/',
+              'N/A',
+              'README Generation',
+              gitRoot,
+              false,
+              summary.writtenPaths.length,
+              '',
+              'README.md',
+              '',
+              '',
+              0,
+              1,
+              null,
+              gitlabURL.replace(/\.git$/, '') + '/-/blob/' + mainOrMaster + '/README.md'
+            );
+            updateInfo('✓ README files committed and pushed!', 100);
+
+            // Update GitLab project description with generated abstract
+            if (summary.abstract) {
+              try {
+                const projectPath = gitlabURL.replace(/^https?:\/\//, '').replace(/\.git$/, '').replace(/^.*?\//, '');
+                await updateGitLabProjectDescription(projectPath, summary.abstract, datahubtoken);
+              } catch (descError) {
+                console.warn('[ReadmeGen] Could not update GitLab description:', descError);
+              }
+            }
+          } else {
+            showWarningToast('READMEs generated but not pushed: GitLab URL or token missing.');
+          }
+        }
+      } catch (error) {
+        console.error('[ReadmeGen Modal] Error:', error);
+        showErrorToast('README generation failed: ' + (error.message || error));
+        updateInfo('❌ README generation failed: ' + (error.message || error), 0);
+      }
+    };
+
+    window.commitPushReadmesFromModal = async function() {
+      try {
+        const gitRoot = resolveGitRootFromArcInfo();
+        if (!gitRoot || gitRoot.includes("Please select")) {
+          showWarningToast("Please select or clone an ARC first.");
+          return;
+        }
+        if (!fs || !fs.existsSync(`./${gitRoot}`)) {
+          showWarningToast("ARC not found in workspace. Please clone it first.");
+          return;
+        }
+
+        const gitlabURL = document.getElementById('gitlabInfo').innerHTML;
+        const datahubtoken = document.getElementById('datahubToken').value;
+        if (!gitlabURL || !datahubtoken || gitlabURL === 'GitLab URL') {
+          showWarningToast('Please ensure GitLab URL and token are set before pushing.');
+          return;
+        }
+
+        // Close folder modal, open status modal
+        const folderModal = bootstrap.Modal.getInstance(document.getElementById('folderModal'));
+        if (folderModal) folderModal.hide();
+        const statusModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('statusModal'));
+        statusModal.show();
+
+        statusInfo = "";
+        const detailedInfo = document.getElementById("detailedStatus");
+        if (detailedInfo) detailedInfo.innerHTML = "";
+        updateInfo('⬆️ Committing and pushing README files...', 1);
+
+        await commitPush(
+          datahubtoken,
+          gitlabURL + '.git',
+          window.userId?.name || 'elab2arc',
+          window.userId?.commit_email || '',
+          gitRoot,
+          gitRoot + '/',
+          'N/A',
+          'Update README files',
+          gitRoot,
+          false,
+          0,
+          '',
+          'README.md',
+          '',
+          '',
+          0,
+          1,
+          null,
+          gitlabURL.replace(/\.git$/, '') + '/-/blob/main/README.md'
+        );
+
+        updateInfo('✓ README files committed and pushed!', 100);
+        showToast('README files committed and pushed successfully!', 'success', 5000);
+      } catch (error) {
+        console.error('[ReadmeGen Commit] Error:', error);
+        showErrorToast('Commit failed: ' + (error.message || error));
+        updateInfo('❌ Commit failed: ' + (error.message || error), 0);
+      }
+    };
 
     /**
      * Show a simple conversion notification
@@ -2975,6 +3868,9 @@ Generated by elab2ARC`
         document.getElementById("elabURLInput1").value = instance;
       } else {
         instance = localStorage.getItem("instance");
+        if (!instance || instance === 'null' || instance === 'undefined') {
+          instance = 'https://elab.dataplan.top/api/v2/';
+        }
         document.getElementById("elabURLInput1").value = instance;
       }
 
@@ -3679,36 +4575,67 @@ ${res.uploads && res.uploads.length > 0 ?
         // Check if LLM datamap is enabled
         if (datamapSwitch && datamapSwitch.checked) {
           console.log('[ISA Gen] LLM datamap enabled, extracting protocols from markdown...');
-          updateInfo(`🤖 Analyzing protocol with AI for: <b>${assayId}</b>`, baseProgress + 0.3);
 
-          // Clear previous LLM stream content
-          if (window.Elab2ArcLLM && window.Elab2ArcLLM.clearLLMStream) {
-            window.Elab2ArcLLM.clearLLMStream();
+          // Check for cached pre-conversion LLM data
+          const cacheKey = elabid;
+          const cached = window._previewLLMCache && window._previewLLMCache[cacheKey];
+          if (cached && cached.llmData) {
+            console.log('[ISA Gen] Using cached pre-conversion LLM data for experiment', cacheKey);
+            llmData = JSON.parse(JSON.stringify(cached.llmData));
+            updateInfo(`♻️ Reusing cached LLM analysis for: <b>${assayId}</b>`, baseProgress + 0.3);
+          } else {
+            updateInfo(`🤖 Analyzing protocol with AI for: <b>${assayId}</b>`, baseProgress + 0.3);
+
+            // Clear previous LLM stream content
+            if (window.Elab2ArcLLM && window.Elab2ArcLLM.clearLLMStream) {
+              window.Elab2ArcLLM.clearLLMStream();
+            }
+
+            // Expand LLM Response Stream accordion during analysis
+            const llmStreamEl = document.getElementById('llmStreamInfo');
+            if (llmStreamEl) {
+              const bsCollapse = bootstrap.Collapse.getOrCreateInstance(llmStreamEl);
+              bsCollapse.show();
+            }
+            // Collapse the main status accordion to focus on LLM stream
+            const submitStatusEl = document.getElementById('submitStatus');
+            if (submitStatusEl) {
+              const bsCollapseStatus = bootstrap.Collapse.getOrCreateInstance(submitStatusEl);
+              bsCollapseStatus.hide();
+            }
+
+            // Pass protocol metadata to LLM for better context
+            const protocolMetadata = {
+              protocolFilename: protocolFilename,
+              protocolPath: `${baseAssayPath.replace(gitRoot + '/', '')}/protocols/${protocolFilename}`,
+              assayId: assayId
+            };
+
+            llmData = await window.Elab2ArcLLM.callTogetherAI(markdown, false, protocolMetadata);  // Now returns multi-protocol structure
+
+            // After LLM finishes, collapse stream and re-expand status
+            if (llmStreamEl) {
+              const bsCollapse = bootstrap.Collapse.getOrCreateInstance(llmStreamEl);
+              bsCollapse.hide();
+            }
+            if (submitStatusEl) {
+              const bsCollapseStatus = bootstrap.Collapse.getOrCreateInstance(submitStatusEl);
+              bsCollapseStatus.show();
+            }
           }
 
-          // Pass protocol metadata to LLM for better context
-          const protocolMetadata = {
-            protocolFilename: protocolFilename,
-            protocolPath: `${baseAssayPath.replace(gitRoot + '/', '')}/protocols/${protocolFilename}`,
-            assayId: assayId
-          };
-
-          llmData = await window.Elab2ArcLLM.callTogetherAI(markdown, false, protocolMetadata);  // Now returns multi-protocol structure
-
           if (llmData) {
-            // Validate structure (backward compatibility with old format)
-            if (!llmData.protocols && llmData.inputs) {
-              // Old format - wrap in protocols array
-              console.log('[ISA Gen] Converting old LLM format to multi-protocol structure');
-              llmData = {
-                protocols: [{
-                  name: "Main Protocol",
-                  description: "",
-                  inputs: llmData.inputs || [],
-                  parameters: llmData.parameters || [],
-                  outputs: llmData.outputs || []
-                }]
-              };
+            // Normalize old format, cache, render graph, and capture PNG (unified)
+            llmData = normalizeAndCacheLLMData(llmData, elabid, assayId, res.title);
+
+            // Check if PNG was already captured during pre-conversion
+            const hasCachedPng = window._previewLLMCache[elabid] && window._previewLLMCache[elabid].pngDataUrl;
+            if (!hasCachedPng) {
+              // Render hidden graph and await PNG capture
+              updateInfo(`📸 Capturing protocol graph for: <b>${assayId}</b>`, baseProgress + 0.45);
+              await renderLLMGraphAndCapturePNG(llmData, elabid, 'llmGraphCaptureContainer', false);
+            } else {
+              console.log('[ISA Gen] Using pre-captured graph PNG from cache for', elabid);
             }
 
             console.log(`[ISA Gen] Extracted ${llmData.protocols?.length || 0} protocol(s) from LLM`);
@@ -3745,6 +4672,45 @@ ${res.uploads && res.uploads.length > 0 ?
                 console.error(`[ISA Gen] Error adding ${jsonFilename} to git:`, gitError);
                 console.error('[ISA Gen] File path:', elab2arcJsonPath);
                 console.error('[ISA Gen] Relative path:', elab2arcJsonPath.replace(gitRoot + '/', ''));
+              }
+
+              // Save graph PNG from cache (now always available after render+capture)
+              const cacheEntry = window._previewLLMCache && window._previewLLMCache[elabid];
+              if (cacheEntry && cacheEntry.pngDataUrl) {
+                try {
+                  const pngFilename = protocolFilename.replace('.md', '.png');
+                  const pngPath = memfsPathJoin(dataFolderPath, pngFilename);
+                  // Convert data URL to Uint8Array (browser-compatible)
+                  const base64Data = cacheEntry.pngDataUrl.replace(/^data:image\/png;base64,/, '');
+                  const binaryString = atob(base64Data);
+                  const pngBytes = new Uint8Array(binaryString.length);
+                  for (let i = 0; i < binaryString.length; i++) {
+                    pngBytes[i] = binaryString.charCodeAt(i);
+                  }
+                  await fs.promises.writeFile(pngPath, pngBytes);
+                  console.log(`[ISA Gen] Saved LLM graph PNG to: ${dataFolderName}/${pngFilename}`);
+
+                  const relativePngPath = pngPath.replace(gitRoot + '/', '');
+                  await git.add({ fs, dir: gitRoot, filepath: relativePngPath });
+                  console.log(`[ISA Gen] Added ${pngFilename} to git`);
+                } catch (pngError) {
+                  console.warn('[ISA Gen] Error saving LLM graph PNG:', pngError);
+                }
+              }
+
+              // Save interactive HTML graph for browser exploration
+              try {
+                const htmlFilename = protocolFilename.replace('.md', '.graph.html');
+                const htmlPath = memfsPathJoin(dataFolderPath, htmlFilename);
+                const htmlContent = generateLLMGraphHTML(llmData, res.title || assayId);
+                await fs.promises.writeFile(htmlPath, htmlContent);
+                console.log(`[ISA Gen] Saved interactive graph HTML to: ${dataFolderName}/${htmlFilename}`);
+
+                const relativeHtmlPath = htmlPath.replace(gitRoot + '/', '');
+                await git.add({ fs, dir: gitRoot, filepath: relativeHtmlPath });
+                console.log(`[ISA Gen] Added ${htmlFilename} to git`);
+              } catch (htmlError) {
+                console.warn('[ISA Gen] Error saving interactive graph HTML:', htmlError);
               }
             } catch (jsonError) {
               console.error(`[ISA Gen] Error saving ${jsonFilename}:`, jsonError);
@@ -3988,7 +4954,17 @@ ${res.uploads && res.uploads.length > 0 ?
       }
       // ========== END METADATA TRACKING ==========
 
-      finalizeExperimentDisplay(baseProgress, totalEntries);
+      // Build specific file URL for this entry's protocol file
+      const relativeAssayPath = baseAssayPath.replace(gitRoot, "").replace(/^\//, "");
+      const protocolFileNameForUrl = (datamapSwitch && datamapSwitch.checked && llmData)
+        ? protocolFilename.replace('.md', '.json')
+        : protocolFilename;
+      const specificFileUrl = `${gitName}/-/blob/${mainOrMaster}/${relativeAssayPath}/protocols/${protocolFileNameForUrl}`;
+
+      // Store for top-right View ARC button
+      window._lastConversionFileUrl = specificFileUrl;
+
+      finalizeExperimentDisplay(baseProgress, totalEntries, specificFileUrl);
       await commitPush(
         params.datahubtoken,
         datahubURL,
@@ -4007,7 +4983,8 @@ ${res.uploads && res.uploads.length > 0 ?
         params.instance.replace('api/v2/', ''),
         completedEntries,
         totalEntries,
-        entryType
+        entryType,
+        specificFileUrl
       );
     }
 
@@ -4159,9 +5136,10 @@ ${res.uploads && res.uploads.length > 0 ?
 
 
     // Finalize experiment display
-    function finalizeExperimentDisplay(baseProgress, totalEntries) {
+    function finalizeExperimentDisplay(baseProgress, totalEntries, specificFileUrl = null) {
       const progressStep3 = baseProgress + (1 / totalEntries) * 90 * 0.7;
-      updateInfo("Finished adding protocol files in ARC", progressStep3);
+      const fileLinks = specificFileUrl ? [{ label: '🔗 View ARC', url: specificFileUrl }] : [];
+      updateInfo("Finished adding protocol files in ARC", progressStep3, fileLinks);
       const progressStep4 = baseProgress + (1 / totalEntries) * 90 * 0.85;
       updateInfo("All files have been added to ARC, starting to push to DataHub", progressStep4);
       //document.getElementById("filesAcc").click();
@@ -4464,8 +5442,14 @@ ${res.uploads && res.uploads.length > 0 ?
 
       // Sync button text with the instance value set by softRoute (from URL param or localStorage fallback)
       const instanceBtn = document.getElementById("elabURLInput1");
-      if (instanceBtn && instanceBtn.value) {
-        instanceBtn.innerHTML = "instance: " + instanceBtn.value;
+      if (instanceBtn) {
+        let instance = instanceBtn.value || window.localStorage.getItem("instance");
+        if (!instance || instance === 'null' || instance === 'undefined') {
+          // Default to DataPLANT if nothing is stored
+          setelabURL('https://elab.dataplan.top/api/v2/');
+        } else {
+          instanceBtn.innerHTML = 'instance: ' + instance;
+        }
       }
 
       // Load saved DataHub settings

@@ -211,7 +211,7 @@ video {
           <br>
           <button class="btn btn-primary dropdown-toggle" id="elabURLInput1" type="button" data-bs-toggle="dropdown"
             aria-expanded="false">
-            eLabFTW Instance: HHU
+            eLabFTW Instance: loading…
           </button>
           <ul class="dropdown-menu">
             <li><button class="dropdown-item" onclick="setelabURL('https://elab.dataplan.top/api/v2/')"
@@ -344,6 +344,7 @@ video {
           </label>
           <select class="form-select" id="llmApiProvider" onchange="saveApiProvider()">
             <option value="dataplan" selected>Community Server</option>
+            <option value="dataplan-gemma">Community Server gemma</option>
             <option value="lmstudio">LM Studio (Local)</option>
             <option value="together">Together.AI (Requires API Key)</option>
             <option value="ollama">Ollama (Local)</option>
@@ -686,8 +687,13 @@ video {
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-info" id="generateReadmesModalBtn" onclick="window.generateARCReadmesFromModal()">
+              📝 Generate READMEs
+            </button>
+            <button type="button" class="btn btn-warning" id="commitPushReadmesModalBtn" onclick="window.commitPushReadmesFromModal()">
+              ⬆️ Commit & Push READMEs
+            </button>
             <button type="button" class="btn btn-primary" id="select-button">Select Folder</button>
-
           </div>
         </div>
       </div>
@@ -816,6 +822,9 @@ video {
             <!-- Sidebar -->
             <div class="col-md-3 sidebar">
               <button class="btn btn-success my-3" data-bs-dismiss="offcanvas" aria-label="Close">Save </button>
+              <button class="btn btn-primary my-2 w-100" id="preConvertLLMBtn" onclick="runPreviewLLM()">
+                🔮 Pre-conversion with LLM
+              </button>
 
               <!-- Conversion Section -->
               <section class="section conversion rounded p-3 mb-4">
@@ -1201,18 +1210,57 @@ video {
 
   <!-- Load modular components before core -->
   <script src="./js/modules/conversion-metadata.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/isa-generation-20260422-1145.js" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/isa-generation-20260422-1145.js?v=20260429" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/llm-service.js?v=20260304120113" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260304120114" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/git-lfs-service.js?v=20260304120115" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/readme-generator.js?v=20260429b" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core0409b.js?v=20260428b" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core0409b.js?v=20260429b" type="text/javascript" charset="utf-8"></script>
+
+  <!-- vis-network for LLM process graph visualization -->
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+  <!-- LLM Process Graph Modal -->
+  <div class="modal fade" id="llmGraphModal" tabindex="-1" aria-labelledby="llmGraphModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="llmGraphModalLabel">🔮 LLM Pre-conversion Process Graph</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="llmGraphLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Running LLM extraction and building process graph...</p>
+          </div>
+          <div id="llmGraphStream" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap; display: none; margin-bottom: 1rem;"></div>
+          <div id="llmGraphError" class="alert alert-danger d-none" role="alert"></div>
+          <div id="llmGraphContainer" style="height: 70vh; border: 1px solid #dee2e6; border-radius: 4px; display: none;"></div>
+          <div id="llmGraphLegend" class="mt-3 d-none">
+            <span class="badge rounded-pill bg-success me-2">● Sample</span>
+            <span class="badge rounded-pill bg-primary me-2">■ Protocol</span>
+            <span class="badge rounded-pill bg-warning text-dark me-2">◆ Output</span>
+            <small class="text-muted">Drag nodes to rearrange. Scroll to zoom. Hover for details.</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Notification Container -->
   <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999;">
     <!-- Toasts will be dynamically added here -->
   </div>
+
+  <!-- Hidden container for graph capture during conversion (must be outside any modal) -->
+  <div id="llmGraphCaptureContainer" style="position: fixed; top: 0; left: 0; width: 1800px; height: 1400px; opacity: 0; pointer-events: none; z-index: -1;"></div>
 
 </body>
 
