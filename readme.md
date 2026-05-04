@@ -49,6 +49,8 @@ Modern microbiological and life sciences research generates vast amounts of both
 
 ## 📦 How to Use
 
+Quick Start
+
 1. **Open the Tool**: Go to [nfdi4plants.org/elab2arc/](https://nfdi4plants.org/elab2arc/)
 2. **Login**:
    - Enter your **eLabFTW API token**
