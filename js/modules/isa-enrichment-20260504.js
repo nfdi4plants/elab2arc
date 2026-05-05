@@ -24,6 +24,12 @@
 //   Fix #18 - Missing executesProtocol when no protocols exist
 //   Fix #19 - Missing unitCategories in assays
 //   Fix #20 - Missing filename in assays
+//   Fix #21 - Missing protocols/executesProtocol for elab2arc assays
+//   Fix #22 - Remove unused materials (medium, robust with try/catch)
+//   Fix #23 - Remove unused protocol parameters
+//   Fix #24 - Remove unused protocols (including _default)
+//   Fix #25 - Remove unused characteristic categories and units
+//   Fix #26 - Remove unused ontology sources
 //
 // Exports: window.Elab2ArcEnrich
 // =============================================================================
@@ -524,6 +530,77 @@
           assay.filename = assayName ? 'assays/' + assayName + '/isa.assay.xlsx' : 'assays/unknown/isa.assay.xlsx';
         }
 
+        // Fix #21 — elab2arc assays represent individual protocols.
+        // Extract protocol from assay comments and ensure it exists in study.protocols.
+        var elab2arcProtocolId = null;
+        var elab2arcProtocolName = null;
+        (assay.comments || []).forEach(function(comment) {
+          if (comment && comment.name === 'protocol_files' && comment.value) {
+            elab2arcProtocolName = comment.value;
+            elab2arcProtocolId = '#Protocol_protocols/' + comment.value;
+          }
+        });
+        // Fallback: try protocol_name comment if protocol_files not found
+        if (!elab2arcProtocolId) {
+          (assay.comments || []).forEach(function(comment) {
+            if (comment && comment.name === 'protocol_name' && comment.value) {
+              var pfn = comment.value;
+              // protocol_name might not have .md extension
+              if (!pfn.endsWith('.md')) pfn += '.md';
+              elab2arcProtocolName = pfn;
+              elab2arcProtocolId = '#Protocol_protocols/' + pfn;
+            }
+          });
+        }
+
+        if (elab2arcProtocolId) {
+          // Check if protocol already exists in study
+          var existingProto = null;
+          for (var pi = 0; pi < (study.protocols || []).length; pi++) {
+            if (study.protocols[pi]['@id'] === elab2arcProtocolId) {
+              existingProto = study.protocols[pi];
+              break;
+            }
+          }
+          if (!existingProto) {
+            var displayName = elab2arcProtocolName.replace(/_/g, ' ');
+            var newProto = {
+              '@id': elab2arcProtocolId,
+              'name': displayName,
+              'protocolType': inferProtocolType(displayName),
+              'parameters': []
+            };
+            study.protocols.push(newProto);
+            existingProto = newProto;
+          }
+
+          // Copy parameters used by this assay's processes into the elab2arc protocol
+          var assayParamIds = {};
+          var assayParamDefs = {};
+          (assay.processSequence || []).forEach(function(proc) {
+            (proc.parameterValues || []).forEach(function(pv) {
+              var ref = pv.category || pv.parameter;
+              if (ref && ref['@id']) assayParamIds[ref['@id']] = true;
+            });
+          });
+          // Find parameter definitions across all study protocols
+          (study.protocols || []).forEach(function(proto) {
+            (proto.parameters || []).forEach(function(param) {
+              if (param && param['@id'] && assayParamIds[param['@id']] && !assayParamDefs[param['@id']]) {
+                assayParamDefs[param['@id']] = JSON.parse(JSON.stringify(param));
+              }
+            });
+          });
+          // Add missing parameters to elab2arc protocol
+          var elabProtoParams = {};
+          (existingProto.parameters || []).forEach(function(p) { if (p && p['@id']) elabProtoParams[p['@id']] = true; });
+          Object.keys(assayParamDefs).forEach(function(pid) {
+            if (!elabProtoParams[pid]) {
+              existingProto.parameters.push(assayParamDefs[pid]);
+            }
+          });
+        }
+
         // Assay protocol enrichment — use study-level protocols since assay schema doesn't allow 'protocols'
         var assayProtocols = study.protocols || [];
         assayProtocols.forEach(function(protocol) {
@@ -576,22 +653,28 @@
             return true;
           });
 
-          // Add executesProtocol if missing — match against study protocols, fall back to first
-          if (!proc.executesProtocol && assayProtocols.length > 0) {
-            var procNameLower = (proc.name || '').toLowerCase();
-            var matched = false;
-            for (var k = 0; k < assayProtocols.length; k++) {
-              var prot = assayProtocols[k];
-              var protNameLower = (prot.name || '').toLowerCase();
-              if (procNameLower && protNameLower &&
-                  (procNameLower.includes(protNameLower) || protNameLower.includes(procNameLower))) {
-                proc.executesProtocol = { '@id': prot['@id'] };
-                matched = true;
-                break;
+          // Add executesProtocol if missing or _default
+          if (!proc.executesProtocol || proc.executesProtocol['@id'] === '#Protocol/_default') {
+            if (elab2arcProtocolId) {
+              // Fix #21 — elab2arc assays represent one protocol; all processes use it
+              proc.executesProtocol = { '@id': elab2arcProtocolId };
+            } else if (assayProtocols.length > 0) {
+              // Generic fallback: match process name against protocol names
+              var procNameLower = (proc.name || '').toLowerCase();
+              var matched = false;
+              for (var k = 0; k < assayProtocols.length; k++) {
+                var prot = assayProtocols[k];
+                var protNameLower = (prot.name || '').toLowerCase();
+                if (procNameLower && protNameLower &&
+                    (procNameLower.includes(protNameLower) || protNameLower.includes(procNameLower))) {
+                  proc.executesProtocol = { '@id': prot['@id'] };
+                  matched = true;
+                  break;
+                }
               }
-            }
-            if (!matched) {
-              proc.executesProtocol = { '@id': assayProtocols[0]['@id'] };
+              if (!matched) {
+                proc.executesProtocol = { '@id': assayProtocols[0]['@id'] };
+              }
             }
           }
         });
@@ -800,7 +883,179 @@
         var units = Object.keys(unitMap).map(function(k) { return unitMap[k]; });
         if (units.length > 0) study.unitCategories = units;
       }
+
+      // =====================================================================
+      // CLEANUP: Remove unused declarations to reduce ISA-API warnings
+      // =====================================================================
+
+      // Collect all material IDs actually used in process inputs/outputs
+      var usedMaterialIds = {};
+      function collectUsedMaterials(processSeq) {
+        (processSeq || []).forEach(function(proc) {
+          (proc.inputs || []).forEach(function(i) { if (i && i['@id']) usedMaterialIds[i['@id']] = true; });
+          (proc.outputs || []).forEach(function(o) { if (o && o['@id']) usedMaterialIds[o['@id']] = true; });
+        });
+      }
+      collectUsedMaterials(study.processSequence);
+      (study.assays || []).forEach(function(assay) {
+        collectUsedMaterials(assay.processSequence);
+      });
+
+      // Fix #22 — Remove unused materials (medium, wrapped for safety)
+      try {
+        function filterUnusedMaterials(materials) {
+          if (!materials) return;
+          materials.sources = (materials.sources || []).filter(function(s) { return s && usedMaterialIds[s['@id']]; });
+          materials.samples = (materials.samples || []).filter(function(s) { return s && usedMaterialIds[s['@id']]; });
+          materials.otherMaterials = (materials.otherMaterials || []).filter(function(m) { return m && usedMaterialIds[m['@id']]; });
+        }
+        filterUnusedMaterials(study.materials);
+        (study.assays || []).forEach(function(assay) {
+          filterUnusedMaterials(assay.materials);
+        });
+      } catch (e) {
+        console.warn('[Elab2ArcEnrich] Material cleanup failed, skipping:', e.message);
+      }
+
+      // Collect all parameter IDs actually used in process parameterValues
+      var usedParamIds = {};
+      function collectUsedParams(processSeq) {
+        (processSeq || []).forEach(function(proc) {
+          (proc.parameterValues || []).forEach(function(pv) {
+            var ref = pv.category || pv.parameter;
+            if (ref && ref['@id']) usedParamIds[ref['@id']] = true;
+          });
+        });
+      }
+      collectUsedParams(study.processSequence);
+      (study.assays || []).forEach(function(assay) {
+        collectUsedParams(assay.processSequence);
+      });
+
+      // Fix #23 — Remove unused parameters from protocols (easy)
+      (study.protocols || []).forEach(function(protocol) {
+        if (protocol.parameters) {
+          protocol.parameters = protocol.parameters.filter(function(param) {
+            return param && usedParamIds[param['@id']];
+          });
+        }
+      });
+
+      // Collect all protocol IDs actually executed by processes
+      var usedProtocolIds = {};
+      function collectUsedProtocols(processSeq) {
+        (processSeq || []).forEach(function(proc) {
+          if (proc.executesProtocol && proc.executesProtocol['@id']) {
+            usedProtocolIds[proc.executesProtocol['@id']] = true;
+          }
+        });
+      }
+      collectUsedProtocols(study.processSequence);
+      (study.assays || []).forEach(function(assay) {
+        collectUsedProtocols(assay.processSequence);
+      });
+
+      // Fix #24 — Remove unused protocols including _default (easy)
+      study.protocols = (study.protocols || []).filter(function(p) {
+        return p && usedProtocolIds[p['@id']];
+      });
+
+      // Collect all characteristic category IDs actually used
+      var usedCharCatIds = {};
+      function collectUsedCharCats(materials) {
+        if (!materials) return;
+        (materials.sources || []).forEach(function(s) {
+          (s.characteristics || []).forEach(function(c) {
+            if (c && c.characteristicType && c.characteristicType['@id']) usedCharCatIds[c.characteristicType['@id']] = true;
+          });
+        });
+        (materials.samples || []).forEach(function(s) {
+          (s.characteristics || []).forEach(function(c) {
+            if (c && c.characteristicType && c.characteristicType['@id']) usedCharCatIds[c.characteristicType['@id']] = true;
+          });
+        });
+      }
+      collectUsedCharCats(study.materials);
+      (study.assays || []).forEach(function(assay) {
+        collectUsedCharCats(assay.materials);
+      });
+
+      // Collect all unit IDs actually used
+      var usedUnitIds = {};
+      function collectUsedUnits(materials) {
+        if (!materials) return;
+        (materials.sources || []).forEach(function(s) {
+          (s.characteristics || []).forEach(function(c) {
+            if (c && c.unit && c.unit['@id']) usedUnitIds[c.unit['@id']] = true;
+          });
+        });
+        (materials.samples || []).forEach(function(s) {
+          (s.characteristics || []).forEach(function(c) {
+            if (c && c.unit && c.unit['@id']) usedUnitIds[c.unit['@id']] = true;
+          });
+        });
+      }
+      collectUsedUnits(study.materials);
+      (study.assays || []).forEach(function(assay) {
+        collectUsedUnits(assay.materials);
+      });
+      collectUsedParams(study.processSequence);
+      (study.assays || []).forEach(function(assay) {
+        collectUsedParams(assay.processSequence);
+      });
+
+      // Fix #25 — Remove unused characteristic categories and units (easy)
+      study.characteristicCategories = (study.characteristicCategories || []).filter(function(cat) {
+        return cat && usedCharCatIds[cat['@id']];
+      });
+      (study.assays || []).forEach(function(assay) {
+        assay.characteristicCategories = (assay.characteristicCategories || []).filter(function(cat) {
+          return cat && usedCharCatIds[cat['@id']];
+        });
+      });
+      study.unitCategories = (study.unitCategories || []).filter(function(u) {
+        return u && usedUnitIds[u['@id']];
+      });
+      (study.assays || []).forEach(function(assay) {
+        assay.unitCategories = (assay.unitCategories || []).filter(function(u) {
+          return u && usedUnitIds[u['@id']];
+        });
+      });
     });
+
+    // Fix #26 — Remove unused ontology sources (easy)
+    var usedOntSources = {};
+    function collectOntSources(obj) {
+      if (!obj || typeof obj !== 'object') return;
+      if (obj.termSource) usedOntSources[obj.termSource] = true;
+      if (Array.isArray(obj)) {
+        obj.forEach(collectOntSources);
+      } else {
+        Object.keys(obj).forEach(function(key) {
+          collectOntSources(obj[key]);
+        });
+      }
+    }
+    (data.studies || []).forEach(function(study) {
+      (study.protocols || []).forEach(function(p) { collectOntSources(p.protocolType); collectOntSources(p.parameters); });
+      (study.factors || []).forEach(function(f) { collectOntSources(f.factorType); });
+      (study.assays || []).forEach(function(assay) {
+        collectOntSources(assay.measurementType);
+        collectOntSources(assay.technologyType);
+        collectOntSources(assay.characteristicCategories);
+        collectOntSources(assay.unitCategories);
+      });
+      collectOntSources(study.characteristicCategories);
+      collectOntSources(study.unitCategories);
+      (study.materials || {}).sources.forEach(function(s) { collectOntSources(s.characteristics); });
+      (study.materials || {}).samples.forEach(function(s) { collectOntSources(s.characteristics); collectOntSources(s.factorValues); });
+    });
+    (data.people || []).forEach(function(p) { collectOntSources(p.roles); });
+    if (Array.isArray(data.ontologySourceReferences)) {
+      data.ontologySourceReferences = data.ontologySourceReferences.filter(function(ref) {
+        return ref && usedOntSources[ref.name];
+      });
+    }
 
     return data;
   }
