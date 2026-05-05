@@ -56,9 +56,6 @@
       if (!stat.isFile()) return null;
 
       let content = fs.readFileSync(filePath, 'utf8');
-      if (content.length > MAX_FILE_CONTENT) {
-        content = content.slice(0, MAX_FILE_CONTENT) + '\n\n[...truncated...]';
-      }
       return content;
     } catch (e) {
       console.warn('[ReadmeGen] Could not read file:', filePath, e.message);
@@ -179,7 +176,7 @@
 
     // Also recursively collect ALL images under root (including subdirectories like images/)
     // Exclude studies/ and assays/ since those are documented in their own sections
-    const rootAllImages = collectImagesRecursive(gitRoot, gitRoot, ['studies', 'assays', '.git']);
+    const rootAllImages = collectImagesRecursive(gitRoot, gitRoot, ['.git']);
     data.root.allImages = rootAllImages;
 
     // Studies
@@ -336,7 +333,6 @@ Return ONLY a valid JSON object (no markdown code fences, no explanation) with t
 - Protocols section with file links: [protocol.md](./protocols/protocol.md)
 - Resources section listing all files with links
 - Images displayed inline using markdown: ![alt text](./resources/image.png)
-- Navigation link: [Back to Project Root](../README.md)
 
 ### Assay README.md should include:
 - Assay title (use folder name if no other title found)
@@ -345,7 +341,6 @@ Return ONLY a valid JSON object (no markdown code fences, no explanation) with t
 - Protocols section with file links
 - Dataset section listing all files with links
 - Images displayed inline using markdown: ![alt text](./dataset/image.png)
-- Navigation link: [Back to Project Root](../README.md)
 
 ### Image linking rules:
 - Use the EXACT relative paths provided above (e.g., ./resources/subfolder/image.png)
@@ -460,22 +455,43 @@ Return ONLY a valid JSON object (no markdown code fences, no explanation):
   // ROOT README BUILDER
   // ===========================================================================
 
-  function extractFirstParagraph(markdown) {
-    const lines = markdown.split('\n').filter(l => l.trim() !== '');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('#')) continue;
-      if (trimmed.startsWith('![')) continue;
-      if (trimmed.startsWith('[') && trimmed.includes('](')) continue;
-      if (trimmed.startsWith('-') || trimmed.startsWith('*')) continue;
-      return trimmed;
-    }
-    return '';
-  }
-
   function extractTitle(markdown) {
     const match = markdown.match(/^#\s+(.+)$/m);
     return match ? match[1].trim() : '';
+  }
+
+  /**
+   * Extract bullet points and numbered steps from markdown content.
+   * Returns an array of step strings (without leading bullet/number).
+   */
+  function extractSteps(markdown) {
+    if (!markdown) return [];
+    const steps = [];
+    const lines = markdown.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Match bullet points: "- text" or "* text"
+      const bulletMatch = trimmed.match(/^[-*]\s+(.+)$/);
+      if (bulletMatch) {
+        steps.push(bulletMatch[1]);
+        continue;
+      }
+      // Match numbered steps: "1. text" or "1) text"
+      const numMatch = trimmed.match(/^\d+[.)]\s+(.+)$/);
+      if (numMatch) {
+        steps.push(numMatch[1]);
+      }
+    }
+    return steps;
+  }
+
+  /**
+   * Find images belonging to a specific study or assay by path prefix.
+   */
+  function findImagesForEntry(allImages, entryType, entryName) {
+    if (!allImages) return [];
+    const prefix = `${entryType}/${entryName}/`;
+    return allImages.filter(img => img.relPath.startsWith(prefix));
   }
 
   function buildRootReadmeMarkdown(arcName, abstract, dataOverview, childReadmes, allImages) {
@@ -495,12 +511,23 @@ Return ONLY a valid JSON object (no markdown code fences, no explanation):
       for (const name of studyNames) {
         const content = childReadmes.studies[name];
         const title = extractTitle(content) || name;
-        const desc = extractFirstParagraph(content);
-        md += `- **[${title}](./studies/${name}/README.md)**`;
-        if (desc) md += ` — ${desc}`;
-        md += `\n`;
+        md += `#### [${title}](./studies/${name}/README.md)\n\n`;
+
+        // Bullet point summary of steps
+        const steps = extractSteps(content);
+        if (steps.length > 0) {
+          for (const step of steps) {
+            md += `- ${step}\n`;
+          }
+          md += `\n`;
+        }
+
+        // Flowchart / images directly under this study
+        const entryImages = findImagesForEntry(allImages, 'studies', name);
+        for (const img of entryImages) {
+          md += `![${img.name}](./${img.relPath})\n\n`;
+        }
       }
-      md += `\n`;
     }
 
     if (assayNames.length > 0) {
@@ -508,24 +535,27 @@ Return ONLY a valid JSON object (no markdown code fences, no explanation):
       for (const name of assayNames) {
         const content = childReadmes.assays[name];
         const title = extractTitle(content) || name;
-        const desc = extractFirstParagraph(content);
-        md += `- **[${title}](./assays/${name}/README.md)**`;
-        if (desc) md += ` — ${desc}`;
-        md += `\n`;
+        md += `#### [${title}](./assays/${name}/README.md)\n\n`;
+
+        // Bullet point summary of steps
+        const steps = extractSteps(content);
+        if (steps.length > 0) {
+          for (const step of steps) {
+            md += `- ${step}\n`;
+          }
+          md += `\n`;
+        }
+
+        // Flowchart / images directly under this assay
+        const entryImages = findImagesForEntry(allImages, 'assays', name);
+        for (const img of entryImages) {
+          md += `![${img.name}](./${img.relPath})\n\n`;
+        }
       }
-      md += `\n`;
     }
 
     if (dataOverview) {
       md += `## Data Overview\n\n${dataOverview}\n\n`;
-    }
-
-    // Images section
-    if (allImages && allImages.length > 0) {
-      md += `## Figures & Images\n\n`;
-      for (const img of allImages) {
-        md += `![${img.name}](./${img.relPath})\n\n`;
-      }
     }
 
     md += `## License\n\nThis project is licensed under CC BY 4.0 unless otherwise specified.\n\n`;

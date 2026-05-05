@@ -908,7 +908,9 @@ Return ONLY valid JSON, no additional text.`;
           // Build request body with provider-specific parameters
           const requestBody = {
             model: model,
-            max_tokens: options.maxTokens || 8192,
+            max_tokens: (provider === 'dataplan' || provider === 'dataplan-gemma')
+              ? Math.max(options.maxTokens || 8192, 16000)
+              : (options.maxTokens || 8192),
             temperature: options.temperature !== undefined ? options.temperature : 0.1,
             stream: true, // Enable streaming mode
             messages: [{
@@ -917,11 +919,11 @@ Return ONLY valid JSON, no additional text.`;
             }]
           };
 
-          // Disable thinking/reasoning mode for local providers (LM Studio, Ollama)
+          // Disable thinking/reasoning mode for providers that support it
           // This prevents the model from generating analysis text before the JSON response
-          if (provider === 'lmstudio' || provider === 'ollama') {
+          if (provider === 'lmstudio' || provider === 'ollama' || provider === 'dataplan' || provider === 'dataplan-gemma') {
             requestBody.enable_thinking = false;
-            console.log('[Datamap LLM] Disabled thinking mode for local provider');
+            console.log('[Datamap LLM] Disabled thinking mode for provider:', provider);
           }
 
           console.log('[Datamap LLM] Request body keys:', Object.keys(requestBody).join(', '));

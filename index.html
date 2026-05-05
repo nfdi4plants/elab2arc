@@ -501,10 +501,6 @@ video {
                 data-bs-target="#statusModal">
                 <span class="lead"> Check Status</span>
               </button>
-              <button type="button" class="btn btn-success btn-sm" id="exportIsaJsonBtn" onclick="handleExportIsaJson()">
-                <span class="lead"> Export ISA-JSON</span>
-              </button>
-
 
               <div class="form-check form-switch d-inline-block">
                 <input class="form-check-input" type="checkbox" id="enableDatamapSwitch" onchange="toggleTogetherAPIKeyField()">
@@ -607,6 +603,10 @@ video {
         <div class="modal-content">
           <div class="modal-header">
             <h1 class="modal-title fs-5" id="folderModalLabel">Select the folder for conversion</h1>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto me-2"
+                    id="recloneArcBtn" onclick="recloneCurrentARC()" title="Force re-clone the selected ARC from GitLab">
+              🔄 Re-clone
+            </button>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
@@ -687,13 +687,16 @@ video {
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-success" id="exportIsaJsonBtn" onclick="handleExportIsaJson()">
+              📤 Export ISA-JSON
+            </button>
             <button type="button" class="btn btn-info" id="generateReadmesModalBtn" onclick="window.generateARCReadmesFromModal()">
               📝 Generate READMEs
             </button>
             <button type="button" class="btn btn-warning" id="commitPushReadmesModalBtn" onclick="window.commitPushReadmesFromModal()">
               ⬆️ Commit & Push READMEs
             </button>
-            <button type="button" class="btn btn-primary" id="select-button">Select Folder</button>
+            <button type="button" class="btn btn-primary" id="select-button">📁 Select Folder</button>
           </div>
         </div>
       </div>
@@ -1211,13 +1214,14 @@ video {
   <!-- Load modular components before core -->
   <script src="./js/modules/conversion-metadata.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/isa-generation-20260422-1145.js?v=20260429" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/llm-service.js?v=20260304120113" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/isa-enrichment-20260504.js?v=20260505" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/llm-service20260504.js?v=20260504" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260304120114" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/git-lfs-service.js?v=20260304120115" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/readme-generator.js?v=20260429b" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/readme-generator20260504.js?v=20260504" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core0409b.js?v=20260429b" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core20260504.js?v=20260505" type="text/javascript" charset="utf-8"></script>
 
   <!-- vis-network for LLM process graph visualization -->
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>

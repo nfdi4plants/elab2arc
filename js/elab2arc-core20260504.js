@@ -306,6 +306,106 @@ CC BY 4.0
     }
 
     // =============================================================================
+    // FRIENDLY 401 UNAUTHORIZED HANDLER
+    // =============================================================================
+
+    // Retry counters to prevent infinite auto-jump loops
+    const _401RetryState = {
+      datahub: { count: 0, maxRetries: 2, lastReset: 0 },
+      elabftw: { count: 0, maxRetries: 2, lastReset: 0 }
+    };
+
+    /**
+     * Reset 401 retry counter for a context (call on successful auth).
+     * @param {string} context - 'datahub' or 'elabftw'
+     */
+    function reset401RetryCounter(context) {
+      if (_401RetryState[context]) {
+        _401RetryState[context].count = 0;
+      }
+    }
+
+    /**
+     * Show a friendly unauthorized (401) notification with countdown and auto-retry.
+     * Auto-jump is limited to maxRetries attempts to prevent infinite loops.
+     * @param {string} context - 'datahub' or 'elabftw' - determines retry behavior
+     * @param {string} [customMessage] - Optional override for the final warning message
+     */
+    function handleUnauthorized401(context, customMessage) {
+      const TOKEN_DOCS_URL = 'https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/#create-an-personal-access-token-in-datahub';
+
+      const state = _401RetryState[context] || _401RetryState.datahub;
+      state.count++;
+
+      const toastContainer = document.getElementById('toastContainer');
+      if (!toastContainer) return;
+
+      const label = context === 'elabftw' ? 'eLabFTW token' : 'DataHUB token';
+      const canAutoRetry = state.count <= state.maxRetries;
+
+      // If max retries exceeded, skip countdown — just show the warning directly
+      if (!canAutoRetry) {
+        const finalMessage = customMessage ||
+          `Your ${label} is expired or invalid. Please get a new token: <a href="${TOKEN_DOCS_URL}" target="_blank" class="text-dark fw-bold text-decoration-underline">How to create a personal access token</a>`;
+        showToast(finalMessage, 'warning', 15000);
+        return;
+      }
+
+      // Show countdown toast with auto-jump
+      const toastId = 'toast-401-' + Date.now();
+      const countdownId = 'countdown-' + toastId;
+
+      const remaining = state.maxRetries - state.count + 1;
+      const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false">
+          <div class="d-flex">
+            <div class="toast-body">
+              <strong> ${label} expired.</strong> Opening token page in <strong id="${countdownId}">5</strong>s&hellip;
+              <small class="ms-1">(retry ${state.count}/${state.maxRetries})</small>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      `;
+
+      toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+      const toastElement = document.getElementById(toastId);
+      const bsToast = new bootstrap.Toast(toastElement, { autohide: false });
+      bsToast.show();
+
+      // Countdown from 5 to 0
+      let seconds = 5;
+      const countdownEl = document.getElementById(countdownId);
+
+      const timer = setInterval(() => {
+        seconds--;
+        if (countdownEl) countdownEl.textContent = seconds;
+
+        if (seconds <= 0) {
+          clearInterval(timer);
+
+          // Dismiss the countdown toast
+          bsToast.hide();
+
+          // Auto-retry based on context
+          if (context === 'datahub') {
+            handleGetTokenClick();
+          } else if (context === 'elabftw') {
+            if (typeof initCookies === 'function') {
+              initCookies();
+            }
+          }
+
+          // Show final warning toast with guidance
+          const finalMessage = customMessage ||
+            `Your ${label} is expired or invalid. Please get a new token: <a href="${TOKEN_DOCS_URL}" target="_blank" class="text-dark fw-bold text-decoration-underline">How to create a personal access token</a>`;
+
+          showToast(finalMessage, 'warning', 15000);
+        }
+      }, 1000);
+    }
+
+    // =============================================================================
     // END TOAST NOTIFICATION SYSTEM
     // =============================================================================
 
@@ -1590,7 +1690,11 @@ CC BY 4.0
         return userJSON;
       } catch (error) {
         // Handle any errors that occur during the fetch or processing
-        showErrorToast(error.message || error);
+        if (error.message && error.message.includes('Unauthorized')) {
+          handleUnauthorized401('datahub');
+        } else {
+          showErrorToast(error.message || error);
+        }
       }
     };
 
@@ -2122,12 +2226,13 @@ CC BY 4.0
         cacheGitProxyResult(proxyStrategy.cacheKey, initialProxy ? 'proxy' : 'direct');
         const arcWebUrl = datahubURL.replace(/\.git$/, '');
         updateInfo(`✓ Clone complete: ${repoName} (main branch${initialProxy ? '' : ', direct'})`, 1, [{ label: '🔗 View ARC', url: arcWebUrl }]);
+        reset401RetryCounter('datahub');
         mainOrMaster = "main";
       } catch (error) {
         console.error('[DataHub Clone] Clone failed:', error.name, error.message);
         // Check for 401 authentication errors
         if (error.message && error.message.includes('401')) {
-          showErrorToast('Authentication failed: Your DataHub token may have expired (tokens expire after 2 hours). Please click "get a token" to refresh.');
+          handleUnauthorized401('datahub');
           console.warn('[DataHub Clone] 401 Unauthorized: Token may be expired. Please refresh your token.');
           throw new Error('DataHub token expired - please refresh your token');
         }
@@ -2419,6 +2524,7 @@ Date: ${timestamp}`;
         const arcWebUrl = datahubURL.replace(/\.git$/, '');
         const pushLinkUrl = specificFileUrl || arcWebUrl;
         updateInfo("PLANTDataHUB has been updated.  <br>", pushProgressEnd, [{ label: '🔗 View ARC', url: pushLinkUrl }]);
+        reset401RetryCounter('datahub');
         //
       } catch (error) {
         console.error('[PUSH DIAGNOSTIC] ========== PUSH ERROR ==========');
@@ -2455,7 +2561,7 @@ Date: ${timestamp}`;
 
         // Check for 401 authentication errors
         if (error.message && error.message.includes('401')) {
-          showErrorToast('Push failed: Your DataHub token may have expired. Please click "get a token" to refresh and try again.');
+          handleUnauthorized401('datahub');
           console.warn('[Git Push] 401 Unauthorized: Token may be expired.');
           throw new Error('DataHub token expired - please refresh your token');
         }
@@ -3477,13 +3583,14 @@ Generated by elab2ARC`
           if (gitlabURL && datahubtoken && gitlabURL !== 'GitLab URL') {
             await commitPush(
               datahubtoken,
-              gitlabURL + '.git',
+              gitlabURL.endsWith('.git') ? gitlabURL : gitlabURL + '.git',
               window.userId?.name || 'elab2arc',
               window.userId?.commit_email || '',
               gitRoot,
               gitRoot + '/',
               'N/A',
               'README Generation',
+              'N/A',
               gitRoot,
               false,
               summary.writtenPaths.length,
@@ -3576,13 +3683,14 @@ Generated by elab2ARC`
           if (gitlabURL && datahubtoken && gitlabURL !== 'GitLab URL') {
             await commitPush(
               datahubtoken,
-              gitlabURL + '.git',
+              gitlabURL.endsWith('.git') ? gitlabURL : gitlabURL + '.git',
               window.userId?.name || 'elab2arc',
               window.userId?.commit_email || '',
               gitRoot,
               gitRoot + '/',
               'N/A',
               'README Generation',
+              'N/A',
               gitRoot,
               false,
               summary.writtenPaths.length,
@@ -5150,7 +5258,7 @@ ${res.uploads && res.uploads.length > 0 ?
     function handleError(error) {
       if (error.message.includes("401")) {
 
-        showError("Error: Unable to access PLANTdataHUB. Please verify that the DataHub Token matches the datahub_url in the extra_fields of eLabFTW.");
+        handleUnauthorized401('datahub');
       } else if (error.message.includes("Cannot read properties of undefined")) {
 
         showError("eLabFTW accessed successfully, but extra_fields is missing. Please check the experiment ID and extra_fields in eLabFTW.");
@@ -5746,8 +5854,19 @@ ${res.uploads && res.uploads.length > 0 ?
       // Read contracts will tell us what we need to read from disc.
       let readContracts = arc.GetReadContracts()
       console.log(readContracts)
+
+      // Filter out contracts for missing ISA files to avoid ENOENT crashes during export
+      let validContracts = readContracts.filter(contract => {
+        const normalizedPath = normalizePathSeparators(memfsPathJoin(basePath, contract.Path))
+        if (!fs.existsSync(normalizedPath)) {
+          console.warn(`[ISA-JSON] Skipping missing ${contract.DTOType} file: ${contract.Path}`)
+          return false
+        }
+        return true
+      })
+
       let fcontracts = await Promise.all(
-        readContracts.map(async (contract) => {
+        validContracts.map(async (contract) => {
           let content = await fulfillReadContract(basePath, contract)
           contract.DTO = content
           return (contract)
@@ -5775,16 +5894,74 @@ ${res.uploads && res.uploads.length > 0 ?
     }
 
     /**
+     * Fallback ISA-JSON serialization when arc.ISA serialization fails.
+     *
+     * Reads isa.investigation.xlsx + each assay xlsx directly, bypassing
+     * SetISAFromContracts which can leave arc.ISA.Studies in a broken state
+     * (Fable F# immutable structures cannot be repaired via splice/assignment).
+     *
+     * All standalone assays (assays/ with no parent study) are grouped under one
+     * top-level study whose identifier matches the ARC name, satisfying the ISA
+     * requirement that assays must be nested inside a study.
+     *
+     * @param {string} arcName - ARC root directory name in memfs
+     * @returns {string} ISA-JSON string
+     */
+    async function buildIsaJsonDirectly(arcName) {
+      console.warn('[ISA-JSON] Falling back to direct xlsx read for', arcName);
+
+      // Read investigation xlsx fresh (no SetISAFromContracts involved)
+      const invWb = await Xlsx.fromXlsxFile(arcName + '/isa.investigation.xlsx');
+      const isa = await arctrl.XlsxController.Investigation.fromFsWorkbook(invWb);
+
+      // Create one overall wrapper study to hold standalone assays
+      const overallStudy = arctrl.ArcStudy.init(arcName);
+
+      const assaysBase = './' + arcName + '/assays';
+      const registeredAssayNames = [];
+      if (fs.existsSync(assaysBase)) {
+        const assayDirs = fs.readdirSync(assaysBase);
+        for (const assayName of assayDirs) {
+          const assayIsaPath = arcName + '/assays/' + assayName + '/isa.assay.xlsx';
+          if (fs.existsSync('./' + assayIsaPath)) {
+            try {
+              const wb = await Xlsx.fromXlsxFile(assayIsaPath);
+              const assay = arctrl.XlsxController.Assay.fromFsWorkbook(wb);
+              // Add assay to the investigation (AddAssay is on ArcInvestigation, not ArcStudy)
+              isa.AddAssay(assay);
+              registeredAssayNames.push(assayName);
+            } catch (ae) {
+              console.warn('[ISA-JSON] Could not add assay', assayName + ':', ae.message);
+            }
+          }
+        }
+      }
+
+      // Register the wrapper study in the investigation
+      isa.AddStudy(overallStudy);
+
+      // Formally register each assay under the wrapper study in the investigation
+      for (const assayName of registeredAssayNames) {
+        try {
+          isa.RegisterAssay(arcName, assayName);
+          console.log('[ISA-JSON] Registered assay to study:', assayName, '→', arcName);
+        } catch (re) {
+          console.warn('[ISA-JSON] RegisterAssay failed for', assayName + ':', re.message);
+        }
+      }
+
+      return arctrl.JsonController.Investigation.toISAJsonString(isa, void 0, true);
+    }
+
+    /**
      * Export ARC as ISA-JSON and trigger browser download
      * @param {string} arcName - ARC directory name
      */
     window.downloadIsaJson = async function(arcName) {
       try {
-        // Read ARC and get ISA object (reuse existing read() function)
-        const arc = await read(arcName);
-
-        // Convert to ISA-JSON string using ARCtrl
-        const jsonString = arctrl.JsonController.Investigation.toISAJsonString(arc.ISA, void 0, true);
+        // Always use direct xlsx read — it properly groups assays under an overarching study
+        // (arc.ISA via SetISAFromContracts has no study/assay linkages since registration is skipped during conversion)
+        const jsonString = await buildIsaJsonDirectly(arcName);
 
         // Trigger browser download using data URI pattern
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
@@ -5850,7 +6027,27 @@ ${res.uploads && res.uploads.length > 0 ?
         }
 
         showConversionNotification('Exporting ISA-JSON...');
-        await window.downloadIsaJson(gitRoot);
+        if (window.Elab2ArcEnrich) {
+          // Enrich ISA-JSON with ontology annotations and structural fixes
+          const arc = await read(gitRoot);
+          let jsonString;
+          try {
+            jsonString = arctrl.JsonController.Investigation.toISAJsonString(arc.ISA, void 0, true);
+          } catch (serErr) {
+            console.warn('[ISA-JSON] arc.ISA serialization failed:', serErr.message);
+            jsonString = await buildIsaJsonDirectly(gitRoot);
+          }
+          const enriched = window.Elab2ArcEnrich.enrichIsaJson(JSON.parse(jsonString));
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(enriched, null, 2));
+          const dl = document.createElement('a');
+          dl.setAttribute("href", dataStr);
+          dl.setAttribute("download", gitRoot.replace(/\/$/, '') + "_isa.json");
+          document.body.appendChild(dl);
+          dl.click();
+          dl.remove();
+        } else {
+          await window.downloadIsaJson(gitRoot);
+        }
         showSuccessToast('ISA-JSON exported successfully!');
       } catch (error) {
         console.error('Export failed:', error);
@@ -6241,45 +6438,82 @@ ${res.uploads && res.uploads.length > 0 ?
       const btnContent = btn.querySelector('.btn-content');
       const btnLoading = btn.querySelector('.btn-loading');
 
+      // Check if ARC already exists locally in memfs
+      const alreadyCloned = fs && fs.existsSync('./' + name);
+
       try {
         // Show button loading state
         btnContent.classList.add('d-none');
         btnLoading.classList.remove('d-none');
         btn.disabled = true;
 
-        // Perform the actual clone operation
-        await cloneARC(http_url_to_repo, name);
+        if (alreadyCloned) {
+          // Skip clone — ARC already in memfs
+          console.log('[Clone] ARC already present locally, skipping clone:', name);
+          btnLoading.innerHTML = `<span>✅ Using local ARC</span>`;
+        } else {
+          // Perform the actual clone operation
+          await cloneARC(http_url_to_repo, name);
+        }
 
-        // Update UI info
+        // Update UI info (gitlabInfo, arcInfo, targetPath)
         document.getElementById('gitlabInfo').innerHTML = http_url_to_repo;
         document.getElementById('arcInfo').innerHTML = name + '/';
+        setTargetPath(name + '/');
 
-        // Open file explorer after successful clone
+        // Open file explorer after successful clone/reuse
         fileExplorer.show();
 
       } catch (error) {
         console.error('ARC clone failed:', error);
 
         // Show error state temporarily
-        btnLoading.innerHTML = `
-          <span style="color: #dc3545;">❌ Clone Failed</span>
-        `;
+        btnLoading.innerHTML = `<span style="color: #dc3545;">❌ Clone Failed</span>`;
 
         setTimeout(() => {
-          // Reset to original state after 3 seconds
-          btnLoading.innerHTML = `
-            <div class="btn-spinner"></div>
-            Cloning ARC...
-          `;
+          btnLoading.innerHTML = `<div class="btn-spinner"></div>Cloning ARC...`;
         }, 3000);
 
       } finally {
         // Reset button state
         setTimeout(() => {
+          btnLoading.innerHTML = `<div class="btn-spinner"></div>Cloning ARC...`;
           btnContent.classList.remove('d-none');
           btnLoading.classList.add('d-none');
           btn.disabled = false;
-        }, 1000); // Small delay to show completion
+        }, 1000);
+      }
+    }
+
+    /**
+     * Force re-clone the currently selected ARC from GitLab.
+     * Reads gitlabInfo + arcInfo from the DOM, calls cloneARC(), updates all UI fields.
+     */
+    async function recloneCurrentARC() {
+      const url  = document.getElementById('gitlabInfo').innerHTML;
+      const name = (document.getElementById('arcInfo').innerHTML || '').replace(/\/$/, '').trim();
+
+      if (!url || url.includes('Please select') || !name) {
+        showWarningToast('No ARC selected. Please select an ARC from the list first.');
+        return;
+      }
+
+      const btn = document.getElementById('recloneArcBtn');
+      const originalHTML = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = '🔄 Cloning...'; }
+
+      try {
+        await cloneARC(url, name);
+        document.getElementById('gitlabInfo').innerHTML = url;
+        document.getElementById('arcInfo').innerHTML    = name + '/';
+        setTargetPath(name + '/');
+        fileExplorer.show();
+        showSuccessToast('ARC re-cloned successfully!');
+      } catch (error) {
+        console.error('[reclone] Failed:', error);
+        showErrorToast('Re-clone failed: ' + error.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
       }
     }
 

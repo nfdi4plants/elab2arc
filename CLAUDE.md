@@ -43,7 +43,7 @@ elab2arc/
 │   ├── webpack.config.cjs       # Webpack configuration
 │   ├── src/index.js             # Bundle entry point
 │   ├── src/Xlsx.js              # Xlsx wrapper module
-│   ├── elab2arc-core1209.js     # Core conversion functionality
+│   ├── elab2arc-core20260504.js    # Core conversion functionality
 │   ├── git.js                   # Git operations wrapper
 │   ├── http.js                  # HTTP utilities (ES6 module)
 │   ├── MEMfsGUI1006.js          # File system GUI manager
@@ -54,9 +54,10 @@ elab2arc/
 ├── js/modules/
 │   ├── conversion-metadata.js   # Conversion tracking/metadata
 │   ├── isa-generation-20260422-1145.js  # ISA-Tab generation logic
-│   ├── llm-service.js           # LLM/AI integration
+│   ├── llm-service20260504.js           # LLM/AI integration (multi-provider)
 │   ├── extra-fields-handler.js  # Custom field processing
-│   └── git-lfs-service.js       # Git LFS for large files (>10MB)
+│   ├── git-lfs-service.js       # Git LFS for large files (>10MB)
+│   └── readme-generator20260504.js      # ARC README generation via LLM
 ├── templates/              # Excel templates for ISA metadata
 ├── images/               # Static assets (logo, help images)
 └── LICENSE               # GPL v3.0
@@ -122,7 +123,7 @@ The investigation is now created BEFORE processing experiments to ensure proper 
 - `registerStudyToInvestigation()` - Register study during conversion
 - `registerAssayToInvestigation()` - Register assay during conversion
 
-**Flow:** Initialize → Process (register) → Save → Commit → Push (see `js/elab2arc-core1209.js` lines 2011-2173)
+**Flow:** Initialize → Process (register) → Save → Commit → Push (see `js/elab2arc-core20260504.js` ~lines 3006+)
 
 **ARCtrl Serialization Issue (Fixed March 2026):**
 When reading full study objects from xlsx files and adding them to the investigation, ARCtrl's `toFsWorkbook()` had serialization issues (error: "Could not write investigation to spreadsheet: source").
@@ -137,6 +138,38 @@ arcStudy.Title = studyName;
 investigation.AddStudy(arcStudy);
 investigation.RegisterStudy(studyName);
 ```
+
+**ISA-JSON Export (Fixed May 2026):**
+During conversion, `registerStudyToInvestigation()` and `registerAssayToInvestigation()` are no-ops (registration code commented out) to avoid ARCtrl serialization issues. The investigation xlsx is saved without study/assay linkages.
+
+At export time (`handleExportIsaJson()` → `downloadIsaJson()`), the `buildIsaJsonDirectly()` function creates the linkages temporarily in memory:
+1. Reads the investigation xlsx
+2. Creates an overarching study (identifier = ARC name)
+3. Reads all assay xlsx files from `assays/` and adds them to the overarching study
+4. Registers the study and assays in the investigation
+5. Serializes to ISA-JSON string (never writes back to xlsx)
+
+This ensures the exported ISA-JSON has proper study/assay nesting without modifying the investigation file.
+
+After serialization, `Elab2ArcEnrich.enrichIsaJson()` (from `js/modules/isa-enrichment-20260504.js`) post-processes the JSON to fix structural issues. It enriches investigation, study, and assay levels:
+
+**Investigation level:**
+- Adds `publications: []` if missing
+- Ensures `ontologySourceReferences` includes SCORO, OBI, EFO, UO
+
+**Study level:**
+- Adds `title`, `description`, `materials`, `protocols`, `processSequence`, `publications`, `characteristicCategories`, `factors`, `unitCategories` if missing
+- Enriches protocols: adds `parameters`, infers `protocolType`, extracts `parameterName`
+- Enriches processes: adds `inputs`, `outputs`, `parameterValues`, infers `executesProtocol`
+- Removes undeclared data file references from process outputs
+- Aggregates materials and protocols from assays to study level
+
+**Assay level:**
+- Sets `measurementType` and `technologyType` defaults (metagenome sequencing / nucleotide sequencing)
+- Ensures `materials`, `processSequence`, `characteristicCategories` arrays exist
+- Enriches processes: adds `inputs`, `outputs`, `parameterValues`, infers `executesProtocol`
+- Aggregates undeclared protocol references from assay processes into study
+- Declares undeclared material IDs and protocol parameters
 
 **Testing:** See `TESTING.md` for detailed test cases and verification steps.
 
@@ -186,12 +219,33 @@ Previously, assays only stored metadata in Comment fields, leaving Title and Des
 **Key Functions:** `js/modules/isa-generation-20260422-1145.js`
 - `generateIsaAssayElab2arcWithDatamap()` - Sets Title and Description with fallback logic (lines 681-722)
 
+### README Generator (Added April 2026)
+`js/modules/readme-generator20260504.js` (v`20260504`) generates README.md files for the entire ARC using LLM.
+
+**Public API:** `window.Elab2ArcReadmeGen`
+- `generateARCReadmes(gitRoot, options)` - Main entry point; options: `{ stageGit: true, onProgress: fn }`
+- `collectRepoData(gitRoot)` - Collect repo structure/file contents
+- `buildPrompt(repoData)` - Build LLM prompt from repo data
+- `buildRootReadme(arcName, abstract, dataOverview, childReadmes, allImages)` - Build root README deterministically
+
+**Two-phase generation:**
+1. **Phase 1:** LLM generates JSON with `{ studies: {...}, assays: {...} }` — each value is the README.md markdown for that study/assay
+2. **Phase 2:** Reads back written child READMEs, calls LLM again for a 2-3 sentence abstract, then builds root `README.md` deterministically
+
+**Triggered from UI:** "📝 Generate READMEs" button in ARC tab (`generateARCReadmesFromModal()` in core); also `generateARCReadmesUI()` for post-conversion flow.
+
+**Dependencies:** Requires `window.Elab2ArcLLM.callTogetherAI` (from `llm-service20260504.js`) and `window.FS.fs` (memfs).
+
+**Console prefix:** `[ReadmeGen]`
+
 ### CORS Proxy System
 Due to browser security restrictions, the app uses proxy fallback:
 - Primary: `corsproxy.cplantbox.com`
 - Backup: `corsproxy2.cplantbox.com`
-- Git proxy: `gitcors.cplantbox.com`
+- Git proxy: `gitcors.cplantbox.com` (backup: `gitcors2.cplantbox.com`)
 - **LFS proxy:** `lfsproxy.cplantbox.com` (supports PUT requests for file uploads)
+
+The CORS proxy tries direct access first (`tryDirectFirst: true`) before falling back to the proxy.
 
 #### Local Python CORS Proxy (cors-proxy-py)
 A Python port of the Node.js CORS proxy is available at `/Users/xr/git/elab2arc/cors-proxy-py/` for local development:
@@ -309,7 +363,7 @@ await window.Xlsx.toFile(path, spreadsheet);
 The application uses multiple filesystem references that must all point to the same `window.FS.fs` instance. When different `fs` instances are used, directories created in one filesystem are not visible to another, causing ENOENT errors.
 
 **Fix Location:**
-- `js/elab2arc-core1209.js` line 10: `var fs = window.FS.fs;` (NOT `var fs = FS.fs;`)
+- `js/elab2arc-core20260504.js` line 10: `var fs = window.FS.fs;` (NOT `var fs = FS.fs;`)
 - `js/src/Xlsx.js` line 29-35: `getFs()` function that returns `window.FS.fs`
 - `js/src/Xlsx.js` line 60-67: Added directory creation before file write
 
@@ -324,7 +378,7 @@ fs === window.FS.fs  // Should return: true
 2. Verify `fs === window.FS.fs` in browser console
 3. Rebuild arctrl.bundle.js if source files were modified: `cd js && npm run build`
 
-### ARCtrl 3.0.1 Migration Notes (March 2027)
+### ARCtrl 3.0.1 Migration Notes (March 2026)
 
 **GetHashCode TypeError Fix:**
 ARCtrl 3.0.1's internal F# hashing fails when `undefined` values are passed to constructors. Always provide empty string fallbacks for optional metadata fields:
@@ -407,14 +461,15 @@ The `params` object is returned by `getParameters()` and contains all authentica
 
 | Task | File |
 |------|------|
-| Main UI flow | `js/arctrl.bundle.js` |
-| Core conversion logic | `js/elab2arc-core1209.js` |
+| Main UI flow | `index.html` |
+| Core conversion logic | `js/elab2arc-core20260504.js` |
 | ISA-Tab generation | `js/modules/isa-generation-20260422-1145.js` |
-| LLM integration | `js/modules/llm-service.js` |
+| LLM integration | `js/modules/llm-service20260504.js` |
+| README generation | `js/modules/readme-generator20260504.js` |
 | Git operations | `js/git.js` |
 | Git LFS (large files) | `js/modules/git-lfs-service.js` |
+| ARCtrl bundle | `js/arctrl.bundle.js` |
 | UI styling | `css/custom0929.css`, `css/elabGUI1305.css` |
-| HTML structure | `index.html` |
 
 ## Configuration
 
@@ -422,10 +477,21 @@ The `params` object is returned by `getParameters()` and contains all authentica
 - eLabFTW instances configured in `index.html` (lines 212-227)
 - CORS proxies defined in JavaScript files
 
-### LLM Models
-Configured in Token tab (index.html lines 295-329):
-- Primary: Qwen/Qwen3-235B-A22B-Instruct-2507-tput
-- Fallbacks: meta-llama, gpt-oss, deepseek-ai models
+### LLM Providers
+Configured in Token tab (index.html ~line 345). Multi-provider support:
+
+| Provider ID | Name | Requires Key | Endpoint |
+|-------------|------|-------------|---------|
+| `dataplan` | Community Server (default) | No | `https://h.dataplan.top/v1/chat/completions` |
+| `dataplan-gemma` | Community Server gemma | No | `https://h.dataplan.top/v1/chat/completions` |
+| `lmstudio` | LM Studio (Local) | No | `http://localhost:1234/v1/chat/completions` |
+| `together` | Together.AI | Yes | `https://api.together.xyz/v1/chat/completions` |
+| `ollama` | Ollama (Local) | No | `http://localhost:11434/v1/chat/completions` |
+| `custom` | Custom API | No | User-configured |
+
+Default provider: `dataplan`. Valid Together.AI models (from `VALID_MODELS`):
+- `Qwen/Qwen3-235B-A22B-Instruct-2507-tput` (default)
+- `openai/gpt-oss-120b`
 
 ### localStorage Keys
 - Selected eLabFTW URL
@@ -436,17 +502,25 @@ Configured in Token tab (index.html lines 295-329):
 ## Common Tasks
 
 ### Adding a New eLabFTW Instance
-Edit `index.html` lines 212-227, add new dropdown item:
+Edit `index.html` ~line 216, add new dropdown item:
 ```html
 <li><button class="dropdown-item" onclick="setelabURL('YOUR_URL/api/v2/')"
     type="button">eLabFTW Instance: NAME</button></li>
 ```
 
+Current instances: DataPLANT (`elab.dataplan.top`), HHU (`elabftw.hhu.de`), Custom input field.
+
+### Custom DataHub/GitLab Instance
+Users can configure a custom DataHub/GitLab instance via the Token tab UI (checkbox "Use custom DataHub/GitLab instance"):
+- **GitLab URL** - Base URL (e.g. `https://gitlab.com`), no API suffix
+- **API Suffix** - Default `/api/v4`
+- **SSO/Token URL** - URL to obtain a personal access token
+
 ### Modifying ISA-Tab Templates
 Templates stored in `/templates/` directory. ExcelJS processes these.
 
 ### Customizing LLM Prompts
-Use the Prompt Editor modal (UI-based) or modify `js/modules/llm-service.js`
+Use the Prompt Editor modal (UI-based) or modify `js/modules/llm-service20260504.js`
 
 ### Debugging Git Operations
 Browser DevTools → Network tab shows proxied Git requests to `gitcors.cplantbox.com`
