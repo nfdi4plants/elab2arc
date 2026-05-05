@@ -8,18 +8,18 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <link rel="icon" type="image/x-icon" href="favicon.png">
+  <link rel="icon" type="image/x-icon" href="favicon.png?v=20260505">
   <style>
 video {
   width: 100%;
   height: auto;
 }
   </style>
-  <link href="./css/bootstrap.min.css" rel="stylesheet">
-  <link href="./css/custom0929.css" rel="stylesheet" />
-  <link href="./css/bs5-intro-tour.css" rel="stylesheet" />
-  <link href="./css/MEMfsGUI0929.css" rel="stylesheet" />
-  <link href="./css/elabGUI1305.css" rel="stylesheet" />
+  <link href="./css/bootstrap.min.css?v=20260505" rel="stylesheet">
+  <link href="./css/custom0929.css?v=20260505" rel="stylesheet" />
+  <link href="./css/bs5-intro-tour.css?v=20260505" rel="stylesheet" />
+  <link href="./css/MEMfsGUI0929.css?v=20260505" rel="stylesheet" />
+  <link href="./css/elabGUI1305.css?v=20260505" rel="stylesheet" />
 
   <!-- Diff2html for version comparison -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
@@ -32,7 +32,7 @@ video {
 
     <div class=" container-fluid " style=" height: 3.25rem;  ">
       <a class="" href="https://nfdi4plants.org/" style="">
-        <img src="images/logo.png" alt="Logo" width="32" height="32"
+        <img src="images/logo.png?v=20260505" alt="Logo" width="32" height="32"
           style=" margin: 8px 20px 8px 12px; left: 0px; padding-top: 4px;" />
       </a>
 
@@ -76,13 +76,13 @@ video {
       <span class="ms-auto">
         <a id="kblink" class="p-2  nav-linkc" target="_blank"
           href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img
-            src="images/knowledgebase.png" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> Help</a>
+            src="images/knowledgebase.png?v=20260505" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> Help</a>
 
 
 
 
         <a id="ghlink" class=" p-2 nav-linkc" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img
-            src="images/github-mark-white.png" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"> Github</a>
+            src="images/github-mark-white.png?v=20260505" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"> Github</a>
       </span>
     </div>
 
@@ -425,7 +425,7 @@ video {
 
       <div class="row justify-content-center align-items-end">
         <div class="my-3 col-lg-8">
-          <button class="btn btn-primary" onclick="initCookies();redirect();" type="button"> Save
+          <button class="btn btn-primary" onclick="(async () => { initCookies(); await checkElabFTWConnection(); await checkGitLabConnection(); redirect(); })();" type="button"> Save
 
           </button>
         </div>
@@ -1224,7 +1224,7 @@ video {
   <script src="./js/elab2arc-core20260504.js?v=20260505" type="text/javascript" charset="utf-8"></script>
 
   <!-- vis-network for LLM process graph visualization -->
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js?v=20260505"></script>
 
   <!-- LLM Process Graph Modal -->
   <div class="modal fade" id="llmGraphModal" tabindex="-1" aria-labelledby="llmGraphModalLabel" aria-hidden="true">

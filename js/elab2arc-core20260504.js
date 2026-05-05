@@ -315,6 +315,28 @@ CC BY 4.0
       elabftw: { count: 0, maxRetries: 2, lastReset: 0 }
     };
 
+    const ELABFTW_FALLBACK_API_KEY = '20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320';
+
+    /**
+     * Attempts to retry an eLabFTW request with the fallback test API key.
+     * Updates the input field and cookies if fallback is used.
+     * @param {string} currentToken - The token that just failed
+     * @param {string} targetUrl - URL to fetch
+     * @param {object} options - fetch options
+     * @returns {Promise<Response|null>} - Fallback response or null if already using fallback
+     */
+    async function tryElabFallbackRequest(currentToken, targetUrl, options) {
+      if (currentToken === ELABFTW_FALLBACK_API_KEY) return null;
+      console.warn('[eLabFTW] Auth failed, trying fallback test token...');
+      document.getElementById('elabToken').value = ELABFTW_FALLBACK_API_KEY;
+      if (typeof initCookies === 'function') initCookies();
+      const fallbackOptions = {
+        ...options,
+        headers: { ...options.headers, 'Authorization': ELABFTW_FALLBACK_API_KEY }
+      };
+      return await fetchWithProxyFallback(targetUrl, fallbackOptions);
+    }
+
     /**
      * Reset 401 retry counter for a context (call on successful auth).
      * @param {string} context - 'datahub' or 'elabftw'
@@ -351,7 +373,17 @@ CC BY 4.0
         return;
       }
 
-      // Show countdown toast with auto-jump
+      // For eLabFTW, immediately switch to fallback test key without countdown
+      if (context === 'elabftw') {
+        document.getElementById('elabToken').value = ELABFTW_FALLBACK_API_KEY;
+        if (typeof initCookies === 'function') {
+          initCookies();
+        }
+        showToast(`Your ${label} is expired or invalid. Automatically switched to the test API key.`, 'warning', 15000);
+        return;
+      }
+
+      // Show countdown toast with auto-jump (DataHub only)
       const toastId = 'toast-401-' + Date.now();
       const countdownId = 'countdown-' + toastId;
 
@@ -387,13 +419,9 @@ CC BY 4.0
           // Dismiss the countdown toast
           bsToast.hide();
 
-          // Auto-retry based on context
+          // Auto-retry based on context (DataHub only)
           if (context === 'datahub') {
             handleGetTokenClick();
-          } else if (context === 'elabftw') {
-            if (typeof initCookies === 'function') {
-              initCookies();
-            }
           }
 
           // Show final warning toast with guidance
@@ -502,8 +530,8 @@ CC BY 4.0
         return { valid: false, warning: 'DataHub token is too short' };
       }
 
-      // Check for suspicious characters (should be alphanumeric + dash/underscore)
-      const gitlabTokenPattern = /^[a-zA-Z0-9_-]+$/;
+      // Check for suspicious characters (should be alphanumeric + dash/underscore/dot)
+      const gitlabTokenPattern = /^[a-zA-Z0-9_.-]+$/;
       if (!gitlabTokenPattern.test(token)) {
         return { valid: false, warning: 'DataHub token contains invalid characters' };
       }
@@ -1582,6 +1610,7 @@ CC BY 4.0
         } else {
           document.getElementById("elabFTWCheck").innerHTML = "&#10060;";
           console.error('❌ eLabFTW API returned an error:', response.statuscode);
+          handleUnauthorized401('elabftw');
           return false;
         }
       } catch (error) {
@@ -2103,11 +2132,44 @@ CC BY 4.0
       // Make the fetch request with proxy fallback
       try {
         const response = await fetchWithProxyFallback(targetUrl, { headers, method: 'GET' });
+
+        // If auth failed and we haven't tried the fallback yet, retry once with fallback key
+        if ((response.status === 401 || response.status === 403) && elabToken !== ELABFTW_FALLBACK_API_KEY) {
+          const fbResponse = await tryElabFallbackRequest(elabToken, targetUrl, { headers, method: 'GET' });
+          if (fbResponse) {
+            const fbJson = await fbResponse.json();
+            fbJson.statuscode = fbResponse.status;
+            if (fbResponse.status === 200) {
+              showToast('eLabFTW API key was invalid. Automatically switched to test key.', 'info', 6000);
+              reset401RetryCounter('elabftw');
+            }
+            return fbJson;
+          }
+        }
+
         const json = await response.json();
         json.statuscode = response.status;
         return json;
       } catch (error) {
+        // Check if this looks like an auth error (HTML response instead of JSON)
         if (error.message.includes(`is not valid JSON`) || error.message.includes(`Invalid host`) || error.message.includes(`!DOCTYPE`)) {
+          // Try fallback once if not already using it
+          if (elabToken !== ELABFTW_FALLBACK_API_KEY) {
+            const fbResponse = await tryElabFallbackRequest(elabToken, targetUrl, { headers, method: 'GET' });
+            if (fbResponse) {
+              try {
+                const fbJson = await fbResponse.json();
+                fbJson.statuscode = fbResponse.status;
+                if (fbResponse.status === 200) {
+                  showToast('eLabFTW API key was invalid. Automatically switched to test key.', 'info', 6000);
+                  reset401RetryCounter('elabftw');
+                }
+                return fbJson;
+              } catch (fbError) {
+                // Fallback also failed, show original error below
+              }
+            }
+          }
           showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, or the elabFTW instance might be wrong. Please first check the eLabFTW instance and then go to the settings of the eLabFTW to create a new API key and use it");
         } else {
           showError("Access of eLabFTW is not successful, error message is " + error);
@@ -2123,10 +2185,43 @@ CC BY 4.0
       // Make the fetch request with proxy fallback
       try {
         const response = await fetchWithProxyFallback(targetUrl, { headers, method: 'GET' });
+
+        // If auth failed and we haven't tried the fallback yet, retry once with fallback key
+        if (!response.ok && elabToken !== ELABFTW_FALLBACK_API_KEY) {
+          const fbResponse = await tryElabFallbackRequest(elabToken, targetUrl, { headers, method: 'GET' });
+          if (fbResponse) {
+            const fbBlob = await fbResponse.blob();
+            console.log(`[fetchElabFiles] Fetched file with fallback token, type: ${fbBlob.type}, size: ${fbBlob.size} bytes`);
+            if (fbResponse.ok) {
+              showToast('eLabFTW API key was invalid. Automatically switched to test key.', 'info', 6000);
+              reset401RetryCounter('elabftw');
+            }
+            return fbBlob;
+          }
+        }
+
         const blob = await response.blob();
         console.log(`[fetchElabFiles] Fetched file with type: ${blob.type}, size: ${blob.size} bytes`);
         return blob;
       } catch (error) {
+        // Try fallback on auth-looking errors
+        if (elabToken !== ELABFTW_FALLBACK_API_KEY &&
+            (error.message.includes(`Unexpected token 'N'`) || error.message.includes(`is not valid JSON`) || error.message.includes(`!DOCTYPE`))) {
+          const fbResponse = await tryElabFallbackRequest(elabToken, targetUrl, { headers, method: 'GET' });
+          if (fbResponse) {
+            try {
+              const fbBlob = await fbResponse.blob();
+              console.log(`[fetchElabFiles] Fetched file with fallback token, type: ${fbBlob.type}, size: ${fbBlob.size} bytes`);
+              if (fbResponse.ok) {
+                showToast('eLabFTW API key was invalid. Automatically switched to test key.', 'info', 6000);
+                reset401RetryCounter('elabftw');
+              }
+              return fbBlob;
+            } catch (fbError) {
+              // Fallback also failed, show original error below
+            }
+          }
+        }
         if (error.message.includes(`Unexpected token 'N', "No corresp"... is not valid JSON`)) {
           console.error(error);
           showError("Access of eLabFTW is not successful, the eLabFTW API key might be wrong, please go to settings to create a new API key and use it");
@@ -3156,6 +3251,7 @@ Date: ${timestamp}`;
 
           // Authorization error
           if (res.code === 403) {
+            handleUnauthorized401('elabftw');
             showErrorToast("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
             completedEntries++;
             continue;
@@ -3196,6 +3292,7 @@ Date: ${timestamp}`;
 
           // Authorization error
           if (res.code === 403) {
+            handleUnauthorized401('elabftw');
             showErrorToast("Authorization failed on eLabFTW id " + expId + ", please check your Elab2ARC account or credentials");
             completedEntries++;
             continue;
