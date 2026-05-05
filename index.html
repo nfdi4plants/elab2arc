@@ -814,7 +814,7 @@ video {
 
               </section>
 
-              <section class="section content bg-light rounded p-3 mb-4" id="expContent">
+              <section class="section content bg-light rounded p-3 mb-4" id="expContent" contenteditable="true">
                 <!-- HTML content will be injected here -->
                 <h5>No eLabFTW available. Use <a href="#home" data-bs-dismiss="offcanvas" aria-label="Close">home tab</a>
                   to start a conversion</h5>
@@ -824,7 +824,7 @@ video {
 
             <!-- Sidebar -->
             <div class="col-md-3 sidebar">
-              <button class="btn btn-success my-3" data-bs-dismiss="offcanvas" aria-label="Close">Save </button>
+              <button class="btn btn-success my-3" data-bs-dismiss="offcanvas" aria-label="Close" onclick="saveElabPreviewEdit()">Save </button>
               <button class="btn btn-primary my-2 w-100" id="preConvertLLMBtn" onclick="runPreviewLLM()">
                 🔮 Pre-conversion with LLM
               </button>
