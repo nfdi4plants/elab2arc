@@ -21,10 +21,10 @@
 //   Fix #15 - Undeclared material IDs from process inputs/outputs
 //   Fix #16 - Undeclared protocol parameters from process parameterValues
 //   Fix #17 - Missing dataFiles in assays
-//   Fix #18 - Missing executesProtocol when no protocols exist
+//   Fix #18 - Lazy _default protocol creation for study-level processes
 //   Fix #19 - Missing unitCategories in assays
 //   Fix #20 - Missing filename in assays
-//   Fix #21 - Missing protocols/executesProtocol for elab2arc assays
+//   Fix #21 - Assay protocols constructed directly from assay processes (no _default)
 //   Fix #22 - Remove unused materials (medium, robust with try/catch)
 //   Fix #23 - Remove unused protocol parameters
 //   Fix #24 - Remove unused protocols (including _default)
@@ -353,15 +353,7 @@
       if (!Array.isArray(study.materials.otherMaterials)) study.materials.otherMaterials = [];
       if (!Array.isArray(study.protocols)) study.protocols = [];
 
-      // Fix #18 — Ensure at least one protocol exists so executesProtocol can always be resolved
-      if (study.protocols.length === 0) {
-        study.protocols.push({
-          '@id': '#Protocol/_default',
-          'name': '_default',
-          'protocolType': { 'annotationValue': 'material processing', 'termSource': 'OBI', 'termAccession': 'http://purl.obolibrary.org/obo/OBI_0000094' },
-          'parameters': []
-        });
-      }
+      // Note: _default protocol is created lazily only when needed by study-level processes
 
       if (!Array.isArray(study.processSequence)) study.processSequence = [];
       if (!Array.isArray(study.publications)) study.publications = [];
@@ -455,24 +447,7 @@
           return true;
         });
 
-        // Add executesProtocol reference if missing
-        if (!proc.executesProtocol && (study.protocols || []).length > 0) {
-          var procNameLower = (proc.name || '').toLowerCase();
-          var matched = false;
-          for (var k = 0; k < study.protocols.length; k++) {
-            var prot = study.protocols[k];
-            var protNameLower = (prot.name || '').toLowerCase();
-            if (procNameLower && protNameLower &&
-                (procNameLower.includes(protNameLower) || protNameLower.includes(procNameLower))) {
-              proc.executesProtocol = { '@id': prot['@id'] };
-              matched = true;
-              break;
-            }
-          }
-          if (!matched) {
-            proc.executesProtocol = { '@id': study.protocols[0]['@id'] };
-          }
-        }
+        // executesProtocol assignment deferred until after assay protocols are built
       });
 
       // -----------------------------------------------------------------------
@@ -531,7 +506,8 @@
         }
 
         // Fix #21 — elab2arc assays represent individual protocols.
-        // Extract protocol from assay comments and ensure it exists in study.protocols.
+        // Extract protocol from assay comments, create it in study.protocols,
+        // and populate its parameters directly from the assay's processes.
         var elab2arcProtocolId = null;
         var elab2arcProtocolName = null;
         (assay.comments || []).forEach(function(comment) {
@@ -554,49 +530,58 @@
         }
 
         if (elab2arcProtocolId) {
-          // Check if protocol already exists in study
-          var existingProto = null;
+          // Find or create the protocol
+          var assayProtocol = null;
           for (var pi = 0; pi < (study.protocols || []).length; pi++) {
             if (study.protocols[pi]['@id'] === elab2arcProtocolId) {
-              existingProto = study.protocols[pi];
+              assayProtocol = study.protocols[pi];
               break;
             }
           }
-          if (!existingProto) {
+          if (!assayProtocol) {
             var displayName = elab2arcProtocolName.replace(/_/g, ' ');
-            var newProto = {
+            assayProtocol = {
               '@id': elab2arcProtocolId,
               'name': displayName,
               'protocolType': inferProtocolType(displayName),
               'parameters': []
             };
-            study.protocols.push(newProto);
-            existingProto = newProto;
+            study.protocols.push(assayProtocol);
           }
 
-          // Copy parameters used by this assay's processes into the elab2arc protocol
-          var assayParamIds = {};
-          var assayParamDefs = {};
-          (assay.processSequence || []).forEach(function(proc) {
-            (proc.parameterValues || []).forEach(function(pv) {
-              var ref = pv.category || pv.parameter;
-              if (ref && ref['@id']) assayParamIds[ref['@id']] = true;
-            });
-          });
-          // Find parameter definitions across all study protocols
+          // Build a global parameter definition index from all existing protocols
+          var globalParamDefs = {};
           (study.protocols || []).forEach(function(proto) {
             (proto.parameters || []).forEach(function(param) {
-              if (param && param['@id'] && assayParamIds[param['@id']] && !assayParamDefs[param['@id']]) {
-                assayParamDefs[param['@id']] = JSON.parse(JSON.stringify(param));
+              if (param && param['@id'] && !globalParamDefs[param['@id']]) {
+                globalParamDefs[param['@id']] = JSON.parse(JSON.stringify(param));
               }
             });
           });
-          // Add missing parameters to elab2arc protocol
-          var elabProtoParams = {};
-          (existingProto.parameters || []).forEach(function(p) { if (p && p['@id']) elabProtoParams[p['@id']] = true; });
-          Object.keys(assayParamDefs).forEach(function(pid) {
-            if (!elabProtoParams[pid]) {
-              existingProto.parameters.push(assayParamDefs[pid]);
+
+          // Collect parameter IDs used by this assay's processes
+          var usedParamIds = {};
+          (assay.processSequence || []).forEach(function(proc) {
+            (proc.parameterValues || []).forEach(function(pv) {
+              var ref = pv.category || pv.parameter;
+              if (ref && ref['@id']) usedParamIds[ref['@id']] = true;
+            });
+          });
+
+          // Add missing parameters directly to the assay protocol
+          var existingParamIds = {};
+          (assayProtocol.parameters || []).forEach(function(p) {
+            if (p && p['@id']) existingParamIds[p['@id']] = true;
+          });
+          Object.keys(usedParamIds).forEach(function(pid) {
+            if (existingParamIds[pid]) return;
+            if (globalParamDefs[pid]) {
+              assayProtocol.parameters.push(JSON.parse(JSON.stringify(globalParamDefs[pid])));
+            } else {
+              assayProtocol.parameters.push({
+                '@id': pid,
+                'parameterName': { 'annotationValue': nameFromId(pid) }
+              });
             }
           });
         }
@@ -748,41 +733,41 @@
       // Ensure unitCategories exists on study
       if (!Array.isArray(study.unitCategories)) study.unitCategories = [];
 
-      // Collect all declared protocol parameter @ids
-      var declaredParamIds = {};
-      (study.protocols || []).forEach(function(p) {
-        (p.parameters || []).forEach(function(param) {
-          if (param && param['@id']) declaredParamIds[param['@id']] = true;
+      // Scan all assay processes for undeclared parameterValues and add them
+      // directly to the protocol being executed.
+      function ensureParamDeclaredOnProtocol(targetProto, paramId) {
+        if (!targetProto || !paramId) return;
+        var alreadyDeclared = false;
+        (targetProto.parameters || []).forEach(function(p) {
+          if (p && p['@id'] === paramId) alreadyDeclared = true;
         });
-      });
+        if (alreadyDeclared) return;
+        targetProto.parameters.push({
+          '@id': paramId,
+          'parameterName': { 'annotationValue': nameFromId(paramId) }
+        });
+      }
 
-      // Scan all assay processes for undeclared parameterValues and register them
-      var defaultProtocol = study.protocols[0];
+      function findProtocolById(protoId) {
+        for (var pi = 0; pi < (study.protocols || []).length; pi++) {
+          if (study.protocols[pi]['@id'] === protoId) return study.protocols[pi];
+        }
+        return null;
+      }
+
       (study.assays || []).forEach(function(assay) {
         (assay.processSequence || []).forEach(function(proc) {
+          var targetProtoId = proc.executesProtocol && proc.executesProtocol['@id'];
+          if (!targetProtoId) return;
+          var targetProto = findProtocolById(targetProtoId);
+          if (!targetProto) return;
           (proc.parameterValues || []).forEach(function(pv) {
             if (!pv || typeof pv !== 'object') return;
             var paramRef = pv.category || pv.parameter;
             if (!paramRef || typeof paramRef !== 'object') return;
             var paramId = paramRef['@id'];
-            if (!paramId || declaredParamIds[paramId]) return;
-
-            // Undeclared parameter — add to default protocol or create one
-            if (!defaultProtocol) {
-              defaultProtocol = {
-                '@id': '#Protocol/_default',
-                'name': '_default',
-                'protocolType': { 'annotationValue': 'material processing', 'termSource': 'OBI', 'termAccession': 'http://purl.obolibrary.org/obo/OBI_0000094' },
-                'parameters': []
-              };
-              study.protocols.push(defaultProtocol);
-            }
-            var newParam = {
-              '@id': paramId,
-              'parameterName': { 'annotationValue': nameFromId(paramId) }
-            };
-            defaultProtocol.parameters.push(newParam);
-            declaredParamIds[paramId] = true;
+            if (!paramId) return;
+            ensureParamDeclaredOnProtocol(targetProto, paramId);
           });
         });
       });
@@ -806,6 +791,68 @@
             declaredProtocolIds[protoId] = true;
           }
         });
+      });
+
+      // Handle study-level processes that still lack executesProtocol
+      (study.processSequence || []).forEach(function(proc) {
+        if (!proc.executesProtocol) {
+          var procNameLower = (proc.name || '').toLowerCase();
+          var matched = false;
+          for (var k = 0; k < (study.protocols || []).length; k++) {
+            var prot = study.protocols[k];
+            var protNameLower = (prot.name || '').toLowerCase();
+            if (procNameLower && protNameLower &&
+                (procNameLower.includes(protNameLower) || protNameLower.includes(procNameLower))) {
+              proc.executesProtocol = { '@id': prot['@id'] };
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            // Create _default only if needed
+            var defaultProto = null;
+            for (var pi = 0; pi < (study.protocols || []).length; pi++) {
+              if (study.protocols[pi]['@id'] === '#Protocol/_default') {
+                defaultProto = study.protocols[pi];
+                break;
+              }
+            }
+            if (!defaultProto) {
+              defaultProto = {
+                '@id': '#Protocol/_default',
+                'name': '_default',
+                'protocolType': { 'annotationValue': 'material processing', 'termSource': 'OBI', 'termAccession': 'http://purl.obolibrary.org/obo/OBI_0000094' },
+                'parameters': []
+              };
+              study.protocols.push(defaultProto);
+            }
+            proc.executesProtocol = { '@id': '#Protocol/_default' };
+          }
+        }
+
+        // Ensure study-level process params are declared on their protocol
+        var targetProtoId = proc.executesProtocol && proc.executesProtocol['@id'];
+        if (targetProtoId) {
+          var targetProto = findProtocolById(targetProtoId);
+          if (targetProto) {
+            var existingIds = {};
+            (targetProto.parameters || []).forEach(function(p) {
+              if (p && p['@id']) existingIds[p['@id']] = true;
+            });
+            (proc.parameterValues || []).forEach(function(pv) {
+              if (!pv || typeof pv !== 'object') return;
+              var paramRef = pv.category || pv.parameter;
+              if (!paramRef || typeof paramRef !== 'object') return;
+              var paramId = paramRef['@id'];
+              if (!paramId || existingIds[paramId]) return;
+              targetProto.parameters.push({
+                '@id': paramId,
+                'parameterName': { 'annotationValue': nameFromId(paramId) }
+              });
+              existingIds[paramId] = true;
+            });
+          }
+        }
       });
 
       // Collect all material IDs from process inputs/outputs and declare undeclared ones
