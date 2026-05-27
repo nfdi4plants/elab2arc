@@ -623,7 +623,9 @@
       }
       if (datasetInfo) {
         comments.push(window.arctrl.Comment.create("dataset_files", datasetInfo.files.join(', ')));
-        comments.push(window.arctrl.Comment.create("number_of_samples", datasetInfo.samples.length.toString()));
+        if (datasetInfo.samples.length > 0) {
+          comments.push(window.arctrl.Comment.create("number_of_samples", datasetInfo.samples.length.toString()));
+        }
       }
 
       // Only create sample/process tables when LLM data is available

@@ -743,14 +743,14 @@ Extract and return ONLY a JSON object (no markdown, no explanation) with this st
   "samples": [
     {
       "name": "Sample identifier or name (e.g., Sample_1, Blood_Sample_A, Patient_001)",
-      "organism": "Organism or source (e.g., Homo sapiens, E. coli, Arabidopsis)",
+      "organism": "Scientific organism name (e.g., Homo sapiens, Escherichia coli, Arabidopsis thaliana)",
       "characteristics": [
         {
-          "category": "Characteristic category (e.g., age, tissue type, genotype, treatment, location, collection date)",
+          "category": "Characteristic category (e.g., age, strain, tissue type, genotype, treatment, location, collection date)",
           "value": "Characteristic value (actual value, not a description)",
           "unit": "Unit if applicable (e.g., years, °C, mg/L) or empty string",
-          "termSource": "Ontology source (e.g., NCIT, OBI, EFO) or empty string if unknown",
-          "termAccession": "Ontology term ID or empty string if unknown"
+          "termSource": "Ontology source (e.g., NCBITaxon for organisms/strains, NCIT, OBI, EFO) or empty string if unknown",
+          "termAccession": "Ontology term ID (e.g., NCBITaxon:562 for E. coli, NCBITaxon:9606 for human) or empty string if unknown"
         }
       ]
     }
@@ -858,8 +858,8 @@ Note: Parameters are stored as free text with units combined (e.g., "37 °C"), n
 
 **Good sample extraction with characteristics**:
 Sample with location and collection date:
-- {"name": "Sample_1", "organism": "E. coli", "characteristics": [
-    {"category": "strain", "value": "K-12", "unit": "", "termSource": "NCBI", "termAccession": ""},
+- {"name": "Sample_1", "organism": "Escherichia coli", "characteristics": [
+    {"category": "strain", "value": "K-12", "unit": "", "termSource": "NCBITaxon", "termAccession": "NCBITaxon:83333"},
     {"category": "Location", "value": "Lab A", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C25341"},
     {"category": "Collection Date", "value": "2024-01-15", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}
   ]}

@@ -201,6 +201,17 @@
     return name || 'unknown';
   }
 
+  // Returns true for @ids that represent digital/file entities rather than
+  // biological materials. These must not be placed in otherMaterials.
+  function isDigitalEntity(matId) {
+    if (!matId || typeof matId !== 'string') return false;
+    if (matId.startsWith('dataset/') || matId.startsWith('protocols/') || matId.startsWith('resources/')) return true;
+    if (/^(smb|http|https|ftp|sftp|file):\/\//i.test(matId)) return true;
+    if (matId.includes('*')) return true;
+    if (/\.(fastq|fq|bam|sam|vcf|bed|csv|tsv|txt|pdf|png|jpg|jpeg|zip|gz|tar|md|json|html|xml|bigwig|bw|narrowPeak|broadPeak)$/i.test(matId)) return true;
+    return false;
+  }
+
   /**
    * Return a shallow copy of an ontology annotation object to prevent
    * accidental mutation of constant tables.
@@ -730,6 +741,19 @@
         });
       });
 
+      // Remove digital entities (data files, paths) that may have been aggregated
+      // from assay otherMaterials — these are not biological materials.
+      study.materials.otherMaterials = study.materials.otherMaterials.filter(function(m) {
+        return m && m['@id'] && !isDigitalEntity(m['@id']);
+      });
+      (study.assays || []).forEach(function(assay) {
+        if (assay.materials && Array.isArray(assay.materials.otherMaterials)) {
+          assay.materials.otherMaterials = assay.materials.otherMaterials.filter(function(m) {
+            return m && m['@id'] && !isDigitalEntity(m['@id']);
+          });
+        }
+      });
+
       // Ensure unitCategories exists on study
       if (!Array.isArray(study.unitCategories)) study.unitCategories = [];
 
@@ -863,6 +887,7 @@
 
       function ensureMaterialDeclared(matId) {
         if (!matId || allDeclaredIds[matId]) return;
+        if (isDigitalEntity(matId)) return;  // data files/paths are not biological materials
         allDeclaredIds[matId] = true;
         var name = nameFromId(matId);
         if (matId.includes('Source') || matId.includes('#Source_')) {
@@ -874,14 +899,28 @@
         }
       }
 
-      // Scan all assay process inputs/outputs for undeclared material IDs
+      function ensureDataFileDeclared(matId, targetAssay) {
+        if (!matId || !targetAssay) return;
+        if (!Array.isArray(targetAssay.dataFiles)) targetAssay.dataFiles = [];
+        var alreadyThere = targetAssay.dataFiles.some(function(f) { return f && f['@id'] === matId; });
+        if (alreadyThere) return;
+        targetAssay.dataFiles.push({ '@id': matId, 'name': nameFromId(matId), 'type': 'Raw Data File', 'comments': [] });
+      }
+
+      // Scan all assay process inputs/outputs for undeclared material IDs.
+      // Digital entities (data files, paths) are routed to assay.dataFiles instead
+      // of otherMaterials, which is reserved for biological materials only.
       (study.assays || []).forEach(function(assay) {
         (assay.processSequence || []).forEach(function(proc) {
           (proc.inputs || []).forEach(function(inp) {
-            if (inp && inp['@id']) ensureMaterialDeclared(inp['@id']);
+            if (!inp || !inp['@id']) return;
+            if (isDigitalEntity(inp['@id'])) ensureDataFileDeclared(inp['@id'], assay);
+            else ensureMaterialDeclared(inp['@id']);
           });
           (proc.outputs || []).forEach(function(out) {
-            if (out && out['@id']) ensureMaterialDeclared(out['@id']);
+            if (!out || !out['@id']) return;
+            if (isDigitalEntity(out['@id'])) ensureDataFileDeclared(out['@id'], assay);
+            else ensureMaterialDeclared(out['@id']);
           });
         });
       });
@@ -889,10 +928,10 @@
       // Also scan study-level process inputs/outputs
       (study.processSequence || []).forEach(function(proc) {
         (proc.inputs || []).forEach(function(inp) {
-          if (inp && inp['@id']) ensureMaterialDeclared(inp['@id']);
+          if (inp && inp['@id'] && !isDigitalEntity(inp['@id'])) ensureMaterialDeclared(inp['@id']);
         });
         (proc.outputs || []).forEach(function(out) {
-          if (out && out['@id']) ensureMaterialDeclared(out['@id']);
+          if (out && out['@id'] && !isDigitalEntity(out['@id'])) ensureMaterialDeclared(out['@id']);
         });
       });
 
