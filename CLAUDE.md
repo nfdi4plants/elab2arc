@@ -489,7 +489,11 @@ Configured in Token tab (index.html ~line 345). Multi-provider support:
 | `ollama` | Ollama (Local) | No | `http://localhost:11434/v1/chat/completions` |
 | `custom` | Custom API | No | User-configured |
 
-Default provider: `dataplan`. Valid Together.AI models (from `VALID_MODELS`):
+Default provider: `dataplan`. The `dataplan` and `dataplan-gemma` providers hard-wire their model in `getSelectedModel()` (`js/modules/llm-service20260504.js`) regardless of `togetherAIModel`:
+- `dataplan` → `openai/gpt-oss-20b` (switched from `Qwen/Qwen3-235B-A22B-Instruct-2507-tput` in July 2026, matching the same change in `dmp-eva`)
+- `dataplan-gemma` → `google/gemma-4-31B-it`
+
+Valid Together.AI models (from `VALID_MODELS`, used only for the `together` provider's model dropdown):
 - `Qwen/Qwen3-235B-A22B-Instruct-2507-tput` (default)
 - `openai/gpt-oss-120b`
 

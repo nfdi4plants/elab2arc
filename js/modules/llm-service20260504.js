@@ -185,6 +185,11 @@
       return 'google/gemma-4-31B-it';
     }
 
+    // For dataplan provider, hard-wire the GPT OSS 20B model
+    if (provider === 'dataplan') {
+      return 'openai/gpt-oss-20b';
+    }
+
     // For other providers, use existing logic
     const savedModel = window.localStorage.getItem('togetherAIModel');
 
@@ -225,6 +230,8 @@
       return 131072; // 131K tokens
     } else if (model.includes('gpt-oss-120b')) {
       return 32768; // 32K tokens
+    } else if (model.includes('gpt-oss-20b')) {
+      return 131072; // 131K tokens
     }
     return 131072; // Default fallback
   }
@@ -922,8 +929,14 @@ Return ONLY valid JSON, no additional text.`;
           // Disable thinking/reasoning mode for providers that support it
           // This prevents the model from generating analysis text before the JSON response
           if (provider === 'lmstudio' || provider === 'ollama' || provider === 'dataplan' || provider === 'dataplan-gemma') {
-            requestBody.enable_thinking = false;
-            console.log('[Datamap LLM] Disabled thinking mode for provider:', provider);
+            if (model.includes('gpt-oss')) {
+              // gpt-oss models use reasoning_effort (harmony format) rather than enable_thinking
+              requestBody.reasoning_effort = 'low';
+              console.log('[Datamap LLM] Set low reasoning effort for gpt-oss model:', model);
+            } else {
+              requestBody.enable_thinking = false;
+              console.log('[Datamap LLM] Disabled thinking mode for provider:', provider);
+            }
           }
 
           console.log('[Datamap LLM] Request body keys:', Object.keys(requestBody).join(', '));
