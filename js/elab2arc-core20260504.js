@@ -2415,7 +2415,13 @@ CC BY 4.0
     // GIT ADD ALL FUNCTION
     // Stages all changes including deletions using git.statusMatrix()
     // =============================================================================
-    async function gitAddAll(gitRoot) {
+    // lfsCtx (optional): { url, auth, corsProxy } - when provided, any changed
+    // file under a dataset/ directory is routed through GitLFSService instead
+    // of a plain git.add, so it always ends up as a real LFS pointer. This is
+    // the catch-all safety net: any code path that writes into dataset/ and
+    // relies on this sweep to stage it (rather than calling addFileWithLFS
+    // itself) still gets converted correctly.
+    async function gitAddAll(gitRoot, lfsCtx = null) {
       try {
         console.log('[Git Add All] Analyzing file changes...');
 
@@ -2449,7 +2455,11 @@ CC BY 4.0
           // File added or modified
           else if (WORKDIR === 2 || (HEAD === 0 && WORKDIR === 1)) {
             try {
-              await git.add({ fs, dir: gitRoot, filepath });
+              if (lfsCtx && window.GitLFSService && GitLFSService.isInDatasetDirectory(filepath)) {
+                await GitLFSService.addFileWithLFS(fs, git, gitRoot, filepath, lfsCtx.url, lfsCtx.auth, lfsCtx.corsProxy);
+              } else {
+                await git.add({ fs, dir: gitRoot, filepath });
+              }
               stagedFiles.push(filepath);
               console.log(`[Git Add All] Added: ${filepath}`);
             } catch (err) {
@@ -2534,9 +2544,14 @@ Conversion tool: elab2ARC v${version}
 Date: ${timestamp}`;
       }
 
-      // Stage all changes including deletions before committing
+      // Stage all changes including deletions before committing.
+      // Route dataset/ files through LFS (see gitAddAll's lfsCtx handling) so
+      // anything not already explicitly staged with addFileWithLFS still
+      // ends up as a real LFS pointer, matching what .gitattributes promises.
       try {
-        await gitAddAll(gitRoot);
+        const lfsProxy = 'https://lfsproxy.cplantbox.com';
+        const lfsAuth = `Basic ${btoa('oauth2:' + datahubtoken)}`;
+        await gitAddAll(gitRoot, { url: datahubURL, auth: lfsAuth, corsProxy: lfsProxy });
       } catch (stagingError) {
         console.warn('[Commit] Git staging failed, continuing with individual adds:', stagingError);
       }
@@ -4766,8 +4781,11 @@ ${res.uploads && res.uploads.length > 0 ?
       const readmePath = memfsPathJoin(datasetPath, 'README.elab2arc.md');
       await fs.promises.writeFile(readmePath, readmeContent);
 
-      const relativeDatasetPath = `${baseAssayPath.replace(gitRoot, "")}/${dataFolderName}/README.elab2arc.md`;
-      await git.add({ fs, dir: gitRoot, filepath: relativeDatasetPath });
+      // Not staged here with a plain git.add: this file lives under dataset/,
+      // so .gitattributes tracks it via LFS. It's left for commitPush's
+      // gitAddAll(gitRoot, lfsCtx) sweep to stage, which routes anything
+      // under dataset/ through GitLFSService so it becomes a real LFS
+      // pointer instead of a plain blob (see git-lfs-service.js).
 
       // ========== METADATA TRACKING: Initialize conversion metadata (BEFORE try block for scope) ==========
       const conversionStartTime = Date.now();
@@ -6367,6 +6385,10 @@ ${res.uploads && res.uploads.length > 0 ?
           break;
         case "arc":
           showTab("arcTab");
+
+          break;
+        case "extension":
+          showTab("extensionTab");
 
           break;
         case "ftw":

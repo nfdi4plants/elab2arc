@@ -65,10 +65,13 @@ async function initLFS(fs, gitRoot) {
 }
 
 /**
- * Check if file should use LFS based on size
+ * Check if a file size exceeds LFS_SIZE_THRESHOLD.
+ * No longer used to gate LFS eligibility in addFileWithLFS (every file in
+ * dataset/ uses LFS regardless of size, see addFileWithLFS) - kept as a
+ * standalone size check for callers that just want a "this is large" hint.
  *
  * @param {number} fileSize - Size of file in bytes
- * @returns {boolean} True if file should use LFS
+ * @returns {boolean} True if file exceeds LFS_SIZE_THRESHOLD
  */
 function shouldUseLFS(fileSize) {
   return fileSize > LFS_SIZE_THRESHOLD;
@@ -238,7 +241,14 @@ function extractExtension(filepath) {
 
 /**
  * Process file for git add with LFS support
- * Uses LFS for files >10MB that are in dataset/ directories
+ * Uses LFS for every file in a dataset/ directory, regardless of size —
+ * this matches the blanket "**\/dataset/**" pattern elab2arc writes to
+ * .gitattributes, so every file it promises is LFS-tracked actually is.
+ * (Previously gated on a 10MB threshold; that let small dataset/ files be
+ * committed as plain blobs while .gitattributes still claimed them as LFS,
+ * which downstream tools that assume the promise holds - e.g. DataPLANT's
+ * arc-export in "-lfs" mode - can't handle: it errors reading a non-pointer
+ * file where an LFS pointer was expected.)
  *
  * @param {object} fs - Filesystem object (memfs)
  * @param {object} git - isomorphic-git instance
@@ -257,9 +267,9 @@ async function addFileWithLFS(fs, git, gitRoot, filepath, url, auth, corsProxy) 
     const content = await fs.promises.readFile(fullPath);
     const fileSize = content.byteLength;
 
-    // Check if file should use LFS: must be >10MB AND in a dataset directory
-    if (shouldUseLFS(fileSize) && isInDatasetDirectory(filepath)) {
-      console.log(`[LFS] File ${filepath} (${formatBytes(fileSize)}) in dataset/ exceeds threshold`);
+    // Any file in a dataset/ directory uses LFS, regardless of size.
+    if (isInDatasetDirectory(filepath)) {
+      console.log(`[LFS] File ${filepath} (${formatBytes(fileSize)}) is in dataset/, using LFS`);
 
       // Ensure LFS is configured
       const gitattributesPath = `${gitRoot}/${LFS_CONFIG_PATH}`;
@@ -367,4 +377,4 @@ window.GitLFSService = {
   LFS_PATTERN
 };
 
-console.log('[LFS] Git LFS Service loaded (threshold:', formatBytes(LFS_SIZE_THRESHOLD), ', pattern:', LFS_PATTERN, ')');
+console.log('[LFS] Git LFS Service loaded (all dataset/ files use LFS regardless of size, pattern:', LFS_PATTERN, ')');

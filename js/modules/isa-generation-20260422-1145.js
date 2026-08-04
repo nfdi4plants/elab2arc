@@ -31,6 +31,90 @@
   }
 
   /**
+   * Recursively list files under a directory, as paths relative to it.
+   * Used to validate LLM-extracted "data file" references against what
+   * actually exists on disk before writing them into an ISA table.
+   *
+   * @param {object} fs - Filesystem object (memfs)
+   * @param {string} dirPath - Directory to scan
+   * @returns {string[]} - Relative file paths (forward-slash separated)
+   */
+  function listFilesRecursive(fs, dirPath) {
+    const results = [];
+    function walk(currentPath, relPrefix) {
+      let entries;
+      try {
+        entries = fs.readdirSync(currentPath);
+      } catch (e) {
+        return;
+      }
+      entries.forEach(name => {
+        const full = window.memfsPathJoin(currentPath, name);
+        const rel = relPrefix ? `${relPrefix}/${name}` : name;
+        let stats;
+        try {
+          stats = fs.statSync(full);
+        } catch (e) {
+          return;
+        }
+        if (stats.isDirectory()) {
+          walk(full, rel);
+        } else {
+          results.push(rel);
+        }
+      });
+    }
+    walk(dirPath, '');
+    return results;
+  }
+
+  /**
+   * Reject values that can never be a real committed file: URLs/URIs (e.g.
+   * eLabFTW notes describing an external "smb://..." data location) and
+   * glob patterns (e.g. LLM-extracted "*.fastq") - both have been observed
+   * in LLM-extracted dataFiles output and, written verbatim into an ISA
+   * "Output [Data]" cell, make downstream tools (arc-export) fail trying to
+   * resolve them as literal files.
+   *
+   * @param {string} value
+   * @returns {boolean}
+   */
+  function isPlausibleDataFileName(value) {
+    const v = (value || '').trim();
+    if (!v) return false;
+    if (v.includes('://')) return false;
+    if (v.includes('*') || v.includes('?')) return false;
+    return true;
+  }
+
+  /**
+   * Resolve an LLM-extracted "data file" value against the real files
+   * present in the assay/study's data folder, returning a path relative to
+   * that folder (never prefixed with "dataset/"/"resources/" - the ISA
+   * consumer, e.g. arc-export, already resolves Output [Data] values
+   * relative to that folder itself; prefixing here double-prefixes).
+   *
+   * @param {string} value - Raw LLM-extracted value
+   * @param {Set<string>|null} realFiles - Real relative file paths under the
+   *   data folder, or null if no manifest is available (falls back to a
+   *   plausibility-only check)
+   * @returns {string|null} - Resolved relative path, or null if the value
+   *   doesn't correspond to any real file / isn't plausibly a filename
+   */
+  function resolveDataFileReference(value, realFiles) {
+    const v = (value || '').trim();
+    if (!isPlausibleDataFileName(v)) return null;
+    const stripped = v.replace(/^\.*\/+/, '').replace(/^(dataset|resources)\//, '');
+    if (!realFiles) {
+      return stripped;
+    }
+    if (realFiles.has(stripped)) return stripped;
+    const base = stripped.split('/').pop();
+    const match = Array.from(realFiles).find(f => f.split('/').pop() === base);
+    return match || null;
+  }
+
+  /**
    * Analyze ARC directory structure
    * @param {string} gitRoot - Root directory of ARC
    * @returns {Object} - Structure with studies and assays arrays
@@ -380,9 +464,13 @@
    * @param {Object} protocol - Protocol object with inputs, parameters, outputs
    * @param {number} processNr - Process number for naming
    * @param {Object} protocolInfo - Protocol file information (optional)
+   * @param {Set<string>|null} datasetFiles - Real relative file paths under the
+   *   assay/study's data folder (dataset/ or resources/), used to validate
+   *   LLM-extracted "data file" output values before writing them into the
+   *   ISA table. Pass null if no manifest is available.
    * @returns {ArcTable} - Process table
    */
-  function createProcessTable(protocol, processNr, protocolInfo = null) {
+  function createProcessTable(protocol, processNr, protocolInfo = null, datasetFiles = null) {
     try {
       const tableName = `process nr. ${processNr}`;
       const processTable = window.arctrl.ArcTable.init(tableName);
@@ -473,33 +561,37 @@
         }
       }
 
-      // Determine output type: Data if dataFiles exist, otherwise Sample
-      // ARCtrl only allows ONE output column per table
-      const hasDataFiles = protocol.dataFiles && protocol.dataFiles.length > 0 && protocol.dataFiles.some(f => safeString(f).trim() !== '');
+      // Determine output type: Data if any dataFiles value resolves to a real
+      // (or at least plausible) file, otherwise Sample.
+      // ARCtrl only allows ONE output column per table.
+      // Note: resolved values are NEVER prefixed with "dataset/"/"resources/"
+      // here - the ISA consumer (e.g. arc-export) already resolves Output
+      // [Data] values relative to that folder itself; prefixing here on top
+      // of that produced doubled paths like "dataset/dataset/...".
+      const rawDataFiles = protocol.dataFiles || [];
+      const resolvedDataFiles = rawDataFiles.map(f => {
+        const fileStr = safeString(f);
+        if (fileStr.trim() === '') return { raw: fileStr, resolved: '' };
+        const resolved = resolveDataFileReference(fileStr, datasetFiles);
+        if (resolved === null) {
+          console.warn(`[ISA Elab2Arc] Discarding data file reference "${fileStr}": not found under the dataset folder, or not a plausible filename (URL/glob pattern).`);
+        }
+        return { raw: fileStr, resolved: resolved || '' };
+      });
+      const hasDataFiles = resolvedDataFiles.some(f => f.resolved !== '');
 
       if (hasDataFiles) {
         // Output as Data (with file references)
         const dataHeader = window.arctrl.CompositeHeader.output(window.arctrl.IOType.data());
 
-        const dataCells = protocol.dataFiles.map(file => {
-          // Handle empty strings or null/undefined
-          const fileStr = safeString(file);
-          if (fileStr.trim() === '') {
-            return window.arctrl.CompositeCell.createFreeText('');
-          }
-
-          // Add dataset/ prefix if not already prefixed and not a wildcard pattern
-          let filePath = fileStr;
-          if (!fileStr.startsWith('dataset/') && !fileStr.startsWith('*/')) {
-            filePath = `dataset/${fileStr}`;
-          }
-
-          return window.arctrl.CompositeCell.createFreeText(filePath);
-        });
+        const dataCells = resolvedDataFiles.map(f =>
+          window.arctrl.CompositeCell.createFreeText(f.resolved)
+        );
 
         processTable.AddColumn(dataHeader, dataCells);
-        const nonEmptyCount = protocol.dataFiles.filter(f => safeString(f).trim() !== '').length;
-        console.log(`  - Added Output [Data] column with ${nonEmptyCount} file(s) (${protocol.dataFiles.length} row(s) total)`);;
+        const resolvedCount = resolvedDataFiles.filter(f => f.resolved !== '').length;
+        const discardedCount = resolvedDataFiles.filter(f => f.raw.trim() !== '' && f.resolved === '').length;
+        console.log(`  - Added Output [Data] column with ${resolvedCount} file(s) (${discardedCount} discarded, ${resolvedDataFiles.length} row(s) total)`);
 
       } else {
         // Output as Sample (named outputs or default)
@@ -636,6 +728,11 @@
         const sampleTable = createSampleTable(llmData.samples || []);
         allTables = [sampleTable];
 
+        // Real manifest of files under dataset/, used to validate LLM-extracted
+        // "data file" output values (see createProcessTable / resolveDataFileReference)
+        const assayDatasetPath = window.memfsPathJoin(assayPath, 'dataset');
+        const realDatasetFiles = new Set(listFilesRecursive(window.FS.fs, assayDatasetPath));
+
         // ========== SHEETS 2+: Process Tables (one per protocol) ==========
         if (llmData.protocols && llmData.protocols.length > 0) {
           for (let i = 0; i < llmData.protocols.length; i++) {
@@ -651,7 +748,7 @@
               }
             }
 
-            const processTable = createProcessTable(protocol, processNr, protocolInfo);
+            const processTable = createProcessTable(protocol, processNr, protocolInfo, realDatasetFiles);
             allTables.push(processTable);
 
             comments.push(window.arctrl.Comment.create(
@@ -773,6 +870,11 @@
         allTables = [sampleTable];
         console.log(`[ISA Gen] Created sample table for study`);
 
+        // Real manifest of files under resources/, used to validate LLM-extracted
+        // "data file" output values (see createProcessTable / resolveDataFileReference)
+        const studyResourcesPath = window.memfsPathJoin(studyPath, 'resources');
+        const realResourceFiles = new Set(listFilesRecursive(window.FS.fs, studyResourcesPath));
+
         // ========== SHEETS 2+: Process Tables (one per protocol) ==========
         if (llmData.protocols && llmData.protocols.length > 0) {
           for (let i = 0; i < llmData.protocols.length; i++) {
@@ -788,7 +890,7 @@
               }
             }
 
-            const processTable = createProcessTable(protocol, processNr, protocolInfo);
+            const processTable = createProcessTable(protocol, processNr, protocolInfo, realResourceFiles);
             allTables.push(processTable);
           }
 

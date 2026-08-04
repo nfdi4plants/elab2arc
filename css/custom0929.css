@@ -246,14 +246,6 @@ padding:0;
 
 
 
-.nav-linkc:hover {
-    color:  rgb(255, 254, 254);
-    background-color:  rgba(255, 255, 255, 0.6);
-    border-color: rgb(45, 62, 80);
-	height: 3.25rem;
-	
-}
-
 .btn-tutorial:hover {
     color: #FEFEFE;
     background-color: #FFC000;
@@ -347,13 +339,16 @@ padding:0;
 height: 3.25rem;
 border-width: 0 ;
 font-size: 0.75rem;
-text-decoration: none !important; 
+text-decoration: none !important;
+transition: background-color 0.15s ease-in-out;
 
 }
 
-.nav-linkc:hover{
-    color:  white;
-	cursor: pointer;	
+.nav-linkc:hover,
+.nav-linkc.show {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.15);
+    cursor: pointer;
 }
 .nav-item {
 	display:inline;

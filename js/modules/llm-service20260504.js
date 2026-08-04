@@ -776,7 +776,7 @@ Extract and return ONLY a JSON object (no markdown, no explanation) with this st
         }
       ],
       "outputs": ["array of output sample/material names - ONE VALUE PER ROW. Length MUST match inputs. For 3 input samples, use 3 output entries: ['Output_1', 'Output_2', 'Output_3']"],
-      "dataFiles": ["array of data file names - ONE VALUE PER ROW. MUST match length of inputs/outputs. Can repeat filenames if multiple samples share the same file. Use empty string for rows with no data files. Examples: 'results.csv', '*.fastq', 'plot.png'"]
+      "dataFiles": ["array of CONCRETE data file names only - ONE VALUE PER ROW. MUST match length of inputs/outputs. Can repeat filenames if multiple samples share the same file. Use empty string when only a general description/pattern is given (not a real filename) or when there are no data files. Never use wildcards ('*.fastq') or external storage paths ('smb://...', 'https://...'). Examples: 'results.csv', 'plot.png', ''"]
     }
   ]
 }
@@ -841,12 +841,22 @@ IMPORTANT - DATA FILE LINKING:
 4. **Mixed scenarios**:
    - Some samples share a file, others don't → repeat as needed
    - Example: ["batch1.csv", "batch1.csv", "sample3_only.csv"]
-5. **File name extraction**:
+5. **File name extraction - ONLY use a value when a concrete, specific filename is stated**:
    - Explicit names: "saved as results.csv" → "results.csv"
-   - Patterns: "FASTQ files for each sample" → ["*.fastq", "*.fastq", "*.fastq"]
    - Images: "Figure 1 (plot.png)" → "plot.png"
-   - Formats: "exported to CSV" → "results.csv" or "*.csv"
-6. **No data files**:
+   - Do NOT invent a name or pattern when only a general description is given
+     (e.g. "FASTQ files generated for each sample", "exported to CSV") - use
+     an empty string for that entry instead. These files are never actually
+     attached to the ARC as literal "*.fastq" or "*.csv", so writing a
+     wildcard/pattern here creates a reference to a file that doesn't exist.
+6. **Never use a value that isn't a real, standalone filename**:
+   - No wildcards or patterns: "*.fastq", "*.csv", "sample_*.txt" are NOT
+     valid dataFiles values - use "" instead
+   - No URLs or network paths describing where data is stored externally:
+     "smb://server/path/...", "https://...", "ftp://..." are NOT valid
+     dataFiles values (they describe an external storage location, not a
+     file committed to this ARC) - use "" instead
+7. **No data files**:
    - If no files mentioned → use empty strings: ["", "", ""]
    - Or omit dataFiles field entirely (backward compatible)
 
@@ -896,11 +906,11 @@ Example 3 - Mixed scenario (some shared, some individual):
 - outputs: ["Result_1", "Result_2", "Result_3"]
 - dataFiles: ["batch1.csv", "batch1.csv", "sample3.csv"]
 
-Example 4 - Wildcard pattern for multiple files:
-- Protocol: "FASTQ files generated for each sample"
+Example 4 - Only a general description, no concrete filename (leave empty):
+- Protocol: "FASTQ files generated for each sample" / "Data stored on smb://server/path"
 - inputs: ["Sample_A", "Sample_B"]
 - outputs: ["Sequencing_A", "Sequencing_B"]
-- dataFiles: ["*.fastq", "*.fastq"]
+- dataFiles: ["", ""]  (no wildcard pattern, no external storage path - neither is a real filename)
 
 Example 5 - No data files mentioned:
 - inputs: ["Sample_1", "Sample_2"]

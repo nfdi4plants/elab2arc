@@ -78,7 +78,18 @@ video {
           href="https://nfdi4plants.github.io/nfdi4plants.knowledgebase/resources/elab2arc/"><img
             src="images/knowledgebase.png?v=20260505" alt="DataPLANT knowledgebase" style="width:2rem;height:2rem;"> Help</a>
 
-
+        <span class="dropdown d-inline-block">
+          <a id="advancedDropdownBtn" class="p-2 nav-linkc dropdown-toggle" href="#" role="button"
+            data-bs-toggle="dropdown" aria-expanded="false">Advanced</a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="advancedDropdownBtn">
+            <li><button class="dropdown-item" type="button"
+                onclick="window.history.pushState('', '', '/elab2arc/#extension'); showTab('extensionTab')">🗂️
+                Alternative Input (zip / note vault)</button></li>
+            <li><button class="dropdown-item" type="button"
+                onclick="refreshTree(); bootstrap.Modal.getOrCreateInstance(document.getElementById('folderModal')).show()">📁
+                Open File Explorer</button></li>
+          </ul>
+        </span>
 
 
         <a id="ghlink" class=" p-2 nav-linkc" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img
@@ -556,6 +567,45 @@ video {
         </button>
       </div>
       <div id="alertPlace"> </div>
+    </div>
+
+    <!-- Alternative-input plugin tab: zip/vault upload -> ARC conversion.
+         Not linked from any nav button - reachable only via the #extension
+         URL hash (see softRoute()). Reuses the ARC selected in the ARC tab
+         (gitlabInfo) and the token already set in the Token tab. -->
+    <div name="tab" class="d-none justify-content-center" id="extensionTab">
+      <h2 class="text-center">Import from zip / note vault</h2>
+      <p class="text-center text-muted">
+        Upload a zip file: an eLabFTW <code>.eln</code> export, an eLabFTW-native
+        <code>export-elabftw.json</code> export, or a generic markdown/HTML note
+        vault (e.g. Obsidian). Select your target ARC in the <a href="#arc">ARC tab</a>
+        first.
+      </p>
+
+      <div class="col-12 col-md-8 mx-auto">
+        <div class="mb-3">
+          <label for="extFileInput" class="form-label">Zip file</label>
+          <input type="file" class="form-control" id="extFileInput" accept=".zip">
+        </div>
+
+        <div id="extFormatSummary" class="mb-3"></div>
+
+        <div id="extGroupingRow" class="mb-3 d-none">
+          <label for="extGroupingSelect" class="form-label">Grouping (vaults only)</label>
+          <select class="form-select" id="extGroupingSelect">
+            <option value="whole-vault">Whole vault = one experiment</option>
+            <option value="top-folder">Top-level folder = one experiment</option>
+            <option value="per-note">Every note = one experiment</option>
+          </select>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-sm mb-3" id="extConvertBtn" disabled>
+          <span class="lead">Convert</span>
+        </button>
+
+        <pre id="extLogPanel" class="border rounded p-2" style="height:30vh; overflow-y:scroll; background:#f8f9fa;"></pre>
+      </div>
+    </div>
 
 
     </div>
@@ -1213,15 +1263,19 @@ video {
 
   <!-- Load modular components before core -->
   <script src="./js/modules/conversion-metadata.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/isa-generation-20260422-1145.js?v=20260526" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/isa-generation-20260422-1145.js?v=20260804" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/isa-enrichment-20260504.js?v=20260526" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/llm-service20260504.js?v=20260728" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/llm-service20260504.js?v=20260804" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260304120114" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/git-lfs-service.js?v=20260304120115" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/git-lfs-service.js?v=20260804" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/readme-generator20260504.js?v=20260504" type="text/javascript" charset="utf-8"></script>
 
+  <!-- Alternative input plugin (zip/vault upload) - only reachable via #extension hash, see softRoute() -->
+  <script src="./js/modules/alt-input-parsers-20260730.js?v=20260730" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/alt-input-convert-20260730.js?v=20260730" type="text/javascript" charset="utf-8"></script>
+
   <!-- Main application core -->
-  <script src="./js/elab2arc-core20260504.js?v=20260505" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core20260504.js?v=20260804" type="text/javascript" charset="utf-8"></script>
 
   <!-- vis-network for LLM process graph visualization -->
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js?v=20260505"></script>
