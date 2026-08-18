@@ -682,6 +682,42 @@ GitHub account, real test repo, plus one synthetic-pagination check):
   genuinely exceeds 100 repos. Search filter verified too (`?search=elab2arc`
   correctly returned exactly the 3 real repos matching that substring).
 
+**GitLab had the identical latent bug, fixed the same session** (not part of
+the Kimi audit - found by asking "does GitLab pagination need the same fix?"
+after fixing GitHub's). `fetchUserProjects()`'s GitLab branch did a single
+fetch with no pagination loop either. Confirmed empirically against
+gitlab.com (unauthenticated, public `/projects`) that GitLab silently caps
+`per_page` at 100 regardless of what's requested - the previous default
+`per_page=200` was doing nothing; the response came back with
+`x-per-page: 100`, only 100 items, and a real `Link: rel="next"` header
+proving more existed. Any GitLab/PLANTdataHUB user with >100 projects was
+silently missing results, identically to the GitHub gap.
+
+Fixed the same way as GitHub (page-looping, `per_page=100`) rather than
+using GitLab's keyset pagination mode + the `Link` header, for two
+independently-confirmed reasons: (1) `pagination=keyset` combined with an
+explicit `page=N` **silently ignores the page param and re-returns page 1
+every time** - confirmed empirically (`page=1` and `page=2` returned
+byte-identical results with keyset mode on), which would have made the loop
+fetch the same 100 projects up to 20 times instead of paginating; (2) even
+in plain offset mode, this app's CORS proxy (`proxy.wb-e.com`) doesn't
+forward the `Link` header via `Access-Control-Expose-Headers`
+(`Content-Length, Content-Range, Content-Type` only - see
+`cors-proxy.nginx.conf` on `zap`), so it wouldn't be readable from browser
+JS through the proxy regardless. Dropped `pagination=keyset` from both real
+`apiParameter` sources (this function's default, and
+`window.updateARCList`'s search-query construction) and switched both to
+explicit `per_page=100`.
+
+**Verified**: the exact page-looping shape now used was run directly
+against real, live, multi-page `gitlab.com` public project data (3 pages of
+100, 300 total, all IDs confirmed unique - i.e. genuinely advancing, not
+re-fetching the same page). Could not verify the *authenticated* path
+end-to-end (no real GitLab/PLANTdataHUB PAT available in this session) -
+but the auth mechanism itself (`Authorization: Bearer <token>` via
+`fetchWithProxyFallback`) is unchanged from the pre-existing, already-working
+single-fetch version; only the page-looping wrapper around it is new.
+
 A third, lower-severity finding (a rare edge case where a failed push mid-batch
 can leave a dangling assay reference registered in the investigation object,
 since registration happens before push inside `processExperiment()`) was

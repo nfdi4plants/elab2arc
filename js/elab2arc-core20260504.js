@@ -1666,7 +1666,12 @@ CC BY 4.0
       const { elabtoken, datahubtoken, instance, elabidList } = await getParameters();
       // Fetch user info
       const id = await fetchUser(datahubtoken);
-      const apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true&search_namespaces=true&" + "search=" + search;
+      // Plain offset pagination (page=N), not GitLab's keyset mode - keyset silently
+      // ignores the page param and just re-returns page 1 every time, which would
+      // break fetchUserProjects's pagination loop (verified empirically against
+      // gitlab.com). per_page=100 matches GitLab's real, non-configurable cap - it
+      // silently truncates a higher requested value rather than erroring.
+      const apiParameter = "?per_page=100&order_by=id&sort=desc&membership=true&search_namespaces=true&" + "search=" + search;
       if (id) {
         // Optionally load user projects
         await fetchUserProjects(id.username, datahubtoken, apiParameter);
@@ -1946,7 +1951,7 @@ CC BY 4.0
       }
     };
 
-    const fetchUserProjects = async (userId, accessToken, apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
+    const fetchUserProjects = async (userId, accessToken, apiParameter = "?per_page=100&order_by=id&sort=desc&membership=true") => {
       try {
         const isGitHub = isGitHubHost();
         let rawProjects;
@@ -1989,22 +1994,42 @@ CC BY 4.0
             );
           }
         } else {
-          const targetUrl = getDatahubAPIURL() + '/projects' + apiParameter;
+          // GitLab silently caps per_page at 100 regardless of what's requested
+          // (confirmed empirically against gitlab.com - a request for per_page=200
+          // comes back with x-per-page: 100 and only 100 items, with a real
+          // Link: rel="next" header proving more exist), so a single fetch was
+          // truncating any account with >100 projects/ARCs. Loop pages until a
+          // short page confirms the end - both real apiParameter sources
+          // (this function's default, and window.updateARCList) already specify
+          // per_page=100 explicitly, matching the real cap.
+          //
+          // Deliberately NOT using pagination=keyset + the Link header for this:
+          // (1) keyset mode ignores the page param and silently re-returns page 1
+          // every time (confirmed empirically - a real, easy-to-miss GitLab
+          // footgun), and (2) even in offset mode, this app's CORS proxy doesn't
+          // forward the Link header via Access-Control-Expose-Headers, so it
+          // wouldn't be readable from JS through the proxy anyway.
+          const perPage = 100;
+          const maxPages = 20; // 2,000 projects/ARCs ceiling - generous
+          rawProjects = [];
+          for (let page = 1; page <= maxPages; page++) {
+            const pageUrl = getDatahubAPIURL() + '/projects' + apiParameter + `&page=${page}`;
+            const pageResponse = await fetchWithProxyFallback(pageUrl, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              }
+            });
 
-          // Fetch the data from the API with the access token in the headers
-          const response = await fetchWithProxyFallback(targetUrl, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
+            // Check for bad responses (status codes between 400 and 599)
+            if (pageResponse.status >= 400 && pageResponse.status < 600) {
+              throw new Error("Bad response from server, please check the availability of the server");
             }
-          });
 
-          // Check for bad responses (status codes between 400 and 599)
-          if (response.status >= 400 && response.status < 600) {
-            throw new Error("Bad response from server, please check the availability of the server");
+            const pageItems = await pageResponse.json();
+            rawProjects.push(...pageItems);
+            if (pageItems.length < perPage) break; // short page = last page
           }
-
-          rawProjects = await response.json();
         }
 
         // Map GitHub's repo shape onto the GitLab-shaped fields the
