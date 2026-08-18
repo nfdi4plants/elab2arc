@@ -649,22 +649,38 @@ touched function's pre-commit vs post-commit behavior. Confirmed correct: the
 field mapping, the LFS fallback's ordering (pointer only written after a
 successful upload, so the fallback's plain `git.add` can't stage a broken
 pointer), the null-body fix, and the `lastLLMError` mechanism. Found bug 4
-above (fixed) plus two known gaps not yet fixed, tracked here rather than
-silently accepted:
+above (fixed) plus two gaps, both since fixed and live-verified (real
+GitHub account, real test repo, plus one synthetic-pagination check):
 
-- **`updateGitLabProjectDescription()` (`elab2arc-core20260504.js:1910`) has
-  no GitHub branch** - on a GitHub host it `PUT`s a nonexistent
-  `api.github.com/projects/...` endpoint, 404s, and the failure is swallowed
-  by design (the function already tolerates failure for other reasons), so
-  nothing crashes - but the "update project description with the LLM
-  summary" feature silently does nothing on GitHub. GitHub's equivalent
-  would be `PATCH /repos/{owner}/{repo}`.
-- **`fetchUserProjects()`'s GitHub branch hardcodes `per_page=100` with no
-  pagination** (GitLab side uses `per_page=200`) - a GitHub account with
-  >100 repos won't see the rest in the selection table. Also,
-  `window.updateARCList(search)`'s GitLab-style `search=` parameter is
-  silently ignored on GitHub (already noted in a code comment, but not
-  surfaced to the user) - the in-UI search box returns the unfiltered list.
+- **`updateGitLabProjectDescription()` now branches on `isGitHubHost()`**:
+  `PATCH {base}/repos/{owner}/{repo}` with `{ description }` (GitHub's
+  documented endpoint - confirmed via its own `documentation_url` in the
+  error response) instead of GitLab's `PUT /projects/:id`. `projectPath` was
+  already being derived by both call sites as an unencoded `"owner/repo"`
+  string, which is exactly the two path segments GitHub's endpoint needs
+  (GitLab instead needs the whole string as one percent-encoded ID). **Code
+  verified correct independently via raw `curl` with the real PAT** (same
+  403 as the app, and GitHub's error pointed at
+  `docs.github.com/rest/repos/repos#update-a-repository` - the exact
+  endpoint implemented) - **but blocked on token scope**: this operation
+  needs "Administration: Read and write" on a fine-grained PAT, a *third*
+  distinct scope dimension from "Contents" (needed for push/LFS, see
+  above). The PAT used for this session's testing only has Contents scope.
+  Not a code bug - noted here so a future session doesn't waste time
+  re-diagnosing the same 403.
+- **`fetchUserProjects()`'s GitHub branch now paginates** (loops
+  `page=1,2,3...` at the API's `per_page=100` max until a short page
+  confirms the end, capped at 20 pages/2,000 repos) and **filters
+  client-side by the `search=` term** pulled back out of `apiParameter`
+  (GitHub's `/user/repos` has no server-side name-search; its actual search
+  endpoint, `GET /search/repositories`, has a different response shape, so
+  filtering the already-paginated list avoids a second endpoint-shape
+  special case). **Verified live against the real account**: real repo
+  count went from 90 (first push-testing session) to 120 now, correctly
+  spanning 2 real pages (`page=1` returning 100, `page=2` returning 20,
+  confirmed via network trace) - not a synthetic test, this account
+  genuinely exceeds 100 repos. Search filter verified too (`?search=elab2arc`
+  correctly returned exactly the 3 real repos matching that substring).
 
 A third, lower-severity finding (a rare edge case where a failed push mid-batch
 can leave a dangling assay reference registered in the investigation object,

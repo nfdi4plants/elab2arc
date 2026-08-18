@@ -1912,11 +1912,19 @@ CC BY 4.0
 
     const updateGitLabProjectDescription = async (projectPath, description, accessToken) => {
       try {
-        const encodedPath = encodeURIComponent(projectPath);
-        const targetUrl = getDatahubAPIURL() + '/projects/' + encodedPath;
+        const isGitHub = isGitHubHost();
+        // projectPath is derived by both call sites as "owner/repo" (host stripped,
+        // .git suffix stripped, everything before the first remaining "/" stripped) -
+        // that's exactly the two path segments GitHub's PATCH /repos/{owner}/{repo}
+        // needs unencoded. GitLab's PUT /projects/:id instead needs the whole
+        // "owner/repo" string as a single percent-encoded ID (%2F, not a literal slash).
+        const targetUrl = isGitHub
+          ? getDatahubAPIURL() + '/repos/' + projectPath
+          : getDatahubAPIURL() + '/projects/' + encodeURIComponent(projectPath);
+        const hostLabel = isGitHub ? 'GitHub' : 'GitLab';
 
         const response = await fetchWithProxyFallback(targetUrl, {
-          method: 'PUT',
+          method: isGitHub ? 'PATCH' : 'PUT',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
@@ -1926,14 +1934,14 @@ CC BY 4.0
 
         if (response.status >= 400) {
           const errorDetails = await response.json().catch(() => ({}));
-          console.warn('[GitLab] Could not update project description:', errorDetails.message || response.status);
+          console.warn(`[${hostLabel}] Could not update project description:`, errorDetails.message || response.status);
           return false;
         }
 
-        console.log('[GitLab] Project description updated for:', projectPath);
+        console.log(`[${hostLabel}] Project description updated for:`, projectPath);
         return true;
       } catch (error) {
-        console.warn('[GitLab] Failed to update project description:', error.message);
+        console.warn('[updateProjectDescription] Failed to update project description:', error.message);
         return false;
       }
     };
@@ -1941,29 +1949,66 @@ CC BY 4.0
     const fetchUserProjects = async (userId, accessToken, apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
       try {
         const isGitHub = isGitHubHost();
-        // GitHub lists repos via GET /user/repos with its own query params - the
-        // GitLab-style apiParameter (e.g. the search-by-name one used in
-        // window.updateARCList) doesn't apply here and is ignored on GitHub.
-        const targetUrl = isGitHub
-          ? getDatahubAPIURL() + '/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member'
-          : getDatahubAPIURL() + '/projects' + apiParameter;
+        let rawProjects;
 
-        // Fetch the data from the API with the access token in the headers
-        const response = await fetchWithProxyFallback(targetUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
+        if (isGitHub) {
+          // GitHub lists repos via GET /user/repos, capped at 100/page (GitHub's max
+          // per_page). Loop pages until a short page confirms the end, rather than
+          // parsing the response's Link header - capped at maxPages as a sane ceiling
+          // so a pathological account can't loop forever.
+          const perPage = 100;
+          const maxPages = 20; // 2,000 repos - generous for a personal/org account
+          rawProjects = [];
+          for (let page = 1; page <= maxPages; page++) {
+            const pageUrl = getDatahubAPIURL() +
+              `/user/repos?per_page=${perPage}&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`;
+            const pageResponse = await fetchWithProxyFallback(pageUrl, {
+              method: 'GET',
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            if (pageResponse.status >= 400 && pageResponse.status < 600) {
+              throw new Error("Bad response from server, please check the availability of the server");
+            }
+            const pageItems = await pageResponse.json();
+            rawProjects.push(...pageItems);
+            if (pageItems.length < perPage) break; // short page = last page
           }
-        });
 
-        // Check for bad responses (status codes between 400 and 599)
-        if (response.status >= 400 && response.status < 600) {
-          throw new Error("Bad response from server, please check the availability of the server");
+          // GitHub's /user/repos has no server-side "search my repos by name" query -
+          // GitHub's equivalent (GET /search/repositories) is a different endpoint with
+          // a different response shape ({total_count, items: [...]}), so instead filter
+          // client-side over the already-paginated full list. apiParameter is a GitLab-
+          // style query string (see window.updateARCList) - pull the search term back
+          // out of it rather than duplicating that construction here.
+          const searchTerm = new URLSearchParams(apiParameter).get('search');
+          if (searchTerm) {
+            const needle = searchTerm.toLowerCase();
+            rawProjects = rawProjects.filter(r =>
+              (r.name || '').toLowerCase().includes(needle) ||
+              (r.full_name || '').toLowerCase().includes(needle)
+            );
+          }
+        } else {
+          const targetUrl = getDatahubAPIURL() + '/projects' + apiParameter;
+
+          // Fetch the data from the API with the access token in the headers
+          const response = await fetchWithProxyFallback(targetUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+
+          // Check for bad responses (status codes between 400 and 599)
+          if (response.status >= 400 && response.status < 600) {
+            throw new Error("Bad response from server, please check the availability of the server");
+          }
+
+          rawProjects = await response.json();
         }
 
-        // Parse the JSON response, mapping GitHub's repo shape onto the
-        // GitLab-shaped fields the table-rendering code below consumes
-        const rawProjects = await response.json();
+        // Map GitHub's repo shape onto the GitLab-shaped fields the
+        // table-rendering code below consumes
         const projects = isGitHub ? rawProjects.map(mapGitHubRepoToProject) : rawProjects;
 
         // Assign the fetched data to a global variable (if needed)
