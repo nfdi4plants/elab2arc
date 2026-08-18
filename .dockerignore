@@ -1,0 +1,5 @@
+.git
+js/node_modules
+docs
+*.md
+!CLAUDE.md

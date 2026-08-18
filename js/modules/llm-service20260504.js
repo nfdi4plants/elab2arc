@@ -640,6 +640,7 @@
   async function callTogetherAI(protocolText, useTestData = false, metadata = {}, options = {}) {
     // Allow callers to redirect the streaming output to a different container
     currentStreamContainerId = options.streamContainerId || 'llmStreamContent';
+    lastLLMError = null;
     try {
       // Get provider and API configuration
       const provider = getSelectedProvider();
@@ -651,9 +652,16 @@
       console.log(`[Datamap LLM] Provider: ${provider}`);
       console.log(`[Datamap LLM] Endpoint: ${endpoint}`);
 
+      if (!protocolText || !protocolText.trim()) {
+        console.warn('[Datamap LLM] Protocol text is empty - skipping LLM extraction');
+        lastLLMError = 'Protocol content is empty';
+        return null;
+      }
+
       // Only require API key for Together.AI provider
       if (provider === 'together' && !apiKey) {
         console.warn('[Datamap LLM] Together.AI requires an API key');
+        lastLLMError = 'Missing Together.AI API key';
         return null;
       }
 
@@ -1054,6 +1062,7 @@ Return ONLY valid JSON, no additional text.`;
       // Merge results if multiple chunks
       if (chunkResults.length === 0) {
         console.error('[Datamap LLM] No valid results from any chunk');
+        lastLLMError = 'Model returned no parseable data for any protocol chunk';
         return null;
       } else if (chunkResults.length === 1) {
         return chunkResults[0];
@@ -1066,6 +1075,7 @@ Return ONLY valid JSON, no additional text.`;
 
     } catch (error) {
       console.error('[Datamap LLM] Error calling Together.AI API:', error);
+      lastLLMError = error.message || String(error);
       return null;
     }
   }
@@ -1251,6 +1261,11 @@ Return ONLY valid JSON, no additional text.`;
   // Configurable stream container ID (defaults to status-modal accordion)
   let currentStreamContainerId = 'llmStreamContent';
 
+  // Reason callTogetherAI() last returned null, so callers can surface *why*
+  // extraction failed (empty content / API error / timeout / no API key)
+  // instead of just "using default structure". Read via getLastLLMError().
+  let lastLLMError = null;
+
   /**
    * Append text to LLM stream UI accordion with auto-scroll
    * @param {string} text - Text to append
@@ -1286,6 +1301,7 @@ Return ONLY valid JSON, no additional text.`;
     splitBySentences: splitBySentences,
     mergeChunkResults: mergeChunkResults,
     callTogetherAI: callTogetherAI,
+    getLastLLMError: () => lastLLMError,
     generateDatamapFromLLM: generateDatamapFromLLM,
     parseProtocolToDatamap: parseProtocolToDatamap,
     appendToLLMStream: appendToLLMStream,

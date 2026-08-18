@@ -791,10 +791,46 @@ CC BY 4.0
 
     /**
      * Get DataHub API URL (base URL + suffix)
-     * @returns {string} Full GitLab API URL
+     * @returns {string} Full GitLab (or GitHub) API URL
      */
     function getDatahubAPIURL() {
+      // GitHub's API is unversioned at the host root (api.github.com/user, not
+      // api.github.com/api/v4/user) - never append a suffix for it. This also
+      // sidesteps setDatahubAPISuffix() treating an empty custom suffix as
+      // "reset to the GitLab default /api/v4", which would otherwise make it
+      // impossible to configure GitHub through the custom-instance panel.
+      if (isGitHubHost()) {
+        return getDatahubURL();
+      }
       return getDatahubURL() + getDatahubAPISuffix();
+    }
+
+    /**
+     * Whether the configured DataHub instance is GitHub rather than GitLab.
+     * GitHub has no /projects endpoint - repo listing/creation go through /user/repos
+     * with a different response shape, so callers branch on this.
+     * @returns {boolean}
+     */
+    function isGitHubHost() {
+      return getDatahubURL().includes('github.com');
+    }
+
+    /**
+     * Map a GitHub repo object (from /user/repos) onto the field names the rest
+     * of the app already consumes from GitLab's /projects response shape.
+     * @param {Object} repo - GitHub repo object
+     * @returns {Object} GitLab-shaped project object
+     */
+    function mapGitHubRepoToProject(repo) {
+      return {
+        id: repo.id,
+        name: repo.name,
+        path_with_namespace: repo.full_name,
+        http_url_to_repo: repo.clone_url,
+        web_url: repo.html_url,
+        visibility: repo.private ? 'private' : 'public',
+        description: repo.description || ''
+      };
     }
 
     /**
@@ -1647,6 +1683,28 @@ CC BY 4.0
 
     // Function to check connection to GitLab API
     async function checkGitLabConnection() {
+      if (isGitHubHost()) {
+        // GitHub has no /projects endpoint to probe - go straight through /user,
+        // which is the same call the GitLab branch below makes once it confirms /projects.
+        try {
+          const { datahubtoken } = await getParameters();
+          const id = await fetchUser(datahubtoken);
+          if (id) {
+            await fetchUserProjects(id.username, datahubtoken);
+            document.getElementById("arcCheck").innerHTML = "&#127760;";
+            console.log('✅ Successfully connected to GitHub API');
+            return true;
+          } else {
+            console.error('🚨 GitHub API can be accessed but the user information could not be fetched. Please check your credentials.');
+            return false;
+          }
+        } catch (error) {
+          document.getElementById("arcCheck").innerHTML = "&#128680;";
+          console.error('🚨 Failed to connect to GitHub API:', error.message);
+          return false;
+        }
+      }
+
       const targetUrl = getDatahubAPIURL() + '/projects';
 
       try {
@@ -1718,6 +1776,13 @@ CC BY 4.0
         // Parse the JSON response
         const userJSON = await response.json();
 
+        // GitHub's /user uses different field names than GitLab's - normalize onto
+        // the fields the rest of the app reads (username, commit_email)
+        if (isGitHubHost()) {
+          userJSON.username = userJSON.login;
+          userJSON.commit_email = userJSON.email || `${userJSON.id}+${userJSON.login}@users.noreply.github.com`;
+        }
+
         // Assign the fetched data to a global variable (if needed)
         window.userId = userJSON;
 
@@ -1742,8 +1807,11 @@ CC BY 4.0
         const username = window.userId.username;
 
         const accessToken = document.getElementById("datahubToken").value;
-        await createGitLabRepo(projectName, projectDescription, accessToken);
-        const url = `${getDatahubURL()}/${username}/${projectName}.git`;
+        const createdRepo = await createGitLabRepo(projectName, projectDescription, accessToken);
+        // Use the clone URL the API actually returned rather than reconstructing it -
+        // on GitHub the git-clone host (github.com) differs from the API host
+        // (api.github.com), so a manually built URL from getDatahubURL() is wrong there.
+        const url = createdRepo?.http_url_to_repo || `${getDatahubURL()}/${username}/${projectName}.git`;
         await cloneARC(url, projectName);
         const name = window.userId.name;
 
@@ -1795,8 +1863,21 @@ CC BY 4.0
 
     const createGitLabRepo = async (projectName, projectDescription, accessToken) => {
       try {
-        // Define the API endpoint for creating a new project
-        const targetUrl = getDatahubAPIURL() + '/projects';
+        const isGitHub = isGitHubHost();
+        // GitHub creates repos via POST /user/repos with different fields
+        // (no initialize_with_readme/default_branch/lfs_enabled - auto_init is the
+        // closest equivalent); GitLab uses POST /projects.
+        const targetUrl = getDatahubAPIURL() + (isGitHub ? '/user/repos' : '/projects');
+        const body = isGitHub
+          ? { name: projectName, description: projectDescription, private: true, auto_init: true }
+          : {
+              name: projectName,
+              description: projectDescription,
+              visibility: 'private',
+              initialize_with_readme: 'true',
+              default_branch: 'main',
+              lfs_enabled: 'true',
+            };
 
         // Prepare request configuration
         const response = await fetchWithProxyFallback(targetUrl, {
@@ -1805,14 +1886,7 @@ CC BY 4.0
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            name: projectName,
-            description: projectDescription,
-            visibility: 'private',
-            initialize_with_readme: 'true',
-            default_branch: 'main',
-            lfs_enabled: 'true',
-          })
+          body: JSON.stringify(body)
         });
 
         // Handle non-success responses [[3]]
@@ -1821,8 +1895,10 @@ CC BY 4.0
           throw new Error(`Error ${response.status}: ${errorDetails.message}`);
         }
 
-        // Return the created project details [[6]]
-        return await response.json();
+        // Return the created project details [[6]] - mapped to the GitLab-shaped
+        // fields the rest of the app consumes (http_url_to_repo, etc.) on GitHub
+        const created = await response.json();
+        return isGitHub ? mapGitHubRepoToProject(created) : created;
 
       } catch (error) {
         // Handle network/API errors [[6]]
@@ -1861,8 +1937,13 @@ CC BY 4.0
 
     const fetchUserProjects = async (userId, accessToken, apiParameter = "?pagination=keyset&per_page=200&order_by=id&sort=desc&membership=true") => {
       try {
-        // Define the API endpoint for fetching user-related projects
-        const targetUrl = getDatahubAPIURL() + '/projects' + apiParameter;
+        const isGitHub = isGitHubHost();
+        // GitHub lists repos via GET /user/repos with its own query params - the
+        // GitLab-style apiParameter (e.g. the search-by-name one used in
+        // window.updateARCList) doesn't apply here and is ignored on GitHub.
+        const targetUrl = isGitHub
+          ? getDatahubAPIURL() + '/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member'
+          : getDatahubAPIURL() + '/projects' + apiParameter;
 
         // Fetch the data from the API with the access token in the headers
         const response = await fetchWithProxyFallback(targetUrl, {
@@ -1877,8 +1958,10 @@ CC BY 4.0
           throw new Error("Bad response from server, please check the availability of the server");
         }
 
-        // Parse the JSON response
-        const projects = await response.json();
+        // Parse the JSON response, mapping GitHub's repo shape onto the
+        // GitLab-shaped fields the table-rendering code below consumes
+        const rawProjects = await response.json();
+        const projects = isGitHub ? rawProjects.map(mapGitHubRepoToProject) : rawProjects;
 
         // Assign the fetched data to a global variable (if needed)
         window.userProjects = projects;
@@ -2611,9 +2694,14 @@ Date: ${timestamp}`;
         gc();
       }
 
+      // Declared outside the try block (not const-scoped to it) so the catch
+      // block below can reference them for the proxy-fallback retry - referencing
+      // them from catch while they were try-scoped previously threw
+      // "ReferenceError: pushProxy is not defined", masking the real push error.
+      let pushProxyStrategy, pushProxy;
       try {
-        const pushProxyStrategy = getGitProxyStrategy();
-        const pushProxy = pushProxyStrategy.useProxy ? getGitProxy() : undefined;
+        pushProxyStrategy = getGitProxyStrategy();
+        pushProxy = pushProxyStrategy.useProxy ? getGitProxy() : undefined;
         updateInfo("Pushing to PLANTDataHUB (main branch)...", pushProgressStart);
         console.log('[PUSH] Starting push to main branch...');
         let pushResult = await git.push({
@@ -3301,7 +3389,12 @@ Date: ${timestamp}`;
           const gitName = datahubURL.slice(0, -4); // Remove .git suffix
           const dir = arcName;
           // Process the experiment with progress tracking - pass investigation object
-          await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'experiment', investigation);
+          try {
+            await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'experiment', investigation);
+          } catch (entryError) {
+            console.error(`Failed to process experiment ${expId}:`, entryError);
+            showErrorToast(`Skipped eLabFTW experiment ${expId}: ${entryError.message || entryError}`);
+          }
           completedEntries++;
         }
 
@@ -3342,7 +3435,12 @@ Date: ${timestamp}`;
           const gitName = datahubURL.slice(0, -4); // Remove .git suffix
           const dir = arcName;
           // Process the resource with progress tracking - pass investigation object
-          await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'resource', investigation);
+          try {
+            await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'resource', investigation);
+          } catch (entryError) {
+            console.error(`Failed to process resource ${expId}:`, entryError);
+            showErrorToast(`Skipped eLabFTW resource ${expId}: ${entryError.message || entryError}`);
+          }
           completedEntries++;
         }
 
@@ -4541,7 +4639,10 @@ Generated by elab2ARC`
       const email = user?.email || '';
 
       // Process protocol HTML
-      let protocol = window.elabEditedBodies[elabid] || res.body;
+      // eLabFTW returns body: null (not "") for an experiment with no content —
+      // fall back to '' so an empty entry produces an empty protocol instead of
+      // crashing the whole batch on protocol.replace() below.
+      let protocol = window.elabEditedBodies[elabid] || res.body || '';
       const elabWWW = params.instance.replace("api/v2/", "");
       protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
       protocol = protocol.replace('<a href="experiments.php?', '<a target="_blank" href="' + instance.replace("api/v2/", "") + 'experiments.php?');
@@ -4945,8 +5046,9 @@ ${res.uploads && res.uploads.length > 0 ?
               console.error(`[ISA Gen] Error saving ${jsonFilename}:`, jsonError);
             }
           } else {
-            console.warn('[ISA Gen] LLM extraction returned no data');
-            updateInfo(`⚠️ LLM extraction failed, using default structure for: <b>${assayId}</b>`, baseProgress + 0.5);
+            const llmFailReason = window.Elab2ArcLLM?.getLastLLMError?.() || 'unknown reason';
+            console.warn('[ISA Gen] LLM extraction returned no data:', llmFailReason);
+            updateInfo(`⚠️ LLM extraction failed (${llmFailReason}), using default structure for: <b>${assayId}</b>`, baseProgress + 0.5);
           }
         } else {
           console.log('[ISA Gen] LLM datamap generation disabled (toggle switch off)');
@@ -5302,13 +5404,26 @@ ${res.uploads && res.uploads.length > 0 ?
           // GitLab LFS requires Basic auth with username "oauth2" and token as password
           // Format: Basic base64("oauth2:token")
           const lfsAuth = `Basic ${btoa('oauth2:' + datahubToken)}`;
-          const lfsResult = await GitLFSService.addFileWithLFS(
-            fs, git, gitRoot, relativeFilePath,
-            datahubURL, lfsAuth,
-            lfsProxy
-          );
-          if (lfsResult.usedLFS) {
-            console.log(`[LFS] File ${fileName} (${GitLFSService.formatBytes(lfsResult.size)}) stored via LFS`);
+          try {
+            const lfsResult = await GitLFSService.addFileWithLFS(
+              fs, git, gitRoot, relativeFilePath,
+              datahubURL, lfsAuth,
+              lfsProxy
+            );
+            if (lfsResult.usedLFS) {
+              console.log(`[LFS] File ${fileName} (${GitLFSService.formatBytes(lfsResult.size)}) stored via LFS`);
+            }
+          } catch (lfsError) {
+            // Don't let one attachment's LFS failure (e.g. a host whose LFS batch
+            // API rejects this token/auth shape - seen with GitHub fine-grained
+            // PATs, which GitHub's LFS endpoint doesn't support) abort the whole
+            // experiment. Matches gitAddAll's existing degrade-gracefully pattern.
+            // Surfaced to the user (not just console) because this silently breaks
+            // the .gitattributes promise that everything under dataset/ is LFS-tracked -
+            // a plain blob here can crash LFS-aware downstream tooling later.
+            console.warn(`[LFS] Upload failed for ${fileName}, falling back to plain git.add:`, lfsError.message || lfsError);
+            showWarningToast(`"${fileName}" was committed without Git LFS (LFS upload failed: ${lfsError.message || lfsError}). It's a regular file in the repo, not an LFS pointer.`);
+            await git.add({ fs, dir: gitRoot, filepath: relativeFilePath });
           }
         } else {
           // Fallback to normal git.add if LFS service not available

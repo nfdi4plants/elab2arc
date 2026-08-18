@@ -263,10 +263,12 @@ localStorage.setItem('gitProxyURL', 'http://localhost:8333')
 **Git Protocol Support:** Handles OPTIONS preflight, GET info/refs, POST git-upload-pack (fetch), and POST git-receive-pack (push) with proper CORS headers and request filtering. Pass GitLab PAT via `onAuth` in isomorphic-git — the proxy forwards the `Authorization` header as-is without modification.
 
 ### Git LFS (Large File Storage)
-Files larger than 10MB in `dataset/` directories are automatically uploaded to Git LFS to improve repository performance and avoid hitting Git size limits.
+**All** files in `dataset/` directories are uploaded to Git LFS, regardless of size — this matches the blanket `.gitattributes` pattern elab2arc writes (see below), so every file `.gitattributes` promises is LFS-tracked actually is, **except** when the LFS upload itself fails for a specific attachment (see "LFS upload failure fallback" below) — that's a known, surfaced-to-the-user exception to this guarantee, not a silent one.
+
+**Why unconditional (fixed August 2026):** LFS conversion used to be gated on a 10MB threshold (`shouldUseLFS()` in `git-lfs-service.js`), so small `dataset/` files (e.g. auto-generated `README.elab2arc.md`) were committed as plain blobs while `.gitattributes` still claimed them as LFS. Downstream tools that assume the promise holds — notably DataPLANT's `arc-export` in `-lfs` mode, used by the ARC RO-Crate CI job — crash reading a non-pointer file where an LFS pointer was expected (`Internal Error: Value cannot be null. (Parameter 'array')`), failing the pipeline on any push, not just ones that add new large files.
 
 **How it works:**
-1. Files >10MB in `dataset/` directories are detected during the conversion process
+1. Any file being staged under a `dataset/` directory is detected during the conversion process (both the live eLabFTW pipeline and the `#extension` alt-input plugin funnel through the same `commitPush` → `gitAddAll` staging sweep, which is LFS-aware — see `gitAddAll`'s `lfsCtx` param in `elab2arc-core20260504.js`)
 2. File content is uploaded to GitLab LFS storage via the LFS Batch API
 3. A small pointer file (SHA-256 reference) is committed to the git repository instead
 4. The LFS proxy handles PUT requests with proper CORS headers
@@ -275,16 +277,58 @@ Files larger than 10MB in `dataset/` directories are automatically uploaded to G
 ```
 **/dataset/** filter=lfs diff=lfs merge=lfs -text
 ```
-All files in any `dataset/` directory are tracked by LFS, regardless of extension.
+All files in any `dataset/` directory are tracked by LFS, regardless of extension or size.
 
 **LFS Configuration:**
-- Threshold: 10MB (`LFS_SIZE_THRESHOLD = 10 * 1024 * 1024`)
 - Config file: `.gitattributes` (auto-generated with dataset pattern)
 - Upload timeout: 5 minutes
 - LFS Batch API: `/info/lfs/objects/batch` (GitLab endpoint)
 
 **Testing LFS:**
 A test page is available at `test-lfs-upload.html` to verify LFS upload functionality.
+
+**LFS upload failure fallback (added August 2026):** if a single attachment's LFS upload
+throws (`processUploadsAndReplaceUrls` → `GitLFSService.addFileWithLFS`, e.g. GitHub rejecting
+a fine-grained PAT for LFS - see "GitHub Support" above), it no longer aborts the whole
+experiment. It falls back to a plain `git.add` for that one file and continues, and surfaces a
+warning toast (`showWarningToast`) naming the file, since this is exactly the
+`.gitattributes`-promises-LFS-but-file-is-a-plain-blob mismatch the unconditional-LFS fix above
+was written to prevent — the toast exists so this doesn't happen silently. This fallback applies
+to any host, not just GitHub: a genuine transient LFS failure against PLANTdataHUB/GitLab would
+hit the same fallback and toast rather than aborting the experiment. `gitAddAll`'s blanket
+`dataset/` staging sweep (used by every `commitPush`) already had an equivalent try/catch before
+this fix; this brings the per-attachment upload path in `processUploadsAndReplaceUrls` in line
+with it.
+
+### Error Handling & Robustness Fixes (August 2026)
+
+**Per-entry conversion isolation:** `processElabEntries`'s experiment/resource loops now wrap
+each `processExperiment()` call in its own try/catch (`elab2arc-core20260504.js`). Previously
+one bad entry threw uncaught, aborted the *entire* batch (all remaining experiments skipped),
+and surfaced only a generic "An unexpected error occurred" toast. Now a failing entry logs +
+toasts its specific ID (`Skipped eLabFTW experiment <id>: <reason>`) and the batch continues.
+
+**Empty eLabFTW body handling:** eLabFTW returns `body: null` (not `""`) for an experiment with
+no content. `processExperiment` used to do `res.body.replace(...)` directly, which threw a
+TypeError on that null - previously this was exactly the kind of error the per-entry isolation
+above now catches, but it's fixed at the source too: `res.body || ''`, so an empty-content entry
+produces an empty protocol instead of erroring at all.
+
+**LLM extraction failure reason:** `callTogetherAI()` (`llm-service20260504.js`) used to swallow
+every failure reason internally and return bare `null`, so the caller's toast was a fixed string
+regardless of cause. It now tracks the reason (`lastLLMError`, exposed via
+`Elab2ArcLLM.getLastLLMError()`) - missing API key, empty protocol content (now checked
+explicitly, before ever calling the API), no parseable model output, or the caught
+exception/API-error message - and the toast reads
+`LLM extraction failed (<reason>), using default structure for: <assayId>` instead of a fixed
+string with no indication of why.
+
+**`commitPush()` proxy-fallback scoping bug:** the retry-via-proxy logic in `commitPush()`'s
+push failure handler referenced `pushProxy`/`pushProxyStrategy`, which were `const`-declared
+inside the sibling `try` block - out of scope in `catch`, so *any* push failure (for *any* host,
+not just GitHub) threw `ReferenceError: pushProxy is not defined` instead of running the
+intended direct→proxy fallback, masking the real error. Fixed by declaring them with `let`
+above the `try`.
 
 ## Development Guidelines
 
@@ -519,6 +563,96 @@ Users can configure a custom DataHub/GitLab instance via the Token tab UI (check
 - **GitLab URL** - Base URL (e.g. `https://gitlab.com`), no API suffix
 - **API Suffix** - Default `/api/v4`
 - **SSO/Token URL** - URL to obtain a personal access token
+
+### GitHub Support (added August 2026)
+The DataHub connector also supports GitHub, detected via `isGitHubHost()`
+(`getDatahubURL()` containing `github.com`) in `elab2arc-core20260504.js`. Set
+**GitLab URL** to `https://api.github.com` and leave **API Suffix** empty - GitHub's
+API is unversioned at the host root, and `getDatahubAPIURL()` skips the suffix
+entirely for GitHub hosts (an empty custom suffix would otherwise fall back to the
+GitLab default `/api/v4` via `setDatahubAPISuffix()`).
+
+`checkGitLabConnection()`, `fetchUserProjects()`, `createGitLabRepo()`, and
+`fetchUser()` all branch on `isGitHubHost()` to use GitHub's `/user` and
+`/user/repos` endpoints instead of GitLab's `/user`/`/projects`, and
+`mapGitHubRepoToProject()` maps GitHub's repo/user field names (`clone_url`,
+`full_name`, `private`, `login`) onto the GitLab-shaped fields
+(`http_url_to_repo`, `path_with_namespace`, `visibility`, `username`) the rest of
+the app consumes.
+
+**Verified fully working end-to-end, including a real push of real converted
+content** (live, real GitHub PAT, real eLabFTW data): connection check, user
+info, repo listing, `cloneARC()`/`datahubClone()`, and a full
+`processElabEntries()` run converting 5 real eLabFTW demo experiments
+(`elab.dataplan.top` IDs 40-44) into ARC assays and pushing them - all through
+the actual production functions, not a synthetic test. Result:
+`github.com/xiaoranzhou/elab2arc-github-test` now has real assay content
+(`isa.assay.xlsx`, protocol markdown, dataset attachments, `isa.investigation.xlsx`)
+across 5 real commits plus the investigation-linkage commit.
+
+GitHub's git-over-HTTPS endpoints send no CORS headers (confirmed via direct
+header inspection), so a browser can't reach them directly - the existing git
+proxy (`getGitProxy()` → `gitproxy.wb-e.com`, config on host `zap`/[redacted-ip],
+`/etc/nginx/sites-available/cors-proxy.nginx.conf`) handles this with no
+target-domain allowlist at all. Its `{"error": "Forbidden: Origin not allowed"}`
+response is a **client-Origin** allowlist check (`https://nfdi4plants.org`,
+`localhost:3000`/`5173`/`8080`) unrelated to the target host - production
+traffic from `https://nfdi4plants.org/elab2arc/` (per `readme.md`, the actual
+hosting URL) satisfies it. Testing from a different local dev port will hit
+that same 403 and can look like a GitHub-specific block - it isn't one.
+
+**Token permission matters, independent of everything above:** a GitHub PAT
+that can list/fetch but not push looks identical to a working setup right up
+until the actual push - `git-receive-pack` and the REST Contents API both
+return the same `403 Resource not accessible by personal access token` for a
+read-only-scoped fine-grained PAT. Confirmed by testing a REST API write
+directly (`PUT /repos/.../contents/...`) independent of git/proxy entirely,
+before concluding it was a permissions issue rather than a code/infra one.
+Fine-grained PATs need "Contents: Read and write" explicitly granted.
+
+**Three real bugs found and fixed** (bugs 1-2 via the end-to-end push run; bug 3
+via a follow-up review checking every field the repo-selection table reads
+against what the GitHub mapping actually provides):
+1. `commitPush()`'s proxy-fallback retry: `pushProxy`/`pushProxyStrategy` were
+   `const`-scoped inside the initial `try` block, so the `catch` block's
+   fallback logic threw `ReferenceError: pushProxy is not defined` on any push
+   failure, masking the real error. Now declared outside the `try`. (Applies to
+   any host, not just GitHub - see "Error Handling & Robustness Fixes" below.)
+2. A single attachment's LFS upload failure (`processUploadsAndReplaceUrls` →
+   `addFileWithLFS`) aborted the entire experiment, unlike `gitAddAll`'s
+   blanket sweep which already degrades gracefully. Now falls back to a plain
+   `git.add` for that file, continues, and surfaces a warning toast (see "LFS
+   upload failure fallback" below - also host-agnostic, not GitHub-only).
+3. `mapGitHubRepoToProject()` didn't map `web_url` (GitHub's `html_url`) - the
+   repo-selection table (`fetchUserProjects`'s rendered `<tr>`) reads
+   `project.web_url` for both the repo-name link and the "View" link, so for
+   every GitHub repo both rendered as `href="undefined"`. Fixed by adding
+   `web_url: repo.html_url` to the mapping; verified live that the rendered
+   table now shows real `github.com/...` links and that "Select assay"/"Select
+   study"/"Select a specific ARC folder" all still set the correct target path
+   and clone URL, matching GitLab's rendering exactly.
+
+**Known trade-off from fix #2:** GitHub's Git LFS does not support
+fine-grained PATs at all (a GitHub platform limitation, not fixable here) -
+confirmed live, `.git/info/lfs/objects/batch` returns 403 regardless of the
+token's granted permissions. Fix #2's fallback means the conversion no longer
+*crashes* on this, but the files it falls back for land as plain git blobs
+while `.gitattributes` still promises `filter=lfs` for anything under
+`dataset/` - confirmed on the real pushed repo (a `dataset/*.png` file is a raw
+PNG blob, not an LFS pointer). This is the *exact* failure mode the August 2026
+"unconditional LFS" fix (see Git LFS section below) was written to prevent for
+the 10MB-threshold case - it resurfaces here specifically for
+GitHub-plus-fine-grained-PAT, where LFS structurally cannot succeed regardless
+of file size. Not fixable from this repo's code (would need a classic PAT
+(`ghp_...`) or a GitHub App installation token, which do support LFS) - the
+warning toast from fix #2 is the mitigation actually shipped, not a follow-up.
+
+**Test repo:** a disposable GitHub repo for exercising this connector,
+`https://github.com/xiaoranzhou/elab2arc-github-test` - now has real pushed ARC
+content per above. Use a personal GitHub PAT with "Contents: Read and write" to
+test writes against it; do not commit tokens to this file or anywhere else in
+the repo - set them via the Token tab UI (stored in `localStorage` only, same
+as any other DataHub token) or pass them ephemerally in a test script.
 
 ### Modifying ISA-Tab Templates
 Templates stored in `/templates/` directory. ExcelJS processes these.
