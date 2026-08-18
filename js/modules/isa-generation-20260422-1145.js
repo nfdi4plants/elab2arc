@@ -764,7 +764,32 @@
           console.log(`[ISA Elab2Arc] Created ${llmData.protocols.length} process table(s)`);
         }
       } else {
-        console.log(`[ISA Elab2Arc] No LLM data - skipping sample/process tables`);
+        // No LLM data this run - every conversion otherwise fully regenerates
+        // isa.assay.xlsx from scratch (ARCtrl's own xlsx serialization model:
+        // build a fresh in-memory ArcAssay, write the whole workbook - not a
+        // targeted read-modify-write), so without this an LLM-disabled run
+        // would silently wipe the sample/process tables (and their parameter/
+        // ontology-annotation columns) a prior LLM-enabled run produced.
+        // Preserve them by reading the existing file back, if one exists; all
+        // the surrounding metadata (Title/Description/Contacts/Comments below)
+        // is still refreshed from the current eLabFTW data either way.
+        const existingIsaPath = window.memfsPathJoin(assayPath, 'isa.assay.xlsx');
+        if (window.FS.fs.existsSync(existingIsaPath)) {
+          try {
+            const existingWorkbook = await window.Xlsx.fromXlsxFile(existingIsaPath);
+            const existingAssay = window.arctrl.XlsxController.Assay.fromFsWorkbook(existingWorkbook);
+            if (existingAssay.Tables && existingAssay.Tables.length > 0) {
+              allTables = existingAssay.Tables;
+              console.log(`[ISA Elab2Arc] No LLM data this run - preserving ${allTables.length} existing table(s) from ${existingIsaPath}`);
+            } else {
+              console.log(`[ISA Elab2Arc] No LLM data this run - existing file has no tables to preserve`);
+            }
+          } catch (readError) {
+            console.warn(`[ISA Elab2Arc] Could not read existing ${existingIsaPath} to preserve its tables - will write empty tables instead:`, readError.message || readError);
+          }
+        } else {
+          console.log(`[ISA Elab2Arc] No LLM data - skipping sample/process tables (no existing file to preserve)`);
+        }
       }
 
       // ========== Create ArcAssay with all tables ==========
@@ -897,7 +922,32 @@
           console.log(`[ISA Gen] Created ${llmData.protocols.length} process table(s) for study`);
         }
       } else {
-        console.log(`[ISA Gen] No LLM data - skipping sample/process tables for study`);
+        // No LLM data this run - same reasoning as the assay path above: without
+        // this, an LLM-disabled run would silently wipe the sample/process
+        // tables (and their parameter/ontology-annotation columns) a prior
+        // LLM-enabled run produced, since every conversion otherwise fully
+        // regenerates isa.study.xlsx from scratch. Preserve them by reading the
+        // existing file back, if one exists.
+        const existingIsaPath = window.memfsPathJoin(studyPath, 'isa.study.xlsx');
+        if (window.FS.fs.existsSync(existingIsaPath)) {
+          try {
+            const existingWorkbook = await window.Xlsx.fromXlsxFile(existingIsaPath);
+            // Unlike Assay.fromFsWorkbook (returns the ArcAssay directly),
+            // Study.fromFsWorkbook returns a 2-tuple [ArcStudy, assaysList] -
+            // confirmed by inspection, not assumed from the Assay pattern.
+            const [existingStudy] = window.arctrl.XlsxController.Study.fromFsWorkbook(existingWorkbook, []);
+            if (existingStudy.Tables && existingStudy.Tables.length > 0) {
+              allTables = existingStudy.Tables;
+              console.log(`[ISA Gen] No LLM data this run - preserving ${allTables.length} existing table(s) from ${existingIsaPath}`);
+            } else {
+              console.log(`[ISA Gen] No LLM data this run - existing file has no tables to preserve`);
+            }
+          } catch (readError) {
+            console.warn(`[ISA Gen] Could not read existing ${existingIsaPath} to preserve its tables - will write empty tables instead:`, readError.message || readError);
+          }
+        } else {
+          console.log(`[ISA Gen] No LLM data - skipping sample/process tables for study (no existing file to preserve)`);
+        }
       }
 
       // Prepare table names and comments

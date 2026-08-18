@@ -173,7 +173,40 @@ After serialization, `Elab2ArcEnrich.enrichIsaJson()` (from `js/modules/isa-enri
 
 **Testing:** See `TESTING.md` for detailed test cases and verification steps.
 
-### LLM Annotation Tables (Studies & Assays)
+**Sample/process table preservation on LLM-disabled re-conversion (added August 2026):**
+`generateIsaAssayElab2arcWithDatamap()` / `generateIsaStudy()` build a fresh in-memory
+`ArcAssay`/`ArcStudy` and write the whole `isa.assay.xlsx`/`isa.study.xlsx` workbook every
+conversion - this is ARCtrl's own xlsx serialization model (same as ARCitect on every save, not
+an elab2arc shortcut; see "Independent audit" above and `TODOs.md`'s E11 discussion for the full
+history of this). Previously, `Tables` (the sample table + per-protocol process tables, which
+carry any parameter-character and ontology-annotation columns) were set to `[]` whenever
+`llmData` was empty for that run - meaning **re-converting the same entry with the LLM toggle
+off after a prior LLM-enabled run silently wiped those tables**, even though nothing else about
+that conversion asked for it. Reproduced and confirmed real, not theoretical.
+
+Fixed: when `llmData` is empty, the function now checks whether `isa.assay.xlsx` /
+`isa.study.xlsx` already exists at that path and, if so, reads it back
+(`Xlsx.fromXlsxFile` → `XlsxController.Assay.fromFsWorkbook()` /
+`XlsxController.Study.fromFsWorkbook()[0]` - **note the `[0]`**: unlike the Assay reader, which
+returns the `ArcAssay` directly, the Study reader returns a 2-tuple `[ArcStudy, assaysList]`,
+confirmed by inspection, not assumed from the Assay pattern - a genuinely different shape that a
+naive symmetric implementation would get wrong) and reuses its `Tables` as-is. Everything else
+(Title/Description/Contacts/Comments) is still recomputed fresh from the current eLabFTW data
+every run, exactly as before - so the net effect is a merge: **the LLM-generated table content
+is preserved verbatim, while the surrounding metadata reflects whatever eLabFTW currently says.**
+If no LLM data is available AND no existing file is there yet (first-ever conversion with LLM
+off), the behavior is unchanged: an empty `Tables` array, same as before this fix.
+
+When LLM *is* enabled, behavior is unchanged: the tables are always rebuilt fresh from that run's
+`llmData`, intentionally - this preservation logic only applies to the LLM-disabled branch.
+
+**Verified** (not just code-reviewed) via a full write→read→reassign→rewrite→read round trip for
+both functions: an initial LLM-enabled run's ontology-annotated characteristic (`Term` cell with
+`_termSourceREF`/`_termAccessionNumber` intact) and unit-annotated parameter (`Unitized` cell)
+both survived byte-for-byte into a second, LLM-disabled run with deliberately different
+`protocolInfo`, while that run's `Title` correctly picked up the new value - confirming both the
+preservation and the merge. Also verified the cold-start case (LLM off, no prior file) still
+correctly produces zero tables without erroring, for both functions.
 Both studies and assays support multi-sheet annotation tables when LLM data is available:
 
 | Feature | Assays (`isa.assay.xlsx`) | Studies (`isa.study.xlsx`) |
