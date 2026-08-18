@@ -610,9 +610,11 @@ directly (`PUT /repos/.../contents/...`) independent of git/proxy entirely,
 before concluding it was a permissions issue rather than a code/infra one.
 Fine-grained PATs need "Contents: Read and write" explicitly granted.
 
-**Three real bugs found and fixed** (bugs 1-2 via the end-to-end push run; bug 3
+**Four real bugs found and fixed** (bugs 1-2 via the end-to-end push run; bug 3
 via a follow-up review checking every field the repo-selection table reads
-against what the GitHub mapping actually provides):
+against what the GitHub mapping actually provides; bug 4 via an independent
+audit by a second model, Kimi K3, run in a separate tmux session against the
+committed diff - see "Independent audit" below):
 1. `commitPush()`'s proxy-fallback retry: `pushProxy`/`pushProxyStrategy` were
    `const`-scoped inside the initial `try` block, so the `catch` block's
    fallback logic threw `ReferenceError: pushProxy is not defined` on any push
@@ -631,6 +633,44 @@ against what the GitHub mapping actually provides):
    table now shows real `github.com/...` links and that "Select assay"/"Select
    study"/"Select a specific ARC folder" all still set the correct target path
    and clone URL, matching GitLab's rendering exactly.
+4. `fetchUser()`'s GitHub normalization mapped `username`/`commit_email` but
+   not `name` - GitHub's `GET /user` returns `name: null` for any account with
+   no display name set (a common state), and `createNewArc()` does
+   `window.userId.name.split(" ")` unguarded, so "Create a new ARC" would
+   throw for those users. Fixed: `userJSON.name = userJSON.name || userJSON.login`.
+
+### Independent audit (Kimi K3, August 2026)
+
+The commit adding GitHub support was independently audited by a second model
+(Kimi K3, via `kimi-code`, run in a separate tmux session with no context from
+the authoring session) against the committed diff, cross-checking every
+touched function's pre-commit vs post-commit behavior. Confirmed correct: the
+`pushProxy` fix, all GitLab paths unchanged, the `mapGitHubRepoToProject()`
+field mapping, the LFS fallback's ordering (pointer only written after a
+successful upload, so the fallback's plain `git.add` can't stage a broken
+pointer), the null-body fix, and the `lastLLMError` mechanism. Found bug 4
+above (fixed) plus two known gaps not yet fixed, tracked here rather than
+silently accepted:
+
+- **`updateGitLabProjectDescription()` (`elab2arc-core20260504.js:1910`) has
+  no GitHub branch** - on a GitHub host it `PUT`s a nonexistent
+  `api.github.com/projects/...` endpoint, 404s, and the failure is swallowed
+  by design (the function already tolerates failure for other reasons), so
+  nothing crashes - but the "update project description with the LLM
+  summary" feature silently does nothing on GitHub. GitHub's equivalent
+  would be `PATCH /repos/{owner}/{repo}`.
+- **`fetchUserProjects()`'s GitHub branch hardcodes `per_page=100` with no
+  pagination** (GitLab side uses `per_page=200`) - a GitHub account with
+  >100 repos won't see the rest in the selection table. Also,
+  `window.updateARCList(search)`'s GitLab-style `search=` parameter is
+  silently ignored on GitHub (already noted in a code comment, but not
+  surfaced to the user) - the in-UI search box returns the unfiltered list.
+
+A third, lower-severity finding (a rare edge case where a failed push mid-batch
+can leave a dangling assay reference registered in the investigation object,
+since registration happens before push inside `processExperiment()`) was
+judged an acceptable trade-off of the per-entry batch-isolation fix and not
+actioned - see `TODOs.md` for the full writeup if picking it up later.
 
 **Known trade-off from fix #2:** GitHub's Git LFS does not support
 fine-grained PATs at all (a GitHub platform limitation, not fixable here) -

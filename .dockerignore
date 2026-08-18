@@ -2,4 +2,9 @@
 js/node_modules
 docs
 *.md
-!CLAUDE.md
+.github
+.claude
+__pycache__
+.DS_Store
+Dockerfile
+.dockerignore

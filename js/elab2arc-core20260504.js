@@ -1675,7 +1675,7 @@ CC BY 4.0
         return true;
 
       } else {
-        console.error('🚨 DataHUB API can be accessed but the user information could not be fetched. Please check your credentials. Error :', error.message);
+        console.error('🚨 DataHUB API can be accessed but the user information could not be fetched. Please check your credentials.');
         return;
       }
 
@@ -1733,7 +1733,7 @@ CC BY 4.0
             return true;
 
           } else {
-            console.error('🚨 DataHUB API can be accessed but the user information could not be fetched. Please check your credentials. Error :', error.message);
+            console.error('🚨 DataHUB API can be accessed but the user information could not be fetched. Please check your credentials.');
             return;
           }
 
@@ -1777,10 +1777,13 @@ CC BY 4.0
         const userJSON = await response.json();
 
         // GitHub's /user uses different field names than GitLab's - normalize onto
-        // the fields the rest of the app reads (username, commit_email)
+        // the fields the rest of the app reads (username, commit_email, name).
+        // GitHub returns name: null for accounts with no display name set (common) -
+        // without a fallback, createNewArc()'s `name.split(" ")` throws for those users.
         if (isGitHubHost()) {
           userJSON.username = userJSON.login;
           userJSON.commit_email = userJSON.email || `${userJSON.id}+${userJSON.login}@users.noreply.github.com`;
+          userJSON.name = userJSON.name || userJSON.login;
         }
 
         // Assign the fetched data to a global variable (if needed)
