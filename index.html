@@ -27,7 +27,15 @@ video {
 </head>
 
 <body>
-  <nav class="navbar  navbar-expand-lg navbar-dark fixed-top border-0 mb-3"
+  <div id="revisionBanner" class="alert alert-warning text-center mb-0" role="alert"
+    style="position: fixed; top: 0; left: 0; right: 0; z-index: 1035; border-radius: 0; padding: 0.5rem 2.5rem;">
+    ⚠️ <strong>elab2arc is under active revision and development until the end of this week.</strong>
+    Not all functions are guaranteed to work correctly during this period — please double-check
+    important conversions.
+    <button type="button" class="btn-close" aria-label="Close" onclick="dismissRevisionBanner()"
+      style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);"></button>
+  </div>
+  <nav class="navbar  navbar-expand-lg navbar-dark fixed-top border-0 mb-3" id="mainNavbar"
     style="background: rgb(45, 62, 80); height: 3.25rem; margin: 0 0 0 0px; padding: 0 0 0 0; ">
 
     <div class=" container-fluid " style=" height: 3.25rem;  ">
@@ -364,6 +372,15 @@ video {
           <small class="form-text text-muted">
             LM Studio runs locally and requires the app to be running. Community server is free but has a waiting queue.
           </small>
+          <div class="form-check mt-2 d-none" id="llmConsentStatusRow">
+            <input class="form-check-input" type="checkbox" id="llmConsentStatusCheckbox"
+              onchange="handleConsentStatusCheckboxChange()">
+            <label class="form-check-label" for="llmConsentStatusCheckbox" id="llmConsentStatusLabel">
+              Cloud LLM privacy consent
+            </label>
+            <button type="button" class="btn btn-link btn-sm p-0 ms-1 align-baseline"
+              id="llmConsentReviewBtn" onclick="showCloudLlmPrivacyNotice()">(view details)</button>
+          </div>
         </div>
       </div>
 
@@ -608,6 +625,46 @@ video {
     </div>
 
 
+    </div>
+
+    <div class="modal fade" id="llmConsentModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+      aria-labelledby="llmConsentModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="llmConsentModalLabel">🔒 Before you continue: data leaves your browser</h1>
+          </div>
+          <div class="modal-body">
+            <p>
+              elab2arc runs entirely in your browser — except for the LLM step. You're about
+              to use <strong class="llm-consent-service-name">this cloud LLM service</strong>
+              (<code class="llm-consent-endpoint">endpoint</code>) to extract structured data
+              from your protocol text.
+            </p>
+            <p>
+              That means your protocol text (titles, descriptions, steps, parameters) is sent
+              to <strong class="llm-consent-service-name">this service</strong>'s server for
+              processing — it is <strong>not</strong> kept fully private to your browser.
+            </p>
+            <p class="mb-2">
+              Full privacy is only guaranteed with <strong>local inference</strong> (LM Studio
+              or Ollama), where nothing leaves your machine.
+            </p>
+            <div class="form-check border rounded py-2 pe-2">
+              <input class="form-check-input" type="checkbox" id="llmConsentModalCheckbox">
+              <label class="form-check-label" for="llmConsentModalCheckbox">
+                I understand my protocol text will be sent to
+                <strong class="llm-consent-service-name">this service</strong> and consent to
+                that.
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="llmConsentCancelBtn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="llmConsentAcceptBtn" disabled>Accept &amp; Continue</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <button type="button" class="btn btn-primary d-none" id="loadingModalBtn" data-bs-toggle="modal"
@@ -1258,6 +1315,10 @@ video {
     window.http = http;
   </script>
 
+  <!-- Cloud LLM consent state store (Zustand vanilla) - loaded before elab2arc-core
+       so window.Elab2ArcConsentStore exists by the time DOMContentLoaded runs. -->
+  <script type="module" src="./js/modules/llm-consent-store.js?v=20260819a"></script>
+
   <!-- Application code (order matters - load after DOM and libraries) -->
   <script src="./js/MEMfsGUI1006.js?v=20260327163322" type="text/javascript" charset="utf-8"></script>
 
@@ -1267,7 +1328,7 @@ video {
   <script src="./js/modules/isa-enrichment-20260504.js?v=20260526" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/llm-service20260504.js?v=20260804" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260304120114" type="text/javascript" charset="utf-8"></script>
-  <script src="./js/modules/git-lfs-service.js?v=20260804" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/git-lfs-service.js?v=20260806" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/readme-generator20260504.js?v=20260504" type="text/javascript" charset="utf-8"></script>
 
   <!-- Alternative input plugin (zip/vault upload) - only reachable via #extension hash, see softRoute() -->
@@ -1275,7 +1336,7 @@ video {
   <script src="./js/modules/alt-input-convert-20260730.js?v=20260730" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core20260504.js?v=20260804" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core20260504.js?v=20260819i" type="text/javascript" charset="utf-8"></script>
 
   <!-- vis-network for LLM process graph visualization -->
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js?v=20260505"></script>

@@ -2943,6 +2943,238 @@ Date: ${timestamp}`;
 
     }
 
+    // =============================================================================
+    // ACTIVE-DEVELOPMENT BANNER
+    // Fixed banner above the (also fixed) navbar. Pushes the navbar and page
+    // content down by its own measured height, and reverses that on close.
+    // Dismissal is remembered per-message (key includes a version date) so
+    // updating the banner text later shows it again even to users who already
+    // closed the old one.
+    // =============================================================================
+    const REVISION_BANNER_DISMISS_KEY = 'elab2arcBannerDismissed_v20260819';
+
+    window.dismissRevisionBanner = function() {
+      const banner = document.getElementById('revisionBanner');
+      if (banner) banner.remove();
+      document.body.style.paddingTop = '';
+      const nav = document.getElementById('mainNavbar');
+      if (nav) nav.style.top = '';
+      const toastContainer = document.getElementById('toastContainer');
+      if (toastContainer) {
+        toastContainer.style.top = '';
+        toastContainer.classList.add('top-0');
+      }
+      window.removeEventListener('resize', window.__revisionBannerResize);
+      window.__revisionBannerResize = null;
+      window.localStorage.setItem(REVISION_BANNER_DISMISS_KEY, 'true');
+    };
+
+    function initRevisionBanner() {
+      const banner = document.getElementById('revisionBanner');
+      if (!banner) return;
+
+      if (window.localStorage.getItem(REVISION_BANNER_DISMISS_KEY) === 'true') {
+        banner.remove();
+        return;
+      }
+
+      function applyOffset() {
+        const nav = document.getElementById('mainNavbar');
+        const toastContainer = document.getElementById('toastContainer');
+        const h = banner.offsetHeight;
+        document.body.style.paddingTop = `${h}px`;
+        if (nav) nav.style.top = `${h}px`;
+        // toast-container uses Bootstrap's `top-0` utility class, which is
+        // `!important` and beats a plain inline style - drop the class first.
+        if (toastContainer) {
+          toastContainer.classList.remove('top-0');
+          toastContainer.style.top = `${h}px`;
+        }
+      }
+
+      applyOffset();
+      window.__revisionBannerResize = applyOffset;
+      window.addEventListener('resize', applyOffset);
+    }
+
+    window.addEventListener('DOMContentLoaded', initRevisionBanner);
+
+    // =============================================================================
+    // CLOUD LLM PRIVACY CONSENT
+    // Non-local providers (Together.AI, DataPLANT Community Server) send protocol
+    // text off the user's machine. Local providers (LM Studio, Ollama, Custom) do
+    // not require consent since data never leaves the browser/host machine.
+    //
+    // State (current provider + per-group consent) lives in a single Zustand
+    // vanilla store (window.Elab2ArcConsentStore, js/modules/llm-consent-store.js)
+    // instead of being read/written ad hoc from localStorage at each call site.
+    // Every piece of UI that reflects this state (the status checkbox next to the
+    // provider dropdown; the review modal) renders off the store, either via the
+    // subscription set up below or by reading getState() fresh when it opens - so
+    // no call site can change provider/consent without every other piece of UI
+    // picking it up.
+    // =============================================================================
+    const CLOUD_LLM_PROVIDERS = {
+      together: { group: 'together', serviceName: 'Together.AI', endpointHost: 'api.together.xyz' },
+      dataplan: { group: 'community', serviceName: 'the DataPLANT Community Server', endpointHost: 'h.dataplan.top' },
+      'dataplan-gemma': { group: 'community', serviceName: 'the DataPLANT Community Server', endpointHost: 'h.dataplan.top' }
+    };
+
+    function providerConsentGiven(provider) {
+      const info = CLOUD_LLM_PROVIDERS[provider];
+      if (!info) return true; // local providers need no consent
+      return !!window.Elab2ArcConsentStore.getState().consent[info.group];
+    }
+
+    // The status row's only render path. Registered as a store subscriber (see
+    // the DOMContentLoaded handler below) so it re-renders on *any* provider or
+    // consent change, regardless of which function triggered it.
+    function renderConsentStatusUI() {
+      const row = document.getElementById('llmConsentStatusRow');
+      const checkbox = document.getElementById('llmConsentStatusCheckbox');
+      const label = document.getElementById('llmConsentStatusLabel');
+      if (!row || !checkbox) return;
+      const { provider, consent } = window.Elab2ArcConsentStore.getState();
+      const info = CLOUD_LLM_PROVIDERS[provider];
+      if (!info) {
+        row.classList.add('d-none');
+        return;
+      }
+      row.classList.remove('d-none');
+      checkbox.checked = !!consent[info.group];
+      if (label) {
+        label.textContent = `Cloud LLM privacy consent (${info.serviceName})`;
+      }
+    }
+
+    // The status checkbox is a real, directly-toggleable checkbox (same pattern
+    // as #enableDatamapSwitch: onchange, not onclick+preventDefault) - the
+    // browser flips its checked state immediately on click in *either*
+    // direction, and this handler validates/reacts after the fact, reverting
+    // the DOM checkbox if the action needs to be rejected. This replaces the
+    // previous design where the checkbox never actually toggled at all (every
+    // click was intercepted and just reopened the review modal), which meant
+    // there was no way to revoke a previously-granted consent - "checked" was
+    // a one-way trap with no path back to unchecked, and the stale
+    // localStorage flag from a granted consent had no way to be cleared short
+    // of clearing site data by hand.
+    window.handleConsentStatusCheckboxChange = async function() {
+      const checkbox = document.getElementById('llmConsentStatusCheckbox');
+      const { provider } = window.Elab2ArcConsentStore.getState();
+      const info = CLOUD_LLM_PROVIDERS[provider];
+      if (!info) return; // row is hidden for local providers, shouldn't fire
+
+      if (checkbox.checked) {
+        // Ticking it on is a request to grant - still gated behind reading the
+        // full notice, so route through the same modal used elsewhere.
+        // requestCloudLlmConsent() calls store.setConsent() on accept, which
+        // the store subscription already re-renders this checkbox from - no
+        // manual sync needed here on success.
+        const accepted = await window.requestCloudLlmConsent(provider);
+        if (!accepted) {
+          checkbox.checked = false; // revert the browser's optimistic toggle
+        }
+      } else {
+        // Unticking it is a direct revoke - withdrawing consent doesn't need
+        // re-reading the notice. setConsent() persists the 'false' through to
+        // localStorage as part of the same write, so nothing stale survives.
+        window.Elab2ArcConsentStore.getState().setConsent(info.group, false);
+        console.log(`[LLM Consent] Consent revoked for "${info.group}" (${info.serviceName})`);
+
+        // If LLM annotation is actively using the now-unconsented provider,
+        // turn it off rather than leaving it silently running unconsented.
+        const enableSwitch = document.getElementById('enableDatamapSwitch');
+        if (enableSwitch && enableSwitch.checked) {
+          enableSwitch.checked = false;
+          if (typeof toggleTogetherAPIKeyField === 'function') {
+            toggleTogetherAPIKeyField();
+          }
+        }
+      }
+    };
+
+    // Shows the privacy consent modal for a cloud provider and resolves once the
+    // user decides. Resolves true only if they check the box and click Accept.
+    window.requestCloudLlmConsent = function(provider) {
+      const info = CLOUD_LLM_PROVIDERS[provider];
+      if (!info) return Promise.resolve(true);
+
+      const modalEl = document.getElementById('llmConsentModal');
+      if (!modalEl) return Promise.resolve(true);
+
+      return new Promise((resolve) => {
+        modalEl.querySelectorAll('.llm-consent-service-name').forEach(el => el.textContent = info.serviceName);
+        modalEl.querySelectorAll('.llm-consent-endpoint').forEach(el => el.textContent = info.endpointHost);
+
+        const checkbox = document.getElementById('llmConsentModalCheckbox');
+        const acceptBtn = document.getElementById('llmConsentAcceptBtn');
+        const cancelBtn = document.getElementById('llmConsentCancelBtn');
+        // Reflect any existing consent (e.g. reopened via "click to view" for review)
+        // instead of always presenting as unconsented.
+        const alreadyConsented = providerConsentGiven(provider);
+        checkbox.checked = alreadyConsented;
+        acceptBtn.disabled = !alreadyConsented;
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static', keyboard: false });
+        let decided = false;
+
+        function onCheckboxChange() {
+          acceptBtn.disabled = !checkbox.checked;
+        }
+        function finish(accepted) {
+          if (decided) return;
+          decided = true;
+          checkbox.removeEventListener('change', onCheckboxChange);
+          acceptBtn.removeEventListener('click', onAccept);
+          cancelBtn.removeEventListener('click', onCancel);
+          modalEl.removeEventListener('hidden.bs.modal', onHidden);
+          if (accepted) {
+            window.Elab2ArcConsentStore.getState().setConsent(info.group, true);
+            console.log(`[LLM Consent] Consent granted for "${info.group}" (${info.serviceName})`);
+          } else {
+            console.log(`[LLM Consent] Consent declined for "${info.group}" (${info.serviceName})`);
+          }
+          resolve(accepted);
+        }
+        // finish() *before* hide(): this modal has no "fade" class, so Bootstrap
+        // treats it as unanimated and dispatches 'hidden.bs.modal' synchronously
+        // from inside hide() (Modal._isAnimated() checks classList.contains
+        // ("fade"); unanimated modals skip the transitionend wait entirely -
+        // confirmed in bootstrap.bundle.min.js). Calling hide() first used to mean
+        // that synchronous event fired onHidden() -> finish(false) *before* the
+        // following finish(true) line ever ran, and the `decided` guard let that
+        // first (false) call win the race - so clicking Accept always silently
+        // recorded a decline. finish() now runs first and removes the onHidden
+        // listener as part of its own cleanup, so the same synchronous event
+        // finds nothing left to call.
+        function onAccept() { finish(true); modal.hide(); }
+        function onCancel() { finish(false); modal.hide(); }
+        function onHidden() { finish(false); } // safety net: any other close path counts as decline
+
+        checkbox.addEventListener('change', onCheckboxChange);
+        acceptBtn.addEventListener('click', onAccept);
+        cancelBtn.addEventListener('click', onCancel);
+        modalEl.addEventListener('hidden.bs.modal', onHidden);
+
+        modal.show();
+      });
+    };
+
+    // Re-opens the consent modal to let the user review/re-confirm at any time.
+    // Does not change anything if they cancel out of a review. Reads the
+    // provider from the store (not the <select> DOM element) - saveApiProvider()
+    // always mirrors the dropdown into the store synchronously, so the store is
+    // the authoritative current value and there's no second source to drift
+    // out of sync with.
+    window.showCloudLlmPrivacyNotice = function() {
+      const { provider } = window.Elab2ArcConsentStore.getState();
+      if (!CLOUD_LLM_PROVIDERS[provider]) return;
+      window.requestCloudLlmConsent(provider);
+      // No follow-up render call needed: requestCloudLlmConsent() only ever
+      // changes state via store.setConsent() on Accept, which the status row's
+      // subscription (set up in the DOMContentLoaded handler) already renders.
+    };
+
     // Toggle Together.AI API key field visibility and validate API key
     async function toggleTogetherAPIKeyField() {
       const enableSwitch = document.getElementById('enableDatamapSwitch');
@@ -2952,13 +3184,25 @@ Date: ${timestamp}`;
 
       if (enableSwitch && apiKeyContainer) {
         if (enableSwitch.checked) {
+          // Gate on cloud-LLM privacy consent before actually using the service
+          const activeProvider = window.Elab2ArcConsentStore.getState().provider;
+          if (!providerConsentGiven(activeProvider)) {
+            // requestCloudLlmConsent() calls store.setConsent() on accept, which
+            // the status row's subscription already renders - no manual sync call.
+            const accepted = await window.requestCloudLlmConsent(activeProvider);
+            if (!accepted) {
+              enableSwitch.checked = false;
+              return;
+            }
+          }
+
           // Show Edit Prompt button when LLM is enabled
           if (editPromptBtn) {
             editPromptBtn.classList.remove('d-none');
           }
 
           // Get the selected provider
-          const provider = window.localStorage.getItem('llmApiProvider') || 'dataplan';
+          const provider = window.Elab2ArcConsentStore.getState().provider;
 
           // Show/hide fields based on provider
           if (provider === 'together') {
@@ -3147,6 +3391,13 @@ Date: ${timestamp}`;
         }
       }
 
+      // Consent status row: one reactive render path, subscribed to the store
+      // instead of relying on every provider/consent-changing call site to
+      // remember to call a manual sync function. Render once immediately for
+      // the initial state, then on every subsequent store change.
+      window.Elab2ArcConsentStore.subscribe(renderConsentStatusUI);
+      renderConsentStatusUI();
+
       // Load saved API provider settings
       if (window.loadApiProvider) {
         window.loadApiProvider();
@@ -3162,39 +3413,63 @@ Date: ${timestamp}`;
       }
     };
 
-    // Save API provider selection to localStorage
-    window.saveApiProvider = function() {
+    // Show/hide provider-specific fields (NOT the consent status row - that
+    // renders off the store via its own subscription, see renderConsentStatusUI).
+    // Pure UI sync - no localStorage writes, no consent gating.
+    window.updateProviderVisibility = function(provider) {
+      const togetherContainer = document.getElementById('togetherAPIKeyContainer');
+      const customContainer = document.getElementById('customEndpointContainer');
+      const lmstudioContainer = document.getElementById('lmstudioContainer');
+
+      // Hide all first
+      togetherContainer?.classList.add('d-none');
+      customContainer?.classList.add('d-none');
+      lmstudioContainer?.classList.add('d-none');
+
+      // Show relevant container
+      if (provider === 'together') {
+        togetherContainer?.classList.remove('d-none');
+      } else if (provider === 'lmstudio') {
+        lmstudioContainer?.classList.remove('d-none');
+        // Auto-fetch models when LM Studio selected
+        window.fetchLMStudioModels();
+      } else if (provider === 'custom') {
+        customContainer?.classList.remove('d-none');
+      }
+    };
+
+    // Save API provider selection.
+    // userInitiated=true (default, e.g. dropdown onchange) gates cloud providers
+    // behind the privacy consent modal; pass false to just resync the UI (e.g.
+    // restoring the saved provider on page load) without re-prompting.
+    window.saveApiProvider = async function(userInitiated) {
+      if (userInitiated === undefined) userInitiated = true;
       const providerSelect = document.getElementById('llmApiProvider');
-      if (providerSelect) {
-        const provider = providerSelect.value;
-        console.log(`%c[Config] Saving API provider: "${provider}"`, 'color: blue; font-weight: bold');
-        window.localStorage.setItem('llmApiProvider', provider);
+      if (!providerSelect) return;
 
-        // Verify it was saved
-        const savedValue = window.localStorage.getItem('llmApiProvider');
-        console.log(`[Config] Verified saved value: "${savedValue}"`);
+      const provider = providerSelect.value;
+      const previousProvider = window.Elab2ArcConsentStore.getState().provider;
 
-        // Show/hide relevant fields based on provider
-        const togetherContainer = document.getElementById('togetherAPIKeyContainer');
-        const customContainer = document.getElementById('customEndpointContainer');
-        const lmstudioContainer = document.getElementById('lmstudioContainer');
+      // Mirror the new selection into the store immediately, synchronously,
+      // *before* the consent gate below. Every subscriber (the status row)
+      // re-renders right away off this - including while the consent-gate
+      // promise is still pending - so the status row never shows a stale
+      // provider's consent state behind an open modal deciding on a new one.
+      window.Elab2ArcConsentStore.getState().setProvider(provider);
 
-        // Hide all first
-        togetherContainer?.classList.add('d-none');
-        customContainer?.classList.add('d-none');
-        lmstudioContainer?.classList.add('d-none');
-
-        // Show relevant container
-        if (provider === 'together') {
-          togetherContainer?.classList.remove('d-none');
-        } else if (provider === 'lmstudio') {
-          lmstudioContainer?.classList.remove('d-none');
-          // Auto-fetch models when LM Studio selected
-          window.fetchLMStudioModels();
-        } else if (provider === 'custom') {
-          customContainer?.classList.remove('d-none');
+      if (userInitiated && !providerConsentGiven(provider)) {
+        const accepted = await window.requestCloudLlmConsent(provider);
+        if (!accepted) {
+          console.log(`[Config] Cloud LLM consent declined for "${provider}", reverting to "${previousProvider}"`);
+          providerSelect.value = previousProvider;
+          window.Elab2ArcConsentStore.getState().setProvider(previousProvider);
+          window.updateProviderVisibility(previousProvider);
+          return;
         }
       }
+
+      console.log(`%c[Config] Saving API provider: "${provider}"`, 'color: blue; font-weight: bold');
+      window.updateProviderVisibility(provider);
     };
 
     // Fetch available models from LM Studio
@@ -3282,8 +3557,8 @@ Date: ${timestamp}`;
           console.log(`[Config] Successfully set provider dropdown to: "${savedProvider}"`);
         }
 
-        // Trigger visibility update
-        window.saveApiProvider();
+        // Trigger visibility update (not a user-initiated change, skip consent gate)
+        window.saveApiProvider(false);
       }
 
       const savedEndpoint = window.localStorage.getItem('llmCustomEndpoint');

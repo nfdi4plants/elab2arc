@@ -57,7 +57,8 @@ elab2arc/
 │   ├── llm-service20260504.js           # LLM/AI integration (multi-provider)
 │   ├── extra-fields-handler.js  # Custom field processing
 │   ├── git-lfs-service.js       # Git LFS for large files (>10MB)
-│   └── readme-generator20260504.js      # ARC README generation via LLM
+│   ├── readme-generator20260504.js      # ARC README generation via LLM
+│   └── llm-consent-store.js     # Zustand store: cloud-LLM consent state
 ├── templates/              # Excel templates for ISA metadata
 ├── images/               # Static assets (logo, help images)
 └── LICENSE               # GPL v3.0
@@ -616,6 +617,7 @@ The `params` object is returned by `getParameters()` and contains all authentica
 | ISA-Tab generation | `js/modules/isa-generation-20260422-1145.js` |
 | LLM integration | `js/modules/llm-service20260504.js` |
 | README generation | `js/modules/readme-generator20260504.js` |
+| Cloud LLM consent state | `js/modules/llm-consent-store.js` |
 | Git operations | `js/git.js` |
 | Git LFS (large files) | `js/modules/git-lfs-service.js` |
 | ARCtrl bundle | `js/arctrl.bundle.js` |
@@ -646,6 +648,77 @@ Default provider: `dataplan`. The `dataplan` and `dataplan-gemma` providers hard
 Valid Together.AI models (from `VALID_MODELS`, used only for the `together` provider's model dropdown):
 - `Qwen/Qwen3-235B-A22B-Instruct-2507-tput` (default)
 - `openai/gpt-oss-120b`
+
+**Cloud LLM privacy consent (added August 2026):** `dataplan`/`dataplan-gemma`/`together` send
+protocol text off the browser to a remote server; `lmstudio`/`ollama`/`custom` don't. A Bootstrap
+modal (`#llmConsentModal` in `index.html`) names the specific service (Together.AI /
+DataPLANT Community Server) and endpoint host, gated behind a checkbox that must be ticked
+before "Accept & Continue" is enabled. It's shown by `window.requestCloudLlmConsent(provider)`
+(`js/elab2arc-core20260504.js`), triggered from `saveApiProvider()` (dropdown onchange) and
+`toggleTogetherAPIKeyField()` (turning "Enable LLM Annotation Table" on) — both only when
+`providerConsentGiven(provider)` is false. Consent is remembered per provider-group in
+localStorage (`llmCloudConsent_together`, `llmCloudConsent_community` — dataplan and
+dataplan-gemma share one group since both hit `h.dataplan.top`).
+
+**State model (Zustand, added August 2026):** current provider + per-group consent live in a
+single vanilla Zustand store (`js/modules/llm-consent-store.js`, loaded as a `<script
+type="module">` in `index.html` before `elab2arc-core20260504.js` - module scripts always finish
+executing before `DOMContentLoaded` fires, the same ordering the pre-existing `http.js` module
+import already relies on, so `window.Elab2ArcConsentStore` is guaranteed to exist by the time any
+consent code runs). `createStore` is pulled from `https://cdn.jsdelivr.net/npm/zustand@5/vanilla/+esm`,
+consistent with this app's existing pattern of loading libraries from CDN `<script>` tags
+(jsdelivr/unpkg, no bundler). The store has exactly two mutators, each the *only* place that
+writes the corresponding localStorage key:
+- `setProvider(provider)` - mirrors the `<select>`'s value; `saveApiProvider()` calls this
+  *synchronously, before* awaiting the consent-gate promise, so every subscriber re-renders off
+  the newly-selected provider immediately, even while a consent decision for it is still pending.
+  (Older versions of this code called it only after the gate resolved, which is why the status
+  checkbox could briefly show a *different* provider's consent state while the modal for the
+  newly-selected one was still open - fixed by moving this call earlier.)
+- `setConsent(group, granted)` - the one write path for a consent flag.
+
+`providerConsentGiven(provider)` reads `window.Elab2ArcConsentStore.getState().consent[group]`.
+`renderConsentStatusUI()` is the *only* function that touches `#llmConsentStatusRow`'s DOM, and
+is registered once as a store subscriber (in the `DOMContentLoaded` handler, alongside an initial
+call) rather than being invoked manually from each place that changes provider/consent - so no
+call site can forget to keep the status row in sync.
+
+**Status checkbox is a real, revocable toggle**, following the same pattern as
+`#enableDatamapSwitch` (plain `onchange`, not `onclick`+`preventDefault`): the browser flips
+`#llmConsentStatusCheckbox` immediately on click in either direction, and
+`window.handleConsentStatusCheckboxChange()` reacts afterward. Ticking it **on** routes through
+`requestCloudLlmConsent()` (still requires reading the full notice) and reverts the checkbox if
+declined. Ticking it **off** is a direct, immediate revoke - no modal - calling
+`setConsent(group, false)`, and also switches off "Enable LLM Annotation Table" if it was
+actively on for the now-revoked provider. Reviewing the notice text without changing anything is
+a separate `(view details)` button (`showCloudLlmPrivacyNotice()`), not wrapped by the
+checkbox's `<label for>`, so viewing and toggling are two independent actions.
+
+**Gotcha - modal hide/accept ordering:** `#llmConsentModal` has the Bootstrap `fade` class (most
+modals in this app do; `loadingModal`/`folderModal` are the only other exceptions). Even so, the
+Accept/Cancel handlers call `finish(accepted)` *before* `modal.hide()`, not after - `finish()`
+sets a `decided` guard and removes its own `hidden.bs.modal` listener as part of its cleanup.
+Do not reorder this to `hide(); finish(...)`: an unanimated modal (no `fade` class, or
+`prefers-reduced-motion` active even *with* `fade` - `Modal._isAnimated()` checks
+`classList.contains("fade")`, and reduced-motion makes Bootstrap skip the transition regardless)
+dispatches `hidden.bs.modal` **synchronously** inside `hide()`, which would let the modal's own
+"any other close path counts as decline" safety-net handler race ahead of and win over the
+intended `finish(true)` - i.e. Accept would silently record a decline. (This was a real,
+previously-shipped bug: the modal lacked `fade` and called `hide()` first, so clicking "Accept &
+Continue" never actually granted consent - only pre-seeded localStorage state ever showed as
+granted. Root-caused via a live click-through in Playwright, not by inspection alone.)
+
+**Site-wide "under active revision" banner (added August 2026, browser-tested):** `#revisionBanner`
+in `index.html` is a fixed, full-width, closable notice above the also-fixed `#mainNavbar`.
+`initRevisionBanner()`/`window.dismissRevisionBanner()` (`js/elab2arc-core20260504.js`) measure
+its real rendered height and push `#mainNavbar` (`nav.style.top`), the page body
+(`body.style.paddingTop`), and `#toastContainer` down by that amount, recalculated on window
+resize (banner text wraps to more lines on narrow viewports). Dismissal is remembered via a
+dated localStorage key (`elab2arcBannerDismissed_v20260819`); bump the date suffix when the
+banner's message changes so users who already dismissed the old one see the new one.
+**Gotcha:** `#toastContainer` uses Bootstrap's `.top-0` utility class, which is `!important` and
+silently wins over a plain `element.style.top` — the offset code removes that class before
+setting the inline style (and restores it on dismiss).
 
 ### localStorage Keys
 - Selected eLabFTW URL
