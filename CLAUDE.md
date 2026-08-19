@@ -272,16 +272,80 @@ Previously, assays only stored metadata in Comment fields, leaving Title and Des
 **Console prefix:** `[ReadmeGen]`
 
 ### CORS Proxy System
-Due to browser security restrictions, the app uses proxy fallback:
-- Primary: `corsproxy.cplantbox.com`
-- Backup: `corsproxy2.cplantbox.com`
-- Git proxy: `gitcors.cplantbox.com` (backup: `gitcors2.cplantbox.com`)
-- **LFS proxy:** `lfsproxy.cplantbox.com` (supports PUT requests for file uploads)
+Due to browser security restrictions, the app uses proxy fallback (`proxyConfig` in
+`js/elab2arc-core20260504.js`), deliberately spanning **two different physical hosts** so the
+fallback is real host-level redundancy, not just a second domain on the same box. **No
+`cplantbox.com` proxy is used anywhere in this app anymore** (removed August 2026, see below) —
+everything is `wb-e.com`:
+- CORS proxy (eLabFTW/GitLab/GitHub API calls): primary `proxy.wb-e.com` (host `zap`,
+  [redacted-ip]), backup `proxy2.wb-e.com` (host `luxvps2`, [redacted-ip])
+- Git proxy (isomorphic-git clone/push): primary `gitproxy.wb-e.com` (`zap`), backup
+  `gitproxy2.wb-e.com` (`luxvps2`)
+- **LFS proxy**: `https://proxy.wb-e.com` — used by three call sites (`LFS_UPLOAD_PROXY` in
+  `js/modules/git-lfs-service.js`, and two `const lfsProxy = ...` in
+  `js/elab2arc-core20260504.js` — one in `commitPush()`'s `gitAddAll` staging sweep, one in
+  `processUploadsAndReplaceUrls()`), all now pointing at the same domain since it already
+  forwards `Authorization` and allows `PUT`. No fallback wired up for this one yet (single
+  constant per call site, not a primary/backup pair like the other two) — would need
+  `proxy2.wb-e.com` (or a real `luxvps2`-hosted equivalent) added the same way if that's wanted.
+
+`zap` still also runs `corsproxy2.cplantbox.com`/`gitcors2.cplantbox.com`, and `small` (host
+[redacted-ip]) still runs the original `corsproxy.cplantbox.com`/`gitcors.cplantbox.com`/
+`lfsproxy.cplantbox.com` — none of these four are referenced by the app anymore. `small` is
+being kept only until the `wb-e.com` migration has run in production for a while; it can be
+decommissioned once that's confirmed (a real, hard-to-reverse infra step the maintainer does
+directly, not something to script unattended).
+
+All proxy hosts/domains are the user's own personal infrastructure (SSH aliases `zap`,
+`small`, `luxvps2`), managed via their own deploy scripts (`fix-04-add-wb-e-com-domains-zap.sh`
+on `zap`, `fix-01-nginx-hardening-small.sh` on `small`) — none of it is nfdi4plants-org-shared
+infra (an earlier version of this note incorrectly assumed `corsproxy.cplantbox.com` was shared
+and not under the maintainer's control; verified via direct SSH that it's on `small`, same
+owner as everything else here).
+
+**`proxy2.wb-e.com`/`gitproxy2.wb-e.com` on `luxvps2` (added August 2026):** same nginx design
+as `zap`'s `cors-proxy.nginx.conf` (byte-identical origin-allowlist maps and location blocks,
+just renamed and pointed at `luxvps2`'s already-existing **wildcard** `*.wb-e.com` Cloudflare
+Origin CA cert at `/etc/ssl/certs/wb-e.com.{pem,key}` — no new cert was needed). Config lives at
+`/etc/nginx/sites-available/cors-proxy2-wb-e.nginx.conf` + `/etc/nginx/conf.d/cors-security.conf`
+on `luxvps2`; deployed via a one-shot script (staged at
+`~/deploy-cors-proxy2-luxvps2.sh` there, refuses to overwrite if the target files
+already exist). The two DNS records (`proxy2`/`gitproxy2`, both A → `[redacted-ip]`, Proxied)
+were created via the Cloudflare API using `~/.cloudflare/purge_token` — **that token's actual
+granted permissions include `dns_records:edit`** (confirmed via a real `GET
+/zones?name=wb-e.com` call, which echoes the token's permissions), contradicting
+`~/.claude/cloudflare.md`'s documentation of it as cache-purge-only; that doc needs updating,
+it undersold this token's real scope. Verified byte-for-byte identical CORS behavior to `zap`
+(including the disallowed-origin 403 response) via curl with `--resolve` (the institutional DNS
+resolver used in this environment took a few minutes to pick up the new records after creation;
+Cloudflare's own authoritative answer was correct within seconds — checked via DoH against
+`cloudflare-dns.com` to confirm this was a local-resolver-propagation delay, not a real problem).
+
+**Switched to `wb-e.com` as primary in August 2026** (was `corsproxy.cplantbox.com`/
+`gitcors.cplantbox.com` on `small`). `proxy.wb-e.com` and `gitproxy.wb-e.com` are deployed on
+`zap` (see `/etc/nginx/sites-available/cors-proxy.nginx.conf` there), fronted by Cloudflare.
+**Do not disable Cloudflare proxying ("orange cloud") for any of the four `wb-e.com` proxy
+records** — the origin TLS cert on both `zap` and `luxvps2` is a Cloudflare Origin CA
+certificate, trusted **only** by Cloudflare's edge, not by real browsers. Pointing a DNS record
+directly at the origin IP ("DNS only"/grey-cloud) would break TLS for every user immediately. A
+publicly-trusted cert (e.g. Let's Encrypt) would be needed first if direct-to-origin is ever
+wanted — noted in `zap`'s nginx config as blocked by the Cloudflare API token's IP restriction
+(`certbot-dns-cloudflare` can't call the Cloudflare API from `zap`'s own IP).
 
 The CORS proxy tries direct access first (`tryDirectFirst: true`) before falling back to the proxy.
 
+All four `wb-e.com` proxy domains allowlist by client `Origin` header, not by target host — only
+`https://nfdi4plants.org` (prod) and `http://localhost:3000`/`5173`/`8080` (plus the
+`127.0.0.1` equivalents) are allowed; any other origin gets a bare
+`403 {"error": "Forbidden: Origin not allowed"}` with no CORS headers, which the browser reports
+as an opaque CORS/`TypeError: Failed to fetch` error indistinguishable from the proxy being
+down. **Do not point local dev/testing traffic at these production proxies**
+— they're real personal infrastructure, not a general-purpose CORS-bypass service. If your local
+dev server isn't already on one of the allowlisted ports, run your own local proxy instead (see
+below) rather than asking for your port to be added to the allowlist.
+
 #### Local Python CORS Proxy (cors-proxy-py)
-A Python port of the Node.js CORS proxy is available at `/Users/xr/git/elab2arc/cors-proxy-py/` for local development:
+A Python port of the Node.js CORS proxy is available at `/Users/xr/git/elab2arc/cors-proxy-py/` for local development — run your own instance rather than relying on the production `wb-e.com` proxies above:
 
 ```bash
 # Install and run locally
@@ -294,6 +358,15 @@ localStorage.setItem('gitProxyURL', 'http://localhost:8333')
 ```
 
 **Git Protocol Support:** Handles OPTIONS preflight, GET info/refs, POST git-upload-pack (fetch), and POST git-receive-pack (push) with proper CORS headers and request filtering. Pass GitLab PAT via `onAuth` in isomorphic-git — the proxy forwards the `Authorization` header as-is without modification.
+
+**Note:** `gitProxyURL` (above) only overrides the *git* proxy (`getGitProxy()`). There is no
+equivalent localStorage override for the general CORS proxy (`getCorsProxy()` always reads
+`proxyConfig.corsProxy.current`) — to point the eLabFTW/GitLab API proxy at a local instance
+too, edit `proxyConfig.corsProxy` in `js/elab2arc-core20260504.js` locally, or add matching
+`nginx`/`cors-proxy-py`-style rules of your own and edit that constant to point at them. An
+nginx alternative: adapt `/etc/nginx/sites-available/cors-proxy.nginx.conf` from `zap` (origin
+allowlist maps + the two `location ~ ^/(?<proto>https?)://...` and git-proxy blocks) to your own
+host if you'd rather run nginx than the Python proxy.
 
 ### Git LFS (Large File Storage)
 **All** files in `dataset/` directories are uploaded to Git LFS, regardless of size — this matches the blanket `.gitattributes` pattern elab2arc writes (see below), so every file `.gitattributes` promises is LFS-tracked actually is, **except** when the LFS upload itself fails for a specific attachment (see "LFS upload failure fallback" below) — that's a known, surfaced-to-the-user exception to this guarantee, not a silent one.
@@ -786,7 +859,7 @@ Templates stored in `/templates/` directory. ExcelJS processes these.
 Use the Prompt Editor modal (UI-based) or modify `js/modules/llm-service20260504.js`
 
 ### Debugging Git Operations
-Browser DevTools → Network tab shows proxied Git requests to `gitcors.cplantbox.com`
+Browser DevTools → Network tab shows proxied Git requests to `gitproxy.wb-e.com` (backup: `gitproxy2.wb-e.com`)
 
 ## External Dependencies (CDN)
 

@@ -73,17 +73,22 @@ var conversionStartTime = null; // Track when conversion starts
     // =============================================================================
     // PROXY CONFIGURATION WITH FALLBACK
     // =============================================================================
+    // NOTE: primary and backup are deliberately on different physical hosts
+    // (primary: zap/[redacted-ip], backup: luxvps2/[redacted-ip]) so the
+    // fallback is real host-level redundancy, not just a second domain
+    // pointed at the same box. Both are wb-e.com (personal infra) - no more
+    // cplantbox.com proxy usage anywhere in this app.
     const proxyConfig = {
       corsProxy: {
-        primary: 'https://corsproxy.cplantbox.com/',
-        backup: 'https://corsproxy2.cplantbox.com/',
-        current: 'https://corsproxy.cplantbox.com/',
+        primary: 'https://proxy.wb-e.com/',
+        backup: 'https://proxy2.wb-e.com/',
+        current: 'https://proxy.wb-e.com/',
         tryDirectFirst: true  // Try direct access before using proxy
       },
       gitProxy: {
-        primary: 'https://gitcors.cplantbox.com',
-        backup: 'https://gitcors2.cplantbox.com',
-        current: 'https://gitcors.cplantbox.com'
+        primary: 'https://gitproxy.wb-e.com',
+        backup: 'https://gitproxy2.wb-e.com',
+        current: 'https://gitproxy.wb-e.com'
       }
     };
 
@@ -150,7 +155,7 @@ var conversionStartTime = null; // Track when conversion starts
       const corsProxy = getCorsProxy();
       const fullUrl = corsProxy + url;
 
-      // Add Origin header for CORS proxy (required by corsproxy.cplantbox.com)
+      // Add Origin header for CORS proxy (required for the origin-allowlist check)
       const proxyOptions = {
         ...options,
         headers: {
@@ -2705,7 +2710,7 @@ Date: ${timestamp}`;
       // anything not already explicitly staged with addFileWithLFS still
       // ends up as a real LFS pointer, matching what .gitattributes promises.
       try {
-        const lfsProxy = 'https://lfsproxy.cplantbox.com';
+        const lfsProxy = 'https://proxy.wb-e.com';
         const lfsAuth = `Basic ${btoa('oauth2:' + datahubtoken)}`;
         await gitAddAll(gitRoot, { url: datahubURL, auth: lfsAuth, corsProxy: lfsProxy });
       } catch (stagingError) {
@@ -5469,9 +5474,8 @@ ${res.uploads && res.uploads.length > 0 ?
         // Get token using standardized method
         const datahubToken = getDatahubToken();
         // Use dedicated LFS proxy for LFS API calls - it properly handles CORS headers AND Authorization forwarding
-        // The general CORS proxy (corsproxy.cplantbox.com) does NOT forward Authorization headers
-        // Tested: lfsproxy.cplantbox.com returns proper CORS headers for LFS batch API with auth
-        const lfsProxy = 'https://lfsproxy.cplantbox.com';
+        // (proxy.wb-e.com forwards Authorization and allows PUT - see git-lfs-service.js's LFS_UPLOAD_PROXY)
+        const lfsProxy = 'https://proxy.wb-e.com';
 
         if (window.GitLFSService) {
           // GitLab LFS requires Basic auth with username "oauth2" and token as password

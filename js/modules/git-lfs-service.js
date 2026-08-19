@@ -10,9 +10,10 @@
 const LFS_SIZE_THRESHOLD = 10 * 1024 * 1024; // 10MB
 const LFS_CONFIG_PATH = '.gitattributes';
 
-// LFS-specific CORS proxy that handles PUT requests for uploads
-// This proxy is specifically configured to allow PUT method for GitLab LFS uploads
-const LFS_UPLOAD_PROXY = 'https://lfsproxy.cplantbox.com';
+// General CORS proxy, also used for LFS uploads: proxy.wb-e.com forwards
+// Authorization headers and allows PUT (see elab2arc-core...js's proxyConfig
+// for the primary/backup pair this domain belongs to).
+const LFS_UPLOAD_PROXY = 'https://proxy.wb-e.com';
 
 /**
  * LFS pattern for dataset directories
