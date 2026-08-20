@@ -36,6 +36,10 @@
 //             array order when none are already linked, so ISA-API's
 //             protocol-sequence check runs once per assay instead of once
 //             per unlinked process row
+//   Fix #28 - Assign measurementType/technologyType per assay from a keyword
+//             match against ISA-API's registered config list, instead of
+//             defaulting every assay to metagenome sequencing regardless of
+//             content
 //
 // Exports: window.Elab2ArcEnrich
 // =============================================================================
@@ -97,6 +101,73 @@
   var PROTOCOL_TYPE_DEFAULT = {
     annotationValue: 'material processing', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000094'
   };
+
+  // Measurement/technology type patterns — keyword signals mapped to one of
+  // ISA-API's actual registered (measurementType, technologyType) config
+  // pairs (isa-api/isatools/resources/config/json/default/*.json), not
+  // arbitrary labels. This matters: assigning anything NOT in that
+  // registered set makes ISA-API's validator fail with a hard error (Rule
+  // 4002, "Measurement/technology type invalid") instead of a warning, so
+  // every entry here — and the fallback below — must be an exact string
+  // match to a real config. termAccession is left blank for these rather
+  // than guessing a specific OBI ID, since only annotationValue is checked
+  // by the validator's config lookup; only reuse a real accession you can
+  // confirm.
+  var MEASUREMENT_TYPE_PATTERNS = [
+    {
+      keywords: ['flow cytometry', 'facs', 'cell sorting'],
+      measurementType: { annotationValue: 'cell sorting', termSource: 'OBI', termAccession: '' },
+      technologyType: { annotationValue: 'flow cytometry', termSource: 'OBI', termAccession: '' }
+    },
+    {
+      keywords: ['qpcr', 'real-time pcr', 'real time pcr', 'rt-pcr'],
+      measurementType: { annotationValue: 'transcription profiling', termSource: 'OBI', termAccession: '' },
+      technologyType: { annotationValue: 'real time PCR', termSource: 'OBI', termAccession: '' }
+    },
+    {
+      keywords: ['mass spectrometry', 'lc-ms', 'gc-ms', 'lcms', 'gcms'],
+      measurementType: { annotationValue: 'metabolite profiling', termSource: 'OBI', termAccession: '' },
+      technologyType: { annotationValue: 'mass spectrometry', termSource: 'OBI', termAccession: '' }
+    },
+    {
+      keywords: ['nmr', 'nuclear magnetic resonance'],
+      measurementType: { annotationValue: 'metabolite profiling', termSource: 'OBI', termAccession: '' },
+      technologyType: { annotationValue: 'NMR spectroscopy', termSource: 'OBI', termAccession: '' }
+    },
+    {
+      keywords: ['microarray', 'hybridization array'],
+      measurementType: { annotationValue: 'transcription profiling', termSource: 'OBI', termAccession: '' },
+      technologyType: { annotationValue: 'DNA microarray', termSource: 'OBI', termAccession: '' }
+    }
+  ];
+
+  // Fallback when no pattern above matches — this MUST also be a registered
+  // config pair (see comment above), and stays on this app's primary domain
+  // (nucleic-acid sequencing) rather than something more "accurate" but
+  // unregistered, since an unregistered pair fails validation outright.
+  var MEASUREMENT_TYPE_DEFAULT = { annotationValue: 'metagenome sequencing', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000626' };
+  var TECHNOLOGY_TYPE_DEFAULT = { annotationValue: 'nucleotide sequencing', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000626' };
+
+  /**
+   * Infer (measurementType, technologyType) for an assay from its protocol
+   * names, matched against MEASUREMENT_TYPE_PATTERNS (first match wins).
+   * Falls back to MEASUREMENT_TYPE_DEFAULT/TECHNOLOGY_TYPE_DEFAULT — always a
+   * registered config pair, never left unassigned — when nothing matches.
+   * @param {string[]} protocolNames
+   * @returns {{measurementType: object, technologyType: object}}
+   */
+  function inferMeasurementTechnologyType(protocolNames) {
+    var joined = (protocolNames || []).join(' ').toLowerCase();
+    for (var i = 0; i < MEASUREMENT_TYPE_PATTERNS.length; i++) {
+      var entry = MEASUREMENT_TYPE_PATTERNS[i];
+      for (var j = 0; j < entry.keywords.length; j++) {
+        if (joined.indexOf(entry.keywords[j]) !== -1) {
+          return { measurementType: copyOnt(entry.measurementType), technologyType: copyOnt(entry.technologyType) };
+        }
+      }
+    }
+    return { measurementType: copyOnt(MEASUREMENT_TYPE_DEFAULT), technologyType: copyOnt(TECHNOLOGY_TYPE_DEFAULT) };
+  }
 
   // Unit patterns — ordered from longest/most-specific to shortest to prevent
   // false substring matches (e.g. 'ml' before 'l', 'mg' before 'g').
@@ -551,17 +622,35 @@
         }
       });
 
+      // Fix #28 — protocol @id -> name lookup, used below to infer each
+      // assay's measurementType/technologyType from what it actually runs.
+      var protocolNameById = {};
+      (study.protocols || []).forEach(function(p) {
+        if (p && p['@id']) protocolNameById[p['@id']] = p.name || '';
+      });
+
       // -----------------------------------------------------------------------
       // Per-assay enrichment (same patterns as study-level)
       // -----------------------------------------------------------------------
       (study.assays || []).forEach(function(assay) {
 
         // Ensure required assay fields (note: 'protocols' is NOT allowed on assays per ISA-JSON schema)
-        if (!assay.measurementType || !assay.measurementType.annotationValue) {
-          assay.measurementType = { annotationValue: 'metagenome sequencing', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000626' };
-        }
-        if (!assay.technologyType || !assay.technologyType.annotationValue) {
-          assay.technologyType = { annotationValue: 'nucleotide sequencing', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000626' };
+        // Fix #28 — infer from the assay's own protocol names (matched against
+        // ISA-API's registered config list) rather than defaulting every
+        // assay to metagenome sequencing regardless of content.
+        if (!assay.measurementType || !assay.measurementType.annotationValue ||
+            !assay.technologyType || !assay.technologyType.annotationValue) {
+          var assayProtocolNames = (assay.processSequence || []).map(function(proc) {
+            var pid = proc.executesProtocol && proc.executesProtocol['@id'];
+            return pid ? protocolNameById[pid] : '';
+          });
+          var inferred = inferMeasurementTechnologyType(assayProtocolNames);
+          if (!assay.measurementType || !assay.measurementType.annotationValue) {
+            assay.measurementType = inferred.measurementType;
+          }
+          if (!assay.technologyType || !assay.technologyType.annotationValue) {
+            assay.technologyType = inferred.technologyType;
+          }
         }
         if (!assay.materials) assay.materials = { sources: [], samples: [], otherMaterials: [] };
         if (!Array.isArray(assay.materials.sources)) assay.materials.sources = [];

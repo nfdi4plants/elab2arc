@@ -1,0 +1,2013 @@
+{
+  "@id": "./",
+  "filename": "isa.investigation.xlsx",
+  "identifier": "review_test",
+  "title": "review_test",
+  "submissionDate": "2026-04-29",
+  "people": [
+    {
+      "@id": "#Tool_elab@dataplan.top_elab2arc",
+      "firstName": "Tool",
+      "lastName": "elab2arc",
+      "midInitials": "elab@dataplan.top"
+    }
+  ],
+  "studies": [
+    {
+      "@id": "studies/review_test/",
+      "filename": "studies/review_test/isa.study.xlsx",
+      "identifier": "review_test",
+      "assays": [
+        {
+          "filename": "assays/20250617-67288e9e29c0e3d251a214fd67479d7e91bdd6fb-Experiment/isa.assay.xlsx",
+          "@id": "assays/20250617-67288e9e29c0e3d251a214fd67479d7e91bdd6fb-Experiment/",
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_Experiment_4_Sequencing_Run_1.altinput",
+              "name": "protocol_name",
+              "value": "Experiment_4_Sequencing_Run_1.altinput"
+            },
+            {
+              "@id": "#Comment_protocol_files_Experiment_4_Sequencing_Run_1.altinput.md",
+              "name": "protocol_files",
+              "value": "Experiment_4_Sequencing_Run_1.altinput.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_Experiment_4_Sequencing_Run_1.altinput.md",
+              "name": "protocol_description",
+              "value": "See details in: Experiment_4_Sequencing_Run_1.altinput.md"
+            },
+            {
+              "@id": "#Comment_dataset_files",
+              "name": "dataset_files"
+            },
+            {
+              "@id": "#Comment_title_Experiment_4_Sequencing_Run_1.altinput",
+              "name": "title",
+              "value": "Experiment_4_Sequencing_Run_1.altinput"
+            },
+            {
+              "@id": "#Comment_description_See_details_in:_Experiment_4_Sequencing_Run_1.altinput.md",
+              "name": "description",
+              "value": "See details in: Experiment_4_Sequencing_Run_1.altinput.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "materials": {
+            "sources": [],
+            "samples": [],
+            "otherMaterials": []
+          },
+          "processSequence": [],
+          "dataFiles": [],
+          "unitCategories": [],
+          "characteristicCategories": []
+        },
+        {
+          "filename": "assays/An_example_experiment/isa.assay.xlsx",
+          "@id": "assays/An_example_experiment/",
+          "materials": {
+            "samples": [
+              {
+                "@id": "#Sample_samples_Output_0",
+                "name": "samples_Output_0",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_Prepared_Sample_1",
+                "name": "Prepared_Sample_1",
+                "factorValues": [],
+                "characteristics": []
+              }
+            ],
+            "sources": [],
+            "otherMaterials": []
+          },
+          "characteristicCategories": [],
+          "unitCategories": [],
+          "processSequence": [
+            {
+              "@id": "#Process_samples",
+              "name": "samples",
+              "inputs": [
+                {
+                  "@id": "#Source_Sample_1",
+                  "name": "Sample_1",
+                  "characteristics": [
+                    {
+                      "@id": "#MaterialAttributeValue/Organism=Escherichia coli",
+                      "category": {
+                        "@id": "#MaterialAttribute/#UserTerm_Organism"
+                      },
+                      "value": {
+                        "@id": "#UserTerm_Escherichia_coli",
+                        "annotationValue": "Escherichia coli"
+                      }
+                    },
+                    {
+                      "@id": "#MaterialAttributeValue/strain=K-12",
+                      "category": {
+                        "@id": "#MaterialAttribute/NCBITaxon:83333"
+                      },
+                      "value": {
+                        "@id": "http://purl.obolibrary.org/obo/NCBITaxon_83333",
+                        "annotationValue": "K-12",
+                        "termSource": "NCBITaxon",
+                        "termAccession": "http://purl.obolibrary.org/obo/NCBITaxon_83333"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "outputs": [
+                {
+                  "@id": "#Sample_samples_Output_0"
+                }
+              ],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1",
+              "name": "process nr. 1",
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md",
+                "name": "protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md",
+                "parameters": [
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Temperature",
+                    "parameterName": {
+                      "@id": "#UserTerm_Temperature",
+                      "annotationValue": "Temperature"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_time",
+                    "parameterName": {
+                      "@id": "#UserTerm_Incubation_time",
+                      "annotationValue": "Incubation time"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Buffer_concentration",
+                    "parameterName": {
+                      "@id": "#UserTerm_Buffer_concentration",
+                      "annotationValue": "Buffer concentration"
+                    }
+                  }
+                ]
+              },
+              "parameterValues": [
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Temperature"
+                  },
+                  "value": 37,
+                  "unit": {
+                    "@id": "#UserTerm_°C"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_time"
+                  },
+                  "value": 60,
+                  "unit": {
+                    "@id": "#UserTerm_min"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Buffer_concentration"
+                  },
+                  "value": 10,
+                  "unit": {
+                    "@id": "#UserTerm_mM"
+                  }
+                }
+              ],
+              "inputs": [
+                {
+                  "@id": "#Source_Sample_1"
+                }
+              ],
+              "outputs": [
+                {
+                  "@id": "#Sample_Prepared_Sample_1"
+                }
+              ],
+              "previousProcess": {
+                "@id": "#Process_samples"
+              }
+            }
+          ],
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_2_An_example_experiment.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_2_An_example_experiment.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_2_An_example_experiment.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_2_An_example_experiment.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_2_An_example_experiment.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_2_An_example_experiment.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_process_1_name_Sample_Preparation",
+              "name": "process_1_name",
+              "value": "Sample Preparation"
+            },
+            {
+              "@id": "#Comment_process_1_description_See_detailed_protocol_in:_review_test/assays/An_example_experiment/protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md",
+              "name": "process_1_description",
+              "value": "See detailed protocol in: review_test/assays/An_example_experiment/protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_title_Sample_Preparation",
+              "name": "title",
+              "value": "Sample Preparation"
+            },
+            {
+              "@id": "#Comment_description_See_detailed_protocol_in:_review_test/assays/An_example_experiment/protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md",
+              "name": "description",
+              "value": "See detailed protocol in: review_test/assays/An_example_experiment/protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "dataFiles": []
+        },
+        {
+          "filename": "assays/Experiment_1__Bacterial_Cultivation/isa.assay.xlsx",
+          "@id": "assays/Experiment_1__Bacterial_Cultivation/",
+          "materials": {
+            "samples": [
+              {
+                "@id": "#Sample_samples_Output_0",
+                "factorValues": [],
+                "characteristics": [],
+                "name": "0"
+              },
+              {
+                "@id": "#Sample_OD600_Sample_1",
+                "name": "OD600_Sample_1",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_2",
+                "name": "OD600_Sample_2",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_3",
+                "name": "OD600_Sample_3",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_4",
+                "name": "OD600_Sample_4",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_5",
+                "name": "OD600_Sample_5",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_6",
+                "name": "OD600_Sample_6",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_7",
+                "name": "OD600_Sample_7",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_8",
+                "name": "OD600_Sample_8",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_9",
+                "name": "OD600_Sample_9",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_OD600_Sample_10",
+                "name": "OD600_Sample_10",
+                "factorValues": [],
+                "characteristics": []
+              }
+            ],
+            "sources": [],
+            "otherMaterials": []
+          },
+          "characteristicCategories": [],
+          "unitCategories": [],
+          "processSequence": [
+            {
+              "@id": "#Process_samples",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1_0"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1_0",
+              "name": "process nr. 1_0",
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md",
+                "name": "protocols/eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md",
+                "parameters": [
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Medium",
+                    "parameterName": {
+                      "@id": "#UserTerm_Medium",
+                      "annotationValue": "Medium"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Volume_per_culture",
+                    "parameterName": {
+                      "@id": "#UserTerm_Volume_per_culture",
+                      "annotationValue": "Volume per culture"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_temperature",
+                    "parameterName": {
+                      "@id": "#UserTerm_Incubation_temperature",
+                      "annotationValue": "Incubation temperature"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Shaking_speed",
+                    "parameterName": {
+                      "@id": "#UserTerm_Shaking_speed",
+                      "annotationValue": "Shaking speed"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_time"
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Inoculation_dilution",
+                    "parameterName": {
+                      "@id": "#UserTerm_Inoculation_dilution",
+                      "annotationValue": "Inoculation dilution"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Sampling_interval",
+                    "parameterName": {
+                      "@id": "#UserTerm_Sampling_interval",
+                      "annotationValue": "Sampling interval"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_speed",
+                    "parameterName": {
+                      "@id": "#UserTerm_Centrifugation_speed",
+                      "annotationValue": "Centrifugation speed"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_time",
+                    "parameterName": {
+                      "@id": "#UserTerm_Centrifugation_time",
+                      "annotationValue": "Centrifugation time"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_temperature",
+                    "parameterName": {
+                      "@id": "#UserTerm_Centrifugation_temperature",
+                      "annotationValue": "Centrifugation temperature"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Measurement_wavelength",
+                    "parameterName": {
+                      "@id": "#UserTerm_Measurement_wavelength",
+                      "annotationValue": "Measurement wavelength"
+                    }
+                  }
+                ]
+              },
+              "parameterValues": [
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Medium"
+                  },
+                  "value": {
+                    "@id": "#UserTerm_LB_broth",
+                    "annotationValue": "LB broth"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Volume_per_culture"
+                  },
+                  "value": 20,
+                  "unit": {
+                    "@id": "#UserTerm_mL"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_temperature"
+                  },
+                  "value": 37,
+                  "unit": {
+                    "@id": "#UserTerm_°C"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Shaking_speed"
+                  },
+                  "value": 180,
+                  "unit": {
+                    "@id": "#UserTerm_rpm"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_time"
+                  },
+                  "value": 16,
+                  "unit": {
+                    "@id": "#UserTerm_h"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Inoculation_dilution"
+                  },
+                  "value": {
+                    "@id": "#UserTerm_1:100",
+                    "annotationValue": "1:100"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Sampling_interval"
+                  },
+                  "value": 1,
+                  "unit": {
+                    "@id": "#UserTerm_h"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_speed"
+                  },
+                  "value": 5000,
+                  "unit": {
+                    "@id": "#UserTerm_g"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_time"
+                  },
+                  "value": 10,
+                  "unit": {
+                    "@id": "#UserTerm_min"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_temperature"
+                  },
+                  "value": 4,
+                  "unit": {
+                    "@id": "#UserTerm_°C"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Measurement_wavelength"
+                  },
+                  "value": 600,
+                  "unit": {
+                    "@id": "#UserTerm_nm"
+                  }
+                }
+              ],
+              "inputs": [
+                {
+                  "@id": "#Source_Sample_1"
+                },
+                {
+                  "@id": "#Source_Sample_2",
+                  "name": "Sample_2"
+                },
+                {
+                  "@id": "#Source_Sample_3",
+                  "name": "Sample_3"
+                },
+                {
+                  "@id": "#Source_Sample_4",
+                  "name": "Sample_4"
+                }
+              ],
+              "outputs": [
+                {
+                  "@id": "#Sample_OD600_Sample_1"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_2"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_3"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_4"
+                }
+              ],
+              "previousProcess": {
+                "@id": "#Process_samples"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1_1"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1_1",
+              "name": "process nr. 1_1",
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md"
+              },
+              "parameterValues": [
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Medium"
+                  },
+                  "value": {
+                    "@id": "#UserTerm_LB_broth"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Volume_per_culture"
+                  },
+                  "value": 10,
+                  "unit": {
+                    "@id": "#UserTerm_mL"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_temperature"
+                  },
+                  "value": 37,
+                  "unit": {
+                    "@id": "#UserTerm_°C"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Shaking_speed"
+                  },
+                  "value": 180,
+                  "unit": {
+                    "@id": "#UserTerm_rpm"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Incubation_time"
+                  },
+                  "value": 16,
+                  "unit": {
+                    "@id": "#UserTerm_h"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Inoculation_dilution"
+                  },
+                  "value": {
+                    "@id": "#UserTerm_1:100"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Sampling_interval"
+                  },
+                  "value": 1,
+                  "unit": {
+                    "@id": "#UserTerm_h"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_speed"
+                  },
+                  "value": 5000,
+                  "unit": {
+                    "@id": "#UserTerm_g"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_time"
+                  },
+                  "value": 10,
+                  "unit": {
+                    "@id": "#UserTerm_min"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Centrifugation_temperature"
+                  },
+                  "value": 4,
+                  "unit": {
+                    "@id": "#UserTerm_°C"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Measurement_wavelength"
+                  },
+                  "value": 600,
+                  "unit": {
+                    "@id": "#UserTerm_nm"
+                  }
+                }
+              ],
+              "inputs": [
+                {
+                  "@id": "#Source_Sample_5",
+                  "name": "Sample_5"
+                },
+                {
+                  "@id": "#Source_Sample_6",
+                  "name": "Sample_6"
+                },
+                {
+                  "@id": "#Source_Sample_7",
+                  "name": "Sample_7"
+                },
+                {
+                  "@id": "#Source_Sample_8",
+                  "name": "Sample_8"
+                },
+                {
+                  "@id": "#Source_Sample_9",
+                  "name": "Sample_9"
+                },
+                {
+                  "@id": "#Source_Sample_10",
+                  "name": "Sample_10"
+                }
+              ],
+              "outputs": [
+                {
+                  "@id": "#Sample_OD600_Sample_5"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_6"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_7"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_8"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_9"
+                },
+                {
+                  "@id": "#Sample_OD600_Sample_10"
+                }
+              ],
+              "previousProcess": {
+                "@id": "#Process_process_nr._1_0"
+              }
+            }
+          ],
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_title_eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc",
+              "name": "title",
+              "value": "eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc"
+            },
+            {
+              "@id": "#Comment_description_See_details_in:_eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md",
+              "name": "description",
+              "value": "See details in: eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "dataFiles": []
+        },
+        {
+          "filename": "assays/Experiment_2__DNA_Extraction/isa.assay.xlsx",
+          "@id": "assays/Experiment_2__DNA_Extraction/",
+          "materials": {
+            "samples": [
+              {
+                "@id": "#Sample_samples_Output_0",
+                "factorValues": [],
+                "characteristics": [],
+                "name": "0"
+              }
+            ],
+            "sources": [],
+            "otherMaterials": []
+          },
+          "characteristicCategories": [],
+          "unitCategories": [],
+          "processSequence": [
+            {
+              "@id": "#Process_samples",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md"
+              },
+              "previousProcess": {
+                "@id": "#Process_samples"
+              }
+            }
+          ],
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_process_1_name_DNA_Extraction_from_E._coli_K-12",
+              "name": "process_1_name",
+              "value": "DNA Extraction from E. coli K-12"
+            },
+            {
+              "@id": "#Comment_process_1_description_See_detailed_protocol_in:_review_test/assays/Experiment_2__DNA_Extraction/protocols/eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md",
+              "name": "process_1_description",
+              "value": "See detailed protocol in: review_test/assays/Experiment_2__DNA_Extraction/protocols/eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_title_DNA_Extraction_from_E._coli_K-12",
+              "name": "title",
+              "value": "DNA Extraction from E. coli K-12"
+            },
+            {
+              "@id": "#Comment_description_See_detailed_protocol_in:_review_test/assays/Experiment_2__DNA_Extraction/protocols/eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md",
+              "name": "description",
+              "value": "See detailed protocol in: review_test/assays/Experiment_2__DNA_Extraction/protocols/eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "dataFiles": []
+        },
+        {
+          "filename": "assays/Experiment_3__Library_Preparation_-_FFPE_Repair__A-tailing__Adapter_Ligation/isa.assay.xlsx",
+          "@id": "assays/Experiment_3__Library_Preparation_-_FFPE_Repair__A-tailing__Adapter_Ligation/",
+          "materials": {
+            "samples": [
+              {
+                "@id": "#Sample_samples_Output_0",
+                "factorValues": [],
+                "characteristics": [],
+                "name": "0"
+              }
+            ],
+            "sources": [],
+            "otherMaterials": []
+          },
+          "characteristicCategories": [],
+          "unitCategories": [],
+          "processSequence": [
+            {
+              "@id": "#Process_samples",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md"
+              },
+              "previousProcess": {
+                "@id": "#Process_samples"
+              }
+            }
+          ],
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_process_1_name_Library_Preparation_using_NEBNext_FFPE_DNA_Repair_Mix",
+              "name": "process_1_name",
+              "value": "Library Preparation using NEBNext FFPE DNA Repair Mix"
+            },
+            {
+              "@id": "#Comment_process_1_description_See_detailed_protocol_in:_review_test/assays/Experiment_3__Library_Preparation_-_FFPE_Repair__A-tailing__Adapter_Ligation/protocols/eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md",
+              "name": "process_1_description",
+              "value": "See detailed protocol in: review_test/assays/Experiment_3__Library_Preparation_-_FFPE_Repair__A-tailing__Adapter_Ligation/protocols/eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_title_Library_Preparation_using_NEBNext_FFPE_DNA_Repair_Mix",
+              "name": "title",
+              "value": "Library Preparation using NEBNext FFPE DNA Repair Mix"
+            },
+            {
+              "@id": "#Comment_description_See_detailed_protocol_in:_review_test/assays/Experiment_3__Library_Preparation_-_FFPE_Repair__A-tailing__Adapter_Ligation/protocols/eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md",
+              "name": "description",
+              "value": "See detailed protocol in: review_test/assays/Experiment_3__Library_Preparation_-_FFPE_Repair__A-tailing__Adapter_Ligation/protocols/eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "dataFiles": []
+        },
+        {
+          "filename": "assays/Experiment_4__Sequencing_Run/isa.assay.xlsx",
+          "@id": "assays/Experiment_4__Sequencing_Run/",
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_title_eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc",
+              "name": "title",
+              "value": "eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc"
+            },
+            {
+              "@id": "#Comment_description_See_details_in:_eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc.md",
+              "name": "description",
+              "value": "See details in: eLabFTW_protocol_43_Experiment_4_Sequencing_Run.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "materials": {
+            "sources": [],
+            "samples": [],
+            "otherMaterials": []
+          },
+          "processSequence": [],
+          "dataFiles": [],
+          "unitCategories": [],
+          "characteristicCategories": []
+        },
+        {
+          "filename": "assays/Experiment_5__Bioinformatic_Analysis/isa.assay.xlsx",
+          "@id": "assays/Experiment_5__Bioinformatic_Analysis/",
+          "materials": {
+            "samples": [
+              {
+                "@id": "#Sample_samples_Output_0",
+                "factorValues": [],
+                "characteristics": [],
+                "name": "0"
+              },
+              {
+                "@id": "#Sample_Trimmed_reads_from_Sample_1",
+                "name": "Trimmed reads from Sample_1",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_Assembled_contigs_from_Sample_1",
+                "name": "Assembled contigs from Sample_1",
+                "factorValues": [],
+                "characteristics": []
+              },
+              {
+                "@id": "#Sample_Annotated_genome_from_Sample_1",
+                "name": "Annotated genome from Sample_1",
+                "factorValues": [],
+                "characteristics": []
+              }
+            ],
+            "sources": [],
+            "otherMaterials": []
+          },
+          "characteristicCategories": [],
+          "unitCategories": [],
+          "processSequence": [
+            {
+              "@id": "#Process_samples",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+              },
+              "previousProcess": {
+                "@id": "#Process_samples"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._2"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._2",
+              "name": "process nr. 2",
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+                "name": "protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+                "parameters": [
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Trimmomatic_version",
+                    "parameterName": {
+                      "@id": "#UserTerm_Trimmomatic_version",
+                      "annotationValue": "Trimmomatic version"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Minimum_read_length",
+                    "parameterName": {
+                      "@id": "#UserTerm_Minimum_read_length",
+                      "annotationValue": "Minimum read length"
+                    }
+                  },
+                  {
+                    "@id": "#ProtocolParameter/#UserTerm_Quality_threshold",
+                    "parameterName": {
+                      "@id": "#UserTerm_Quality_threshold",
+                      "annotationValue": "Quality threshold"
+                    }
+                  }
+                ]
+              },
+              "parameterValues": [
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Trimmomatic_version"
+                  },
+                  "value": {
+                    "@id": "#UserTerm_0.39",
+                    "annotationValue": "0.39"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Minimum_read_length"
+                  },
+                  "value": 50,
+                  "unit": {
+                    "@id": "#UserTerm_bp"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Quality_threshold"
+                  },
+                  "value": {
+                    "@id": "#UserTerm_20",
+                    "annotationValue": "20"
+                  }
+                }
+              ],
+              "inputs": [
+                {
+                  "@id": "#Source_QC_report_from_Sample_1",
+                  "name": "QC report from Sample_1"
+                }
+              ],
+              "outputs": [
+                {
+                  "@id": "#Sample_Trimmed_reads_from_Sample_1"
+                }
+              ],
+              "previousProcess": {
+                "@id": "#Process_process_nr._1"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._3"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._3",
+              "name": "process nr. 3",
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+              },
+              "parameterValues": [
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_SPAdes_version",
+                    "parameterName": {
+                      "@id": "#UserTerm_SPAdes_version",
+                      "annotationValue": "SPAdes version"
+                    }
+                  },
+                  "value": {
+                    "@id": "#UserTerm_3.15.3",
+                    "annotationValue": "3.15.3"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_k-mer_sizes",
+                    "parameterName": {
+                      "@id": "#UserTerm_k-mer_sizes",
+                      "annotationValue": "k-mer sizes"
+                    }
+                  },
+                  "value": {
+                    "@id": "#UserTerm_21,33,55,77",
+                    "annotationValue": "21,33,55,77"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Memory_allocation",
+                    "parameterName": {
+                      "@id": "#UserTerm_Memory_allocation",
+                      "annotationValue": "Memory allocation"
+                    }
+                  },
+                  "value": 16,
+                  "unit": {
+                    "@id": "#UserTerm_GB"
+                  }
+                }
+              ],
+              "inputs": [
+                {
+                  "@id": "#Source_Trimmed_reads_from_Sample_1",
+                  "name": "Trimmed reads from Sample_1"
+                }
+              ],
+              "outputs": [
+                {
+                  "@id": "#Sample_Assembled_contigs_from_Sample_1"
+                }
+              ],
+              "previousProcess": {
+                "@id": "#Process_process_nr._2"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._4"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._4",
+              "name": "process nr. 4",
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+              },
+              "parameterValues": [
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Prokka_version",
+                    "parameterName": {
+                      "@id": "#UserTerm_Prokka_version",
+                      "annotationValue": "Prokka version"
+                    }
+                  },
+                  "value": {
+                    "@id": "#UserTerm_1.14.6",
+                    "annotationValue": "1.14.6"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Reference_database",
+                    "parameterName": {
+                      "@id": "#UserTerm_Reference_database",
+                      "annotationValue": "Reference database"
+                    }
+                  },
+                  "value": {
+                    "@id": "#UserTerm_NCBI_RefSeq_bacterial_genomes",
+                    "annotationValue": "NCBI RefSeq bacterial genomes"
+                  }
+                },
+                {
+                  "category": {
+                    "@id": "#ProtocolParameter/#UserTerm_Reference_database_download_date",
+                    "parameterName": {
+                      "@id": "#UserTerm_Reference_database_download_date",
+                      "annotationValue": "Reference database download date"
+                    }
+                  },
+                  "value": {
+                    "@id": "#UserTerm_2025-06-01",
+                    "annotationValue": "2025-06-01"
+                  }
+                }
+              ],
+              "inputs": [
+                {
+                  "@id": "#Source_Assembled_contigs_from_Sample_1",
+                  "name": "Assembled contigs from Sample_1"
+                }
+              ],
+              "outputs": [
+                {
+                  "@id": "#Sample_Annotated_genome_from_Sample_1"
+                }
+              ],
+              "previousProcess": {
+                "@id": "#Process_process_nr._3"
+              }
+            }
+          ],
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_process_1_name_Quality_Control",
+              "name": "process_1_name",
+              "value": "Quality Control"
+            },
+            {
+              "@id": "#Comment_process_1_description_FastQC_and_MultiQC_analysis_of_raw_sequencing_reads._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+              "name": "process_1_description",
+              "value": "FastQC and MultiQC analysis of raw sequencing reads. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_process_2_name_Trimming",
+              "name": "process_2_name",
+              "value": "Trimming"
+            },
+            {
+              "@id": "#Comment_process_2_description_Adapter_and_quality_trimming_with_Trimmomatic._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+              "name": "process_2_description",
+              "value": "Adapter and quality trimming with Trimmomatic. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_process_3_name_Assembly",
+              "name": "process_3_name",
+              "value": "Assembly"
+            },
+            {
+              "@id": "#Comment_process_3_description_De_novo_assembly_with_SPAdes._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+              "name": "process_3_description",
+              "value": "De novo assembly with SPAdes. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_process_4_name_Annotation",
+              "name": "process_4_name",
+              "value": "Annotation"
+            },
+            {
+              "@id": "#Comment_process_4_description_Genome_annotation_with_Prokka_using_NCBI_RefSeq_database._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+              "name": "process_4_description",
+              "value": "Genome annotation with Prokka using NCBI RefSeq database. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_title_Experiment_5__Bioinformatic_Analysis",
+              "name": "title",
+              "value": "Experiment_5__Bioinformatic_Analysis"
+            },
+            {
+              "@id": "#Comment_description_FastQC_and_MultiQC_analysis_of_raw_sequencing_reads._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md_|_Adapter_and_quality_trimming_with_Trimmomatic._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md_|_De_novo_assembly_with_SPAdes._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md_|_Genome_annotation_with_Prokka_using_NCBI_RefSeq_database._See_detailed_protocol_in:_review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+              "name": "description",
+              "value": "FastQC and MultiQC analysis of raw sequencing reads. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md | Adapter and quality trimming with Trimmomatic. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md | De novo assembly with SPAdes. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md | Genome annotation with Prokka using NCBI RefSeq database. See detailed protocol in: review_test/assays/Experiment_5__Bioinformatic_Analysis/protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "dataFiles": []
+        },
+        {
+          "filename": "assays/Synthesis_of_Aspirin/isa.assay.xlsx",
+          "@id": "assays/Synthesis_of_Aspirin/",
+          "materials": {
+            "samples": [
+              {
+                "@id": "#Sample_samples_Output_0",
+                "factorValues": [],
+                "characteristics": [],
+                "name": "0"
+              }
+            ],
+            "sources": [],
+            "otherMaterials": []
+          },
+          "unitCategories": [],
+          "processSequence": [
+            {
+              "@id": "#Process_samples",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+              },
+              "previousProcess": {
+                "@id": "#Process_samples"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._2"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._2",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+              },
+              "previousProcess": {
+                "@id": "#Process_process_nr._1"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._3"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._3",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+              },
+              "previousProcess": {
+                "@id": "#Process_process_nr._2"
+              }
+            }
+          ],
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_process_1_name_Reagent_Mixing",
+              "name": "process_1_name",
+              "value": "Reagent Mixing"
+            },
+            {
+              "@id": "#Comment_process_1_description_Mix_salicylic_acid_and_acetic_anhydride_in_the_presence_of_sulfuric_acid_catalyst._See_detailed_protocol_in:_review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md",
+              "name": "process_1_description",
+              "value": "Mix salicylic acid and acetic anhydride in the presence of sulfuric acid catalyst. See detailed protocol in: review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_process_2_name_Recrystallization",
+              "name": "process_2_name",
+              "value": "Recrystallization"
+            },
+            {
+              "@id": "#Comment_process_2_description_Purify_aspirin_by_recrystallization_from_hot_water._See_detailed_protocol_in:_review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md",
+              "name": "process_2_description",
+              "value": "Purify aspirin by recrystallization from hot water. See detailed protocol in: review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_process_3_name_Purity_and_Melting_Point_Analysis",
+              "name": "process_3_name",
+              "value": "Purity and Melting Point Analysis"
+            },
+            {
+              "@id": "#Comment_process_3_description_Confirm_purity_using_TLC_and_determine_melting_point._See_detailed_protocol_in:_review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md",
+              "name": "process_3_description",
+              "value": "Confirm purity using TLC and determine melting point. See detailed protocol in: review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_title_Synthesis_of_Aspirin",
+              "name": "title",
+              "value": "Synthesis_of_Aspirin"
+            },
+            {
+              "@id": "#Comment_description_Mix_salicylic_acid_and_acetic_anhydride_in_the_presence_of_sulfuric_acid_catalyst._See_detailed_protocol_in:_review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md_|_Purify_aspirin_by_recrystallization_from_hot_water._See_detailed_protocol_in:_review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md_|_Confirm_purity_using_TLC_and_determine_melting_point._See_detailed_protocol_in:_review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md",
+              "name": "description",
+              "value": "Mix salicylic acid and acetic anhydride in the presence of sulfuric acid catalyst. See detailed protocol in: review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md | Purify aspirin by recrystallization from hot water. See detailed protocol in: review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md | Confirm purity using TLC and determine melting point. See detailed protocol in: review_test/assays/Synthesis_of_Aspirin/protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "dataFiles": [],
+          "characteristicCategories": []
+        },
+        {
+          "filename": "assays/Transfection_of_p103_12-22_into_RPE-1_Actin-RFP/isa.assay.xlsx",
+          "@id": "assays/Transfection_of_p103_12-22_into_RPE-1_Actin-RFP/",
+          "materials": {
+            "samples": [
+              {
+                "@id": "#Sample_samples_Output_0",
+                "factorValues": [],
+                "characteristics": [],
+                "name": "0"
+              }
+            ],
+            "sources": [],
+            "otherMaterials": []
+          },
+          "characteristicCategories": [],
+          "processSequence": [
+            {
+              "@id": "#Process_samples",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md"
+              },
+              "nextProcess": {
+                "@id": "#Process_process_nr._1"
+              }
+            },
+            {
+              "@id": "#Process_process_nr._1",
+              "inputs": [],
+              "outputs": [],
+              "parameterValues": [],
+              "executesProtocol": {
+                "@id": "#Protocol_protocols/eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md"
+              },
+              "previousProcess": {
+                "@id": "#Process_samples"
+              }
+            }
+          ],
+          "comments": [
+            {
+              "@id": "#Comment_protocol_name_eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc",
+              "name": "protocol_name",
+              "value": "eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc"
+            },
+            {
+              "@id": "#Comment_protocol_files_eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md",
+              "name": "protocol_files",
+              "value": "eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_protocol_description_See_details_in:_eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md",
+              "name": "protocol_description",
+              "value": "See details in: eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_dataset_files"
+            },
+            {
+              "@id": "#Comment_process_1_name_Transfection_of_p103Δ12-22_into_RPE-1_Actin-RFP_cells",
+              "name": "process_1_name",
+              "value": "Transfection of p103Δ12-22 into RPE-1 Actin-RFP cells"
+            },
+            {
+              "@id": "#Comment_process_1_description_Transfecting_the_plasmid_p103Δ12-22_into_the_RPE-1_Actin-RFP_cells_and_observing_death_rate._See_detailed_protocol_in:_review_test/assays/Transfection_of_p103_12-22_into_RPE-1_Actin-RFP/protocols/eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md",
+              "name": "process_1_description",
+              "value": "Transfecting the plasmid p103Δ12-22 into the RPE-1 Actin-RFP cells and observing death rate. See detailed protocol in: review_test/assays/Transfection_of_p103_12-22_into_RPE-1_Actin-RFP/protocols/eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md"
+            },
+            {
+              "@id": "#Comment_title_Transfection_of_p103Δ12-22_into_RPE-1_Actin-RFP_cells",
+              "name": "title",
+              "value": "Transfection of p103Δ12-22 into RPE-1 Actin-RFP cells"
+            },
+            {
+              "@id": "#Comment_description_Transfecting_the_plasmid_p103Δ12-22_into_the_RPE-1_Actin-RFP_cells_and_observing_death_rate._See_detailed_protocol_in:_review_test/assays/Transfection_of_p103_12-22_into_RPE-1_Actin-RFP/protocols/eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md",
+              "name": "description",
+              "value": "Transfecting the plasmid p103Δ12-22 into the RPE-1 Actin-RFP cells and observing death rate. See detailed protocol in: review_test/assays/Transfection_of_p103_12-22_into_RPE-1_Actin-RFP/protocols/eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md"
+            }
+          ],
+          "measurementType": {
+            "annotationValue": "metagenome sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "technologyType": {
+            "annotationValue": "nucleotide sequencing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000626"
+          },
+          "dataFiles": [],
+          "unitCategories": []
+        }
+      ],
+      "title": "review_test",
+      "description": "",
+      "materials": {
+        "sources": [
+          {
+            "@id": "#Source_Sample_1",
+            "name": "Source Sample 1",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_2",
+            "name": "Source Sample 2",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_3",
+            "name": "Source Sample 3",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_4",
+            "name": "Source Sample 4",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_5",
+            "name": "Source Sample 5",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_6",
+            "name": "Source Sample 6",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_7",
+            "name": "Source Sample 7",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_8",
+            "name": "Source Sample 8",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_9",
+            "name": "Source Sample 9",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Sample_10",
+            "name": "Source Sample 10",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_QC_report_from_Sample_1",
+            "name": "Source QC report from Sample 1",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Trimmed_reads_from_Sample_1",
+            "name": "Source Trimmed reads from Sample 1",
+            "characteristics": []
+          },
+          {
+            "@id": "#Source_Assembled_contigs_from_Sample_1",
+            "name": "Source Assembled contigs from Sample 1",
+            "characteristics": []
+          }
+        ],
+        "samples": [
+          {
+            "@id": "#Sample_samples_Output_0",
+            "name": "samples_Output_0",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_Prepared_Sample_1",
+            "name": "Prepared_Sample_1",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_1",
+            "name": "OD600_Sample_1",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_2",
+            "name": "OD600_Sample_2",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_3",
+            "name": "OD600_Sample_3",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_4",
+            "name": "OD600_Sample_4",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_5",
+            "name": "OD600_Sample_5",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_6",
+            "name": "OD600_Sample_6",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_7",
+            "name": "OD600_Sample_7",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_8",
+            "name": "OD600_Sample_8",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_9",
+            "name": "OD600_Sample_9",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_OD600_Sample_10",
+            "name": "OD600_Sample_10",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_Trimmed_reads_from_Sample_1",
+            "name": "Trimmed reads from Sample_1",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_Assembled_contigs_from_Sample_1",
+            "name": "Assembled contigs from Sample_1",
+            "factorValues": [],
+            "characteristics": []
+          },
+          {
+            "@id": "#Sample_Annotated_genome_from_Sample_1",
+            "name": "Annotated genome from Sample_1",
+            "factorValues": [],
+            "characteristics": []
+          }
+        ],
+        "otherMaterials": []
+      },
+      "protocols": [
+        {
+          "@id": "#Protocol_protocols/eLabFTW_protocol_2_An_example_experiment.elab2arc.md",
+          "name": "eLabFTW protocol 2 An example experiment.elab2arc.md",
+          "protocolType": {
+            "annotationValue": "material processing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000094"
+          },
+          "parameters": [
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Temperature",
+              "parameterName": {
+                "annotationValue": "#UserTerm Temperature"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Incubation_time",
+              "parameterName": {
+                "annotationValue": "#UserTerm Incubation time"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Buffer_concentration",
+              "parameterName": {
+                "annotationValue": "#UserTerm Buffer concentration"
+              }
+            }
+          ]
+        },
+        {
+          "@id": "#Protocol_protocols/eLabFTW_protocol_40_Experiment_1_Bacterial_Cultiva.elab2arc.md",
+          "name": "eLabFTW protocol 40 Experiment 1 Bacterial Cultiva.elab2arc.md",
+          "protocolType": {
+            "annotationValue": "material processing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000094"
+          },
+          "parameters": [
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Medium",
+              "parameterName": {
+                "annotationValue": "#UserTerm Medium"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Volume_per_culture",
+              "parameterName": {
+                "annotationValue": "#UserTerm Volume per culture"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Incubation_temperature",
+              "parameterName": {
+                "annotationValue": "#UserTerm Incubation temperature"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Shaking_speed",
+              "parameterName": {
+                "annotationValue": "#UserTerm Shaking speed"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Incubation_time",
+              "parameterName": {
+                "annotationValue": "#UserTerm Incubation time"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Inoculation_dilution",
+              "parameterName": {
+                "annotationValue": "#UserTerm Inoculation dilution"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Sampling_interval",
+              "parameterName": {
+                "annotationValue": "#UserTerm Sampling interval"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Centrifugation_speed",
+              "parameterName": {
+                "annotationValue": "#UserTerm Centrifugation speed"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Centrifugation_time",
+              "parameterName": {
+                "annotationValue": "#UserTerm Centrifugation time"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Centrifugation_temperature",
+              "parameterName": {
+                "annotationValue": "#UserTerm Centrifugation temperature"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Measurement_wavelength",
+              "parameterName": {
+                "annotationValue": "#UserTerm Measurement wavelength"
+              }
+            }
+          ]
+        },
+        {
+          "@id": "#Protocol_protocols/eLabFTW_protocol_41_Experiment_2_DNA_Extraction.elab2arc.md",
+          "name": "eLabFTW protocol 41 Experiment 2 DNA Extraction.elab2arc.md",
+          "protocolType": {
+            "annotationValue": "nucleic acid extraction",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000856"
+          },
+          "parameters": []
+        },
+        {
+          "@id": "#Protocol_protocols/eLabFTW_protocol_42_Experiment_3_Library_Preparati.elab2arc.md",
+          "name": "eLabFTW protocol 42 Experiment 3 Library Preparati.elab2arc.md",
+          "protocolType": {
+            "annotationValue": "library construction",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000711"
+          },
+          "parameters": []
+        },
+        {
+          "@id": "#Protocol_protocols/eLabFTW_protocol_44_Experiment_5_Bioinformatic_Ana.elab2arc.md",
+          "name": "eLabFTW protocol 44 Experiment 5 Bioinformatic Ana.elab2arc.md",
+          "protocolType": {
+            "annotationValue": "data transformation",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000094"
+          },
+          "parameters": [
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Trimmomatic_version",
+              "parameterName": {
+                "annotationValue": "#UserTerm Trimmomatic version"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Minimum_read_length",
+              "parameterName": {
+                "annotationValue": "#UserTerm Minimum read length"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Quality_threshold",
+              "parameterName": {
+                "annotationValue": "#UserTerm Quality threshold"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_SPAdes_version",
+              "parameterName": {
+                "annotationValue": "#UserTerm SPAdes version"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_k-mer_sizes",
+              "parameterName": {
+                "annotationValue": "#UserTerm k-mer sizes"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Memory_allocation",
+              "parameterName": {
+                "annotationValue": "#UserTerm Memory allocation"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Prokka_version",
+              "parameterName": {
+                "annotationValue": "#UserTerm Prokka version"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Reference_database",
+              "parameterName": {
+                "annotationValue": "#UserTerm Reference database"
+              }
+            },
+            {
+              "@id": "#ProtocolParameter/#UserTerm_Reference_database_download_date",
+              "parameterName": {
+                "annotationValue": "#UserTerm Reference database download date"
+              }
+            }
+          ]
+        },
+        {
+          "@id": "#Protocol_protocols/eLabFTW_protocol_9_Synthesis_of_Aspirin.elab2arc.md",
+          "name": "eLabFTW protocol 9 Synthesis of Aspirin.elab2arc.md",
+          "protocolType": {
+            "annotationValue": "material processing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000094"
+          },
+          "parameters": []
+        },
+        {
+          "@id": "#Protocol_protocols/eLabFTW_protocol_3_Transfection_of_p10312-22_into.elab2arc.md",
+          "name": "eLabFTW protocol 3 Transfection of p10312-22 into.elab2arc.md",
+          "protocolType": {
+            "annotationValue": "material processing",
+            "termSource": "OBI",
+            "termAccession": "http://purl.obolibrary.org/obo/OBI_0000094"
+          },
+          "parameters": []
+        }
+      ],
+      "processSequence": [],
+      "publications": [],
+      "characteristicCategories": [],
+      "unitCategories": [],
+      "factors": []
+    }
+  ],
+  "publications": [],
+  "ontologySourceReferences": [
+    {
+      "name": "OBI",
+      "file": "http://purl.obolibrary.org/obo/obi.owl",
+      "version": "2024-01-01",
+      "description": "Ontology for Biomedical Investigations"
+    },
+    {
+      "name": "NCBITaxon",
+      "file": "http://purl.obolibrary.org/obo/ncbitaxon.owl",
+      "version": "2024-01-01",
+      "description": "NCBI Organismal Classification"
+    }
+  ]
+}
