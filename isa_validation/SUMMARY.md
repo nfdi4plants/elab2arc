@@ -60,6 +60,29 @@ assay, not inflated by row count.
 
 None of these are blocking; all three files pass validation with 0 errors.
 
+## Why the remaining `[4004]` warnings are left as-is
+
+Two ways exist to clear them, and neither is worth taking:
+
+1. **Author a custom ISA-API config directory** with new `(measurementType, technologyType)`
+   entries that genuinely describe this content (e.g. "immunostaining" / "fluorescence
+   microscopy"), each with an accurate expected protocol sequence, and validate with
+   `config_dir=` pointing at it instead of ISA-API's shipped default. This is the only way to
+   *actually* remove the warnings without misrepresenting the data — but it only holds for
+   whoever validates with that same custom config. A reviewer, journal, or any downstream tool
+   that runs plain `isatools.isajson.validate()` checks against the *official* default config set
+   regardless, and would see the identical mismatches again. It narrows who sees a clean result
+   without changing what the wider ecosystem actually checks against.
+2. **Force a match against the default config anyway** — e.g. relabel an antibody-staining
+   protocol as `nucleic acid extraction` just to satisfy the sequence check. This is worse than
+   the warning itself: it's incorrect data, not a fix.
+
+Neither is worth the tradeoff. These `[4004]` warnings are true positives — the assay genuinely
+isn't one of ISA-API's ~15 registered measurement techniques — and a warning is the correct,
+honest signal for that. Suppressing it would mean the metadata claims something about the assay
+that isn't true. The right response is what elab2arc already does: pick the best real match when
+one exists (Fix #28), and leave a warning when none does, rather than inventing one.
+
 ## Bottom line
 
 Warning counts track content coverage against ISA-API's fixed, narrow set of registered
@@ -68,4 +91,5 @@ because its content is itself a sequencing workflow. `elabftw_demo_test_isa.json
 because it deliberately spans techniques ISA-API's default config set doesn't include at all —
 there is no registered type to assign those assays that would clear the warning without either
 mislabeling them (semantically wrong) or picking something unregistered (which fails validation
-outright with a hard error, worse than a warning).
+outright with a hard error, worse than a warning). This is treated as expected, correct behavior,
+not an open issue.
