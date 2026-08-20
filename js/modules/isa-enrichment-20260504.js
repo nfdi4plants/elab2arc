@@ -14,6 +14,8 @@
 //   Fix #8  - Missing protocolType in protocols
 //   Fix #9  - Missing parameterName in protocol parameters
 //   Fix #10 - Missing ontology source references (SCORO, OBI, EFO, UO)
+//   Fix #10b - Missing ontology source references actually used in the data
+//              but not in the required list above (e.g. NCBITaxon)
 //   Fix #11 - Undeclared data file references in process outputs
 //   Fix #12 - Missing publications on investigation and studies
 //   Fix #13 - Missing measurementType/technologyType on assays
@@ -30,6 +32,10 @@
 //   Fix #24 - Remove unused protocols (including _default)
 //   Fix #25 - Remove unused characteristic categories and units
 //   Fix #26 - Remove unused ontology sources
+//   Fix #27 - Link processSequence entries (previousProcess/nextProcess) in
+//             array order when none are already linked, so ISA-API's
+//             protocol-sequence check runs once per assay instead of once
+//             per unlinked process row
 //
 // Exports: window.Elab2ArcEnrich
 // =============================================================================
@@ -49,12 +55,30 @@
       type: { annotationValue: 'sample collection', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000659' }
     },
     {
-      keywords: ['centrifugation', 'extraction', 'purification', 'preparation', 'digestion', 'lysis'],
-      type: { annotationValue: 'sample preparation', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000073' }
+      // Checked before the DNA-extraction pattern below: a library-prep
+      // protocol's name can legitimately mention "DNA" too (e.g. a reagent
+      // name like "NEBNext FFPE DNA Repair Mix"), and library/ffpe/ligation
+      // wording is the more specific signal in that case. Label aligned with
+      // ISA-API's default "metagenome sequencing" config, which expects the
+      // exact string 'library construction' (not 'library preparation') for
+      // this pipeline step — same OBI term either way.
+      keywords: ['library', 'ffpe', 'repair', 'tail', 'ligation'],
+      type: { annotationValue: 'library construction', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000711' }
     },
     {
-      keywords: ['library', 'ffpe', 'repair', 'tail', 'ligation'],
-      type: { annotationValue: 'library preparation', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000711' }
+      // Checked before the broader 'sample preparation' pattern below (which
+      // also matches on the bare word "extraction") so a DNA/PCR-specific
+      // extraction protocol gets this more specific label instead of being
+      // shadowed by the generic one. This also matches ISA-API's default
+      // "metagenome sequencing" config's exact expected protocol-type string
+      // ('nucleic acid extraction'), so real sequencing-pipeline assays no
+      // longer trip validator warning [4004] on this step.
+      keywords: ['dna', 'pcr', 'amplification'],
+      type: { annotationValue: 'nucleic acid extraction', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000856' }
+    },
+    {
+      keywords: ['centrifugation', 'extraction', 'purification', 'preparation', 'digestion', 'lysis'],
+      type: { annotationValue: 'sample preparation', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000073' }
     },
     {
       keywords: ['sequencing', 'sequencer', 'run', 'illumina', 'nanopore'],
@@ -63,10 +87,6 @@
     {
       keywords: ['analysis', 'bioinformatic', 'alignment', 'assembly', 'annotation', 'computational'],
       type: { annotationValue: 'data transformation', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000094' }
-    },
-    {
-      keywords: ['dna', 'pcr', 'amplification'],
-      type: { annotationValue: 'nucleic acid extraction', termSource: 'OBI', termAccession: 'http://purl.obolibrary.org/obo/OBI_0000856' }
     },
     {
       keywords: ['measurement', 'assay', 'detection', 'quantification'],
@@ -163,6 +183,31 @@
     { name: 'EFO',   file: 'http://www.ebi.ac.uk/efo/efo.owl',             version: '3.60.0',     description: 'Experimental Factor Ontology' },
     { name: 'UO',    file: 'http://purl.obolibrary.org/obo/uo.owl',        version: '2023-01-01', description: 'Units of Measurement Ontology' }
   ];
+
+  // Metadata for ontology sources that show up in the data (e.g. LLM-extracted
+  // organism/strain characteristics) but aren't unconditionally required like
+  // REQUIRED_ONTOLOGIES above — declared on demand by Fix #10b, only when
+  // actually referenced. Unrecognized names still get declared with a minimal
+  // placeholder (see collectTermSources use below), just without this metadata.
+  var KNOWN_ONTOLOGY_METADATA = {
+    'NCBITaxon': { file: 'http://purl.obolibrary.org/obo/ncbitaxon.owl', version: '2024-01-01', description: 'NCBI Organismal Classification' },
+    'NCIT':      { file: 'http://purl.obolibrary.org/obo/ncit.owl',      version: '24.01e',      description: 'NCI Thesaurus OBO Edition' }
+  };
+
+  /**
+   * Recursively collect every non-empty `termSource` value found anywhere in obj.
+   * @param {*} obj
+   * @param {object} out - accumulator, { [termSourceName]: true }
+   */
+  function collectTermSources(obj, out) {
+    if (!obj || typeof obj !== 'object') return;
+    if (obj.termSource) out[obj.termSource] = true;
+    if (Array.isArray(obj)) {
+      obj.forEach(function(item) { collectTermSources(item, out); });
+    } else {
+      Object.keys(obj).forEach(function(key) { collectTermSources(obj[key], out); });
+    }
+  }
 
   // ===========================================================================
   // PRIVATE HELPERS
@@ -344,7 +389,28 @@
     REQUIRED_ONTOLOGIES.forEach(function(ont) {
       if (!existingOntNames[ont.name]) {
         data.ontologySourceReferences.push({ name: ont.name, file: ont.file, version: ont.version, description: ont.description });
+        existingOntNames[ont.name] = true;
       }
+    });
+
+    // Fix #10b — Declare any other ontology source actually referenced in the
+    // incoming data (e.g. NCBITaxon from LLM-extracted organism/strain
+    // characteristics) that isn't one of the always-added REQUIRED_ONTOLOGIES
+    // above. Scanned before any other enrichment runs, so it only reflects
+    // what the input itself already uses.
+    var usedTermSources = {};
+    collectTermSources(data.studies, usedTermSources);
+    collectTermSources(data.people, usedTermSources);
+    Object.keys(usedTermSources).forEach(function(name) {
+      if (existingOntNames[name]) return;
+      var known = KNOWN_ONTOLOGY_METADATA[name];
+      data.ontologySourceReferences.push({
+        name: name,
+        file: known ? known.file : '',
+        version: known ? known.version : '',
+        description: known ? known.description : name
+      });
+      existingOntNames[name] = true;
     });
 
     // -------------------------------------------------------------------------
@@ -1110,38 +1176,55 @@
     });
 
     // Fix #26 — Remove unused ontology sources (easy)
+    // Reuses collectTermSources (Fix #10b's generic walker) over the whole
+    // studies/people trees, rather than enumerating specific fields by hand —
+    // the previous field-by-field version never looked inside processSequence
+    // inputs/outputs, so a termSource used only on a process input's
+    // characteristics (e.g. NCBITaxon on an organism characteristic) was
+    // wrongly treated as unused and stripped back out right after Fix #10b
+    // added it.
     var usedOntSources = {};
-    function collectOntSources(obj) {
-      if (!obj || typeof obj !== 'object') return;
-      if (obj.termSource) usedOntSources[obj.termSource] = true;
-      if (Array.isArray(obj)) {
-        obj.forEach(collectOntSources);
-      } else {
-        Object.keys(obj).forEach(function(key) {
-          collectOntSources(obj[key]);
-        });
-      }
-    }
-    (data.studies || []).forEach(function(study) {
-      (study.protocols || []).forEach(function(p) { collectOntSources(p.protocolType); collectOntSources(p.parameters); });
-      (study.factors || []).forEach(function(f) { collectOntSources(f.factorType); });
-      (study.assays || []).forEach(function(assay) {
-        collectOntSources(assay.measurementType);
-        collectOntSources(assay.technologyType);
-        collectOntSources(assay.characteristicCategories);
-        collectOntSources(assay.unitCategories);
-      });
-      collectOntSources(study.characteristicCategories);
-      collectOntSources(study.unitCategories);
-      (study.materials || {}).sources.forEach(function(s) { collectOntSources(s.characteristics); });
-      (study.materials || {}).samples.forEach(function(s) { collectOntSources(s.characteristics); collectOntSources(s.factorValues); });
-    });
-    (data.people || []).forEach(function(p) { collectOntSources(p.roles); });
+    collectTermSources(data.studies, usedOntSources);
+    collectTermSources(data.people, usedOntSources);
     if (Array.isArray(data.ontologySourceReferences)) {
       data.ontologySourceReferences = data.ontologySourceReferences.filter(function(ref) {
         return ref && usedOntSources[ref.name];
       });
     }
+
+    // Fix #27 — Link processSequence entries via previousProcess/nextProcess
+    // elab2arc always writes a study/assay's process-table rows in intended
+    // pipeline order (the "samples" sheet, then "process nr. 1", "process
+    // nr. 2", ... in creation order — see isa-generation's per-protocol
+    // loop), but never sets these ISA-JSON chain-link fields. ISA-API's
+    // validator (Rule 4004) walks the chain backward from every process that
+    // has no nextProcess — with no links at all, every single row counts as
+    // its own independent "last process", so one genuine protocol-sequence
+    // mismatch gets reported once per row instead of once per assay (e.g. a
+    // 5-row assay produces 5 duplicate warnings for what is really one
+    // mismatch). This restores the links using array order, which is
+    // elab2arc's own intended order and safe to assume — it does not change
+    // which assays match the configuration (Rule 4004 still fires exactly
+    // when it should), it only removes the row-count-driven duplication.
+    // No-op whenever a processSequence already has any links (nothing to
+    // fix) or has fewer than 2 processes (nothing to link).
+    function linkProcessSequence(processSequence) {
+      if (!Array.isArray(processSequence) || processSequence.length < 2) return;
+      var alreadyLinked = processSequence.some(function(p) {
+        return p && (p.nextProcess || p.previousProcess);
+      });
+      if (alreadyLinked) return;
+      for (var i = 0; i < processSequence.length - 1; i++) {
+        processSequence[i].nextProcess = { '@id': processSequence[i + 1]['@id'] };
+        processSequence[i + 1].previousProcess = { '@id': processSequence[i]['@id'] };
+      }
+    }
+    (data.studies || []).forEach(function(study) {
+      linkProcessSequence(study.processSequence);
+      (study.assays || []).forEach(function(assay) {
+        linkProcessSequence(assay.processSequence);
+      });
+    });
 
     return data;
   }
