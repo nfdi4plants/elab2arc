@@ -373,8 +373,21 @@ CC BY 4.0
       const label = context === 'elabftw' ? 'eLabFTW token' : 'DataHUB token';
       const canAutoRetry = state.count <= state.maxRetries;
 
-      // If max retries exceeded, skip countdown — just show the warning directly
-      if (!canAutoRetry) {
+      // A customized DataHub host (e.g. GitHub) with no explicit SSO URL configured has no
+      // meaningful token page to auto-open - the default falls back to GitLab's SSO, which
+      // bounces back without a token. Also rate-limit the auto-redirect itself: it's a
+      // full-page navigation, so the in-memory _401RetryState above resets to 0 on every
+      // bounce-back and never actually caps anything - a persistent (localStorage) cooldown
+      // is needed to stop a real infinite loop, not just an in-memory counter.
+      const DATAHUB_REDIRECT_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+      const lastRedirectAt = parseInt(localStorage.getItem('datahubSSORedirectAt') || '0', 10);
+      const redirectOnCooldown = (Date.now() - lastRedirectAt) < DATAHUB_REDIRECT_COOLDOWN_MS;
+      const noMeaningfulSSOTarget = isCustomDatahub() && !localStorage.getItem('datahubSSOURL');
+      const skipAutoRedirect = context === 'datahub' && (noMeaningfulSSOTarget || redirectOnCooldown);
+
+      // If max retries exceeded, or there's nowhere useful to auto-redirect to, skip
+      // countdown — just show the warning directly
+      if (!canAutoRetry || skipAutoRedirect) {
         const finalMessage = customMessage ||
           `Your ${label} is expired or invalid. Please get a new token: <a href="${TOKEN_DOCS_URL}" target="_blank" class="text-dark fw-bold text-decoration-underline">How to create a personal access token</a>`;
         showToast(finalMessage, 'warning', 15000);
@@ -429,6 +442,7 @@ CC BY 4.0
 
           // Auto-retry based on context (DataHub only)
           if (context === 'datahub') {
+            localStorage.setItem('datahubSSORedirectAt', String(Date.now()));
             handleGetTokenClick();
           }
 
@@ -6808,6 +6822,16 @@ ${res.uploads && res.uploads.length > 0 ?
           let submitJSON = {};
           submitData.forEach(e => { submitJSON[e.split("=")[0]] = e.split("=")[1] }
           );
+
+          // Let a one-click link configure a custom DataHub/GitLab/GitHub host too, not just
+          // eLabFTW/token params - reuses the same validating setters the Token tab's manual
+          // "custom instance" panel calls, so the values persist to localStorage exactly like
+          // hand-entering them would. Runs before the "Load saved DataHub settings" UI-sync
+          // block further down, so the Token tab visibly reflects a link-supplied host too.
+          if (submitJSON.datahubURL) setDatahubBaseURL(decodeURIComponent(submitJSON.datahubURL));
+          if (submitJSON.datahubAPISuffix) setDatahubAPISuffix(decodeURIComponent(submitJSON.datahubAPISuffix));
+          if (submitJSON.datahubSSOURL) setDatahubSSOURL(decodeURIComponent(submitJSON.datahubSSOURL));
+
           await getParameters(submitJSON.elabid, submitJSON.elabResourceid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL);
           //updateAll(submitJSON.elabid, submitJSON.elabtoken, submitJSON.datahubtoken, submitJSON.elabURL )
 
