@@ -835,6 +835,43 @@ CC BY 4.0
     }
 
     /**
+     * Build a file/path-specific "View ARC" web URL, in whichever host's own URL
+     * convention actually resolves. GitLab uses `/-/blob/<branch>/<path>`; GitHub's
+     * equivalent has no `/-/` - it's just `/blob/<branch>/<path>`. Every "View ARC"
+     * link that points at a specific file (not just the bare repo root) must go
+     * through this, or it 404s on whichever host isn't the one it was hardcoded for.
+     * @param {string} repoUrl - repo URL, with or without a trailing .git
+     * @param {string} branch - branch name (e.g. "main" or "master")
+     * @param {string} relativePath - path within the repo, no leading slash
+     * @returns {string}
+     */
+    function buildRepoFileUrl(repoUrl, branch, relativePath) {
+      const base = repoUrl.replace(/\.git$/, '');
+      const sep = isGitHubHost() ? '/blob/' : '/-/blob/';
+      return `${base}${sep}${branch}/${relativePath}`;
+    }
+
+    /**
+     * Describe a token-permission failure (401/403) in host-aware, actionable terms.
+     * Returns null for any other status, so callers can fall back to their own
+     * more-specific guess (e.g. a real name-conflict message) for other cases.
+     * @param {number} status - HTTP status code
+     * @param {string} context - what the token was trying to do, e.g. "create a new ARC"
+     * @returns {string|null}
+     */
+    function describeTokenPermissionError(status, context) {
+      if (status === 401) {
+        return `Your DataHub/GitHub token is invalid or expired. Please get a new token.`;
+      }
+      if (status === 403) {
+        return isGitHubHost()
+          ? `Your GitHub token doesn't have permission to ${context}. A fine-grained PAT needs "Contents: Read and write" (and, for creating new repos, "Administration: Read and write") explicitly granted for this repository.`
+          : `Your DataHub/GitLab token doesn't have permission to ${context}. Check that it has at least the Developer role and the write_repository scope.`;
+      }
+      return null;
+    }
+
+    /**
      * Map a GitHub repo object (from /user/repos) onto the field names the rest
      * of the app already consumes from GitLab's /projects response shape.
      * @param {Object} repo - GitHub repo object
@@ -1919,7 +1956,12 @@ CC BY 4.0
         // Handle non-success responses [[3]]
         if (response.status >= 400) {
           const errorDetails = await response.json();
-          throw new Error(`Error ${response.status}: ${errorDetails.message}`);
+          // A 401/403 here is a token-scope problem, not a naming problem - surface
+          // that distinction rather than the generic "name isn't unique" guess below.
+          const permissionMessage = describeTokenPermissionError(response.status, 'create a new ARC');
+          const err = new Error(permissionMessage || `Error ${response.status}: ${errorDetails.message}`);
+          err.isPermissionError = !!permissionMessage;
+          throw err;
         }
 
         // Return the created project details [[6]] - mapped to the GitLab-shaped
@@ -1929,7 +1971,10 @@ CC BY 4.0
 
       } catch (error) {
         // Handle network/API errors [[6]]
-        showErrorToast("ARC creation failed, please check if the name is unique. " + (error.message || error));
+        const toastMessage = error.isPermissionError
+          ? error.message
+          : "ARC creation failed, please check if the name is unique. " + (error.message || error);
+        showErrorToast(toastMessage);
         throw new Error(`Project creation failed: ${error.message}`);
       }
     };
@@ -2861,27 +2906,57 @@ Date: ${timestamp}`;
           console.warn('[Git Push] 401 Unauthorized: Token may be expired.');
           throw new Error('DataHub token expired - please refresh your token');
         }
-        // Branch "main" not found - trying "master" (common for older repositories)
-        console.log("[DataHub Push] Branch 'main' not found, trying 'master' branch...");
-        if (error.message && !error.message.includes('Could not find')) {
-          console.warn("[DataHub Push] Unexpected error:", error);
+
+        // Check for 403 permission errors - a token that lacks push rights on this
+        // specific repo looks identical to a working setup right up until this exact
+        // moment. This is NOT a "main doesn't exist, try master" situation - retrying
+        // with a different ref against a repo the token can't push to just fails
+        // again (as a NotFoundError, since isomorphic-git can't distinguish "ref
+        // doesn't exist" from "server won't tell me" here), discarding this real,
+        // actionable error. Surface it directly instead.
+        if (error.message && error.message.includes('403')) {
+          const permissionMessage = describeTokenPermissionError(403, 'push to this ARC');
+          console.warn('[Git Push] 403 Forbidden:', permissionMessage);
+          showErrorToast(permissionMessage);
+          throw new Error(permissionMessage);
         }
+
+        // Branch "main" not found locally - trying "master" (common for older
+        // repositories cloned before GitLab/GitHub switched their default branch).
+        // Only isomorphic-git's own NotFoundError for a missing *local* ref means
+        // that's actually what happened here - any other error (network blip,
+        // unexpected server response, etc.) retrying against "master" would just be
+        // guessing, and silently discards the real error if the guess is wrong.
+        if (error.name !== 'NotFoundError') {
+          console.error('[DataHub Push] Unexpected push error, not retrying with master:', error);
+          throw error;
+        }
+        console.log("[DataHub Push] Branch 'main' not found locally, trying 'master' branch...");
         updateInfo("Pushing to PLANTDataHUB (master branch)...", pushProgressStart);
         console.log('[PUSH] Retrying with master branch...');
-        let pushResult = await git.push({
-          fs,
-          http,
-          dir: dir,
-          force: true,
-          remote: 'origin',
-          ref: 'master',
-          corsProxy: pushProxyStrategy.useProxy ? getGitProxy() : undefined,
-          onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
-        });
-        console.log(pushResult);
-        const arcWebUrl = datahubURL.replace(/\.git$/, '');
-        const masterLinkUrl = specificFileUrl || arcWebUrl;
-        updateInfo("PLANTDataHUB has been updated (master branch).  <br>", pushProgressEnd, [{ label: '🔗 View ARC', url: masterLinkUrl }]);
+        try {
+          let pushResult = await git.push({
+            fs,
+            http,
+            dir: dir,
+            force: true,
+            remote: 'origin',
+            ref: 'master',
+            corsProxy: pushProxyStrategy.useProxy ? getGitProxy() : undefined,
+            onAuth: () => ({ username: 'oauth2', password: datahubtoken }),
+          });
+          console.log(pushResult);
+          const arcWebUrl = datahubURL.replace(/\.git$/, '');
+          const masterLinkUrl = specificFileUrl || arcWebUrl;
+          updateInfo("PLANTDataHUB has been updated (master branch).  <br>", pushProgressEnd, [{ label: '🔗 View ARC', url: masterLinkUrl }]);
+        } catch (masterError) {
+          console.error('[DataHub Push] master branch push also failed:', masterError);
+          const masterPermissionMessage = masterError.message && masterError.message.includes('403')
+            ? describeTokenPermissionError(403, 'push to this ARC')
+            : `Push failed on both main and master branches: ${masterError.message || masterError}`;
+          showErrorToast(masterPermissionMessage);
+          throw new Error(masterPermissionMessage);
+        }
         //showError( "push to git failed. The error is "+ error)
       }
     }
@@ -4207,7 +4282,7 @@ Generated by elab2ARC`
               0,
               1,
               null,
-              gitlabURL.replace(/\.git$/, '') + '/-/blob/' + mainOrMaster + '/README.md'
+              buildRepoFileUrl(gitlabURL, mainOrMaster, 'README.md')
             );
             updateInfo('✓ README files committed and pushed!', 100);
 
@@ -4307,7 +4382,7 @@ Generated by elab2ARC`
               0,
               1,
               null,
-              gitlabURL.replace(/\.git$/, '') + '/-/blob/' + mainOrMaster + '/README.md'
+              buildRepoFileUrl(gitlabURL, mainOrMaster, 'README.md')
             );
             updateInfo('✓ README files committed and pushed!', 100);
 
@@ -4380,7 +4455,7 @@ Generated by elab2ARC`
           0,
           1,
           null,
-          gitlabURL.replace(/\.git$/, '') + '/-/blob/main/README.md'
+          buildRepoFileUrl(gitlabURL, 'main', 'README.md')
         );
 
         updateInfo('✓ README files committed and pushed!', 100);
@@ -5184,7 +5259,7 @@ Generated by elab2ARC`
                 <td>
                   ARC file path is ${protocolPath}/${protocolFilename}
                   <br>
-                  <a href="${gitName}/-/blob/${mainOrMaster}/${baseAssayPath.replace(gitRoot, "")}/protocols/${protocolFilename}" target="_blank">Click to check the file</a>
+                  <a href="${buildRepoFileUrl(gitName, mainOrMaster, baseAssayPath.replace(gitRoot, "") + '/protocols/' + protocolFilename)}" target="_blank">Click to check the file</a>
                 </td>
               </tr>
         `;
@@ -5680,7 +5755,7 @@ ${res.uploads && res.uploads.length > 0 ?
       const protocolFileNameForUrl = (datamapSwitch && datamapSwitch.checked && llmData)
         ? protocolFilename.replace('.md', '.json')
         : protocolFilename;
-      const specificFileUrl = `${gitName}/-/blob/${mainOrMaster}/${relativeAssayPath}/protocols/${protocolFileNameForUrl}`;
+      const specificFileUrl = buildRepoFileUrl(gitName, mainOrMaster, `${relativeAssayPath}/protocols/${protocolFileNameForUrl}`);
 
       // Store for top-right View ARC button
       window._lastConversionFileUrl = specificFileUrl;
@@ -5828,7 +5903,7 @@ ${res.uploads && res.uploads.length > 0 ?
                 <td>
                   Submitted ARC file path is: ${relativeFilePath}.
                   <br>
-                  <a href="${gitName}/-/blob/${mainOrMaster}/${relativeFilePath}" target="_blank">Click to check the file</a>
+                  <a href="${buildRepoFileUrl(gitName, mainOrMaster, relativeFilePath)}" target="_blank">Click to check the file</a>
                 </td>
               </tr>
             `;
@@ -5840,7 +5915,7 @@ ${res.uploads && res.uploads.length > 0 ?
                   Submitted ARC file path is: ${relativeFilePath}.
                   <br>
 
-                  <a href="${gitName}/-/blob/${mainOrMaster}/${relativeFilePath}" target="_blank">Click to check the file</a>
+                  <a href="${buildRepoFileUrl(gitName, mainOrMaster, relativeFilePath)}" target="_blank">Click to check the file</a>
                 </td>
               </tr>
             `;
