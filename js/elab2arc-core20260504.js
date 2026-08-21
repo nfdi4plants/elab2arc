@@ -3694,6 +3694,29 @@ Date: ${timestamp}`;
         // Get git root from arcName
         const gitRoot = arcName.endsWith('/') ? arcName : arcName + '/';
 
+        // Ensure the target ARC has its canonical top-level skeleton (assays/studies/
+        // workflows/runs) before anything is written into it - the ARC may have been
+        // created outside this app's own "Create new ARC" flow (which gets this for
+        // free from ARCtrl) and never got it. Isolated in
+        // js/modules/arc-skeleton-service.js; user-toggleable in the Token tab. Guarded
+        // on both sides (module presence, try/catch) so this can never abort a real
+        // conversion even if something here goes wrong.
+        if (window.ArcSkeletonService && ArcSkeletonService.isSelfHealEnabled()) {
+          try {
+            const skeletonResult = await ArcSkeletonService.ensureArcSkeleton(fs, git, gitRoot);
+            if (skeletonResult.created.length > 0) {
+              console.log(`[ArcSkeleton] Created missing top-level folder(s): ${skeletonResult.created.join(', ')}`);
+            }
+            if (skeletonResult.errors.length > 0) {
+              console.warn('[ArcSkeleton] Some folders could not be checked/created:', skeletonResult.errors);
+            }
+          } catch (skeletonError) {
+            console.warn('[ArcSkeleton] Skeleton check failed, continuing conversion:', skeletonError);
+          }
+        } else if (!window.ArcSkeletonService) {
+          console.warn('[ArcSkeleton] ArcSkeletonService module not loaded - skipping skeleton check');
+        }
+
         // Get GitLab account info for investigation metadata
         const gitlabName = window.userId?.name || '';
         const nameParts = gitlabName.split(' ');
@@ -6186,6 +6209,11 @@ ${res.uploads && res.uploads.length > 0 ?
         } else {
           instanceBtn.innerHTML = 'instance: ' + instance;
         }
+      }
+
+      // Sync the ARC skeleton self-heal checkbox to its persisted (or default) state
+      if (window.ArcSkeletonService) {
+        ArcSkeletonService.syncSelfHealCheckbox();
       }
 
       // Load saved DataHub settings

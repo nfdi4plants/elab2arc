@@ -288,6 +288,19 @@ video {
             </label>
           </div>
 
+          <!-- ARC skeleton self-heal: creates any missing assays/studies/workflows/runs
+               folders in the target ARC before conversion writes content into it. See
+               js/modules/arc-skeleton-service.js. Additive-only (never touches existing
+               content), so it defaults on. -->
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="enableArcSkeletonSelfHeal"
+                   checked onchange="toggleArcSkeletonSelfHeal(this.checked)">
+            <label class="form-check-label small" for="enableArcSkeletonSelfHeal">
+              Auto-create missing ARC folders (studies/workflows/runs) during conversion
+              <span class="text-muted" title="If the target ARC is missing its top-level studies/, workflows/, or runs/ folders (e.g. it wasn't created through this app's own 'Create new ARC'), add them automatically before converting. Never touches existing content.">ⓘ</span>
+            </label>
+          </div>
+
           <!-- Custom DataHub Settings (hidden by default) -->
           <div id="customDatahubSettings" class="mb-3" style="display: none;">
             <div class="row g-2">
@@ -1329,6 +1342,7 @@ video {
   <script src="./js/modules/llm-service20260504.js?v=20260804" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/extra-fields-handler.js?v=20260304120114" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/git-lfs-service.js?v=20260806" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/modules/arc-skeleton-service.js?v=20260821" type="text/javascript" charset="utf-8"></script>
   <script src="./js/modules/readme-generator20260504.js?v=20260504" type="text/javascript" charset="utf-8"></script>
 
   <!-- Alternative input plugin (zip/vault upload) - only reachable via #extension hash, see softRoute() -->
