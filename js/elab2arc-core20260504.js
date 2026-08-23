@@ -1687,12 +1687,22 @@ CC BY 4.0
 
     // Function to check connection to eLabFTW API
     async function checkElabFTWConnection() {
-      const elabid = JSON.parse(localStorage.getItem("elabid"))
+      // A brand-new session has no "elabid" key in localStorage yet - JSON.parse(null)
+      // returns null, and null.elabExperimentid would throw before this function ever
+      // reaches its own try/catch. Fall back to an empty selection instead.
+      const storedElabid = localStorage.getItem("elabid");
+      const elabid = storedElabid ? JSON.parse(storedElabid) : { elabExperimentid: [], elabResourceid: [] };
       const params = await getParameters(elabid.elabExperimentid, elabid.elabResourceid);
       // const elabtoken = document.getElementById("elabToken").value;
       // const datahubtoken = document.getElementById("datahubToken").value;
       // const instance = document.getElementById("elabURLInput").value;
 
+      // Same principle as checkGitLabConnection(): this also runs unconditionally on
+      // every page load. No token configured yet isn't a failure - skip silently
+      // rather than switching to the fallback test key and toasting about it.
+      if (!params.elabtoken) {
+        return false;
+      }
 
       try {
         const response = await fetchElabJSON(params.elabtoken, "users", params.instance);
@@ -1744,6 +1754,17 @@ CC BY 4.0
 
     // Function to check connection to GitLab API
     async function checkGitLabConnection() {
+      // This runs unconditionally on every page load (see the DOMContentLoaded handler
+      // below), before the user has necessarily entered anything. Treating "no token
+      // configured yet" the same as "an actual token was rejected" produces a
+      // misleading "Your DataHUB token is expired or invalid" warning on a completely
+      // fresh session that never had a token to begin with. Skip silently instead -
+      // there's nothing to check yet, and this isn't a failure.
+      const { datahubtoken: precheckToken } = await getParameters();
+      if (!precheckToken) {
+        return false;
+      }
+
       if (isGitHubHost()) {
         // GitHub has no /projects endpoint to probe - go straight through /user,
         // which is the same call the GitLab branch below makes once it confirms /projects.
