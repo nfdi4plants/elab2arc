@@ -437,6 +437,42 @@ not just GitHub) threw `ReferenceError: pushProxy is not defined` instead of run
 intended direct→proxy fallback, masking the real error. Fixed by declaring them with `let`
 above the `try`.
 
+## Deployment
+
+**`nfdi4plants.org/elab2arc/` is deployed via GitHub Pages, triggered by every push to
+`origin/main`** (confirmed via `gh api repos/nfdi4plants/elab2arc/pages`: legacy build type,
+source branch `main`, path `/`, servable at `https://nfdi4plants.github.io/elab2arc/`; no `cname`
+is set on the Pages config itself, so the `nfdi4plants.org/elab2arc/` path is fronted/mapped by
+nfdi4plants.org's own infrastructure rather than a custom domain configured on this repo). There
+is no separate build/CI step - whatever is on `main` (including the cache-busting `?v=` query
+params on script tags in `index.html`) goes live automatically once pushed. This means a push to
+`main` is a real production deploy, not just a repo update - treat it accordingly (confirm scope
+with the user before pushing unrelated in-progress work).
+
+**The reviewer/poster landing pages are a separate, unrelated deployment** - not GitHub Pages, not
+triggered by this repo's git push at all:
+- `/Users/xr/git/elab2arc/reviewer.html` (local, untracked - `/Users/xr/git/elab2arc/` is not a
+  git repo) is the working copy of what's staged at `~/elab2arc-review-index.html` on
+  host `luxvps` (ssh alias `luxvps`, `[redacted-ip]:8899` - distinct from `luxvps2`,
+  `[redacted-ip]`, which hosts the `wb-e.com` CORS proxies documented above), which
+  `deploy-poster.sh` (also only living locally on that same server home dir) copies to
+  `/var/www/elab2arc/index.html`, served as `elab2arc-review.dataplan.top` (see
+  `/etc/nginx/sites-enabled/mibi.conf` on `luxvps`). This is the reviewer-access page referenced
+  in `TODOs.md` R3.5.
+- `/Users/xr/git/elab2arc/reviewer-new.html` (local) is the working copy of
+  `~/poster-index.html` on the same `luxvps` host, deployed to `/var/www/poster/index.html`,
+  served as `poster.dataplan.top`.
+- Both `/var/www/elab2arc/index.html` and `/var/www/poster/index.html` are owned by the `xrzhou`
+  ssh user directly (not root/www-data) - writable without sudo.
+- `deploy-poster.sh` is **not idempotent** - it `tee -a`'s a new nginx server block onto
+  `mibi.conf` unconditionally every run, so re-running it duplicates vhost blocks. Don't run it to
+  push a small content fix; instead `scp`/`cp` the specific changed file(s) directly to their
+  `~/...` staging path and `/var/www/.../index.html` live path, mirroring only the
+  relevant `cp` line(s) from the script.
+- `/Users/xr/git/elab2arc/index.html` (the top-level one, also untracked) does **not** match
+  either deployed file (large diff in CSS/structure vs both) - it appears to be a separate,
+  not-yet-deployed redesign draft. Don't assume it maps to a live target without diffing first.
+
 ## Development Guidelines
 
 ### Running Locally
