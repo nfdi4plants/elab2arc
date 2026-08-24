@@ -120,6 +120,43 @@ var conversionStartTime = null; // Track when conversion starts
       return false;
     }
 
+    // Hosts observed this browser session to reject direct (non-proxied) fetches with a
+    // CORS error. Session-scoped (sessionStorage, not localStorage): once a host is known-bad
+    // we skip straight to the proxy for it - avoiding a repeat, alarming-looking native
+    // "blocked by CORS policy" console error and failed-preflight network entry on every
+    // subsequent call - without permanently punishing a host that might later be fixed to
+    // allow direct access (a fresh tab/session re-tries direct once, as before).
+    function getCorsBlockedHosts() {
+      try {
+        return new Set(JSON.parse(sessionStorage.getItem('elab2arcCorsBlockedHosts') || '[]'));
+      } catch (e) {
+        return new Set();
+      }
+    }
+    function markHostCorsBlocked(hostname) {
+      if (!hostname) return;
+      try {
+        const hosts = getCorsBlockedHosts();
+        hosts.add(hostname);
+        sessionStorage.setItem('elab2arcCorsBlockedHosts', JSON.stringify([...hosts]));
+      } catch (e) {
+        // sessionStorage unavailable (e.g. private mode) - just skip the cache, no functional impact
+      }
+    }
+
+    // Shown at most once per browser session, the first time a request actually falls back
+    // to the CORS proxy - the startup console.info (below) is easy to miss since it's only
+    // ever printed once at page load, before a user has any reason to open devtools.
+    function maybeShowCorsFallbackToast() {
+      try {
+        if (sessionStorage.getItem('elab2arcCorsFallbackToastShown')) return;
+        sessionStorage.setItem('elab2arcCorsFallbackToastShown', '1');
+      } catch (e) {
+        // If we can't remember we've shown it, better to show it than spam - proceed anyway
+      }
+      showToast('Some requests are being routed through a CORS proxy - this is expected and does not indicate a failure.', 'info', 6000);
+    }
+
     async function fetchWithProxyFallback(url, options = {}) {
       // Helper to detect CORS errors - treat any TypeError as CORS error when in direct-first mode
       // since we're specifically checking if direct browser-to-API access works
@@ -129,8 +166,16 @@ var conversionStartTime = null; // Track when conversion starts
         return error && error.name === 'TypeError';
       };
 
-      // Step 1: Try direct fetch (no proxy) - if enabled
-      if (proxyConfig.corsProxy.tryDirectFirst) {
+      let hostname;
+      try {
+        hostname = new URL(url).hostname;
+      } catch (e) {
+        // Malformed URL - let the direct fetch attempt below surface the real error
+      }
+
+      // Step 1: Try direct fetch (no proxy) - if enabled, and unless this host already
+      // failed direct access earlier this session
+      if (proxyConfig.corsProxy.tryDirectFirst && !(hostname && getCorsBlockedHosts().has(hostname))) {
         try {
           console.log('[fetchWithProxyFallback] Trying direct access:', url);
           const response = await fetch(url, options);
@@ -148,7 +193,11 @@ var conversionStartTime = null; // Track when conversion starts
           }
           // CORS error is expected - fall back to proxy silently
           console.log('[fetchWithProxyFallback] Direct access blocked (CORS), using proxy');
+          markHostCorsBlocked(hostname);
+          maybeShowCorsFallbackToast();
         }
+      } else if (hostname && getCorsBlockedHosts().has(hostname)) {
+        console.log('[fetchWithProxyFallback] Skipping direct access (host known CORS-blocked this session):', hostname);
       }
 
       // Step 2: Try primary CORS proxy
