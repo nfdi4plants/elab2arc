@@ -420,6 +420,18 @@ its scopes, `/projects?membership=true` for what it can see, and ideally a real 
 probe like creating and immediately deleting a throwaway branch on a project it should *not* be
 able to touch) - don't assume a "different token string" is the same as "differently scoped."
 
+**Gotcha - Project Access Tokens default to Developer, which can't push to a protected default
+branch:** if the target project's `main` requires Maintainer to push (a common protected-branch
+setting), a newly-created Project Access Token needs `access_level=40` (Maintainer) set
+explicitly at creation, or the token's push will fail even though it's correctly scoped. This
+was caught by actually running a real conversion end-to-end (not just checking link shape) after
+rotating one of these tokens - the mismatch only shows up as a push failure at conversion time.
+Also: protected branches commonly have `allow_force_push: false`, so cleaning up a real test
+conversion's pushed commits can't be done with a force-push/reset - use GitLab's revert-commit
+API (`POST /projects/:id/repository/commits/:sha/revert`) instead, newest commit first, and
+verify via tree/blob hash equality against the pre-test commit that the working state is back to
+byte-identical.
+
 ## Development Guidelines
 
 ### Running Locally
