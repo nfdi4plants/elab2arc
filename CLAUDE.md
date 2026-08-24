@@ -275,75 +275,31 @@ Previously, assays only stored metadata in Comment fields, leaving Title and Des
 ### CORS Proxy System
 Due to browser security restrictions, the app uses proxy fallback (`proxyConfig` in
 `js/elab2arc-core20260504.js`), deliberately spanning **two different physical hosts** so the
-fallback is real host-level redundancy, not just a second domain on the same box. **No
-`cplantbox.com` proxy is used anywhere in this app anymore** (removed August 2026, see below) —
-everything is `wb-e.com`:
-- CORS proxy (eLabFTW/GitLab/GitHub API calls): primary `proxy.wb-e.com` (host `zap`,
-  [redacted-ip]), backup `proxy2.wb-e.com` (host `luxvps2`, [redacted-ip])
-- Git proxy (isomorphic-git clone/push): primary `gitproxy.wb-e.com` (`zap`), backup
-  `gitproxy2.wb-e.com` (`luxvps2`)
+fallback is real host-level redundancy, not just a second domain on the same box. All proxy
+domains are the maintainer's own personal infrastructure, not nfdi4plants-org-shared infra and
+not a general-purpose CORS-bypass service - do not point local dev/testing traffic at them (run
+your own local proxy instead, see below).
+- CORS proxy (eLabFTW/GitLab/GitHub API calls): primary `proxy.wb-e.com`, backup `proxy2.wb-e.com`
+- Git proxy (isomorphic-git clone/push): primary `gitproxy.wb-e.com`, backup `gitproxy2.wb-e.com`
 - **LFS proxy**: `https://proxy.wb-e.com` — used by three call sites (`LFS_UPLOAD_PROXY` in
   `js/modules/git-lfs-service.js`, and two `const lfsProxy = ...` in
   `js/elab2arc-core20260504.js` — one in `commitPush()`'s `gitAddAll` staging sweep, one in
-  `processUploadsAndReplaceUrls()`), all now pointing at the same domain since it already
-  forwards `Authorization` and allows `PUT`. No fallback wired up for this one yet (single
-  constant per call site, not a primary/backup pair like the other two) — would need
-  `proxy2.wb-e.com` (or a real `luxvps2`-hosted equivalent) added the same way if that's wanted.
+  `processUploadsAndReplaceUrls()`). No fallback wired up for this one yet (single constant per
+  call site, not a primary/backup pair like the other two).
 
-`zap` still also runs `corsproxy2.cplantbox.com`/`gitcors2.cplantbox.com`, and `small` (host
-[redacted-ip]) still runs the original `corsproxy.cplantbox.com`/`gitcors.cplantbox.com`/
-`lfsproxy.cplantbox.com` — none of these four are referenced by the app anymore. `small` is
-being kept only until the `wb-e.com` migration has run in production for a while; it can be
-decommissioned once that's confirmed (a real, hard-to-reverse infra step the maintainer does
-directly, not something to script unattended).
-
-All proxy hosts/domains are the user's own personal infrastructure (SSH aliases `zap`,
-`small`, `luxvps2`), managed via their own deploy scripts (`fix-04-add-wb-e-com-domains-zap.sh`
-on `zap`, `fix-01-nginx-hardening-small.sh` on `small`) — none of it is nfdi4plants-org-shared
-infra (an earlier version of this note incorrectly assumed `corsproxy.cplantbox.com` was shared
-and not under the maintainer's control; verified via direct SSH that it's on `small`, same
-owner as everything else here).
-
-**`proxy2.wb-e.com`/`gitproxy2.wb-e.com` on `luxvps2` (added August 2026):** same nginx design
-as `zap`'s `cors-proxy.nginx.conf` (byte-identical origin-allowlist maps and location blocks,
-just renamed and pointed at `luxvps2`'s already-existing **wildcard** `*.wb-e.com` Cloudflare
-Origin CA cert at `/etc/ssl/certs/wb-e.com.{pem,key}` — no new cert was needed). Config lives at
-`/etc/nginx/sites-available/cors-proxy2-wb-e.nginx.conf` + `/etc/nginx/conf.d/cors-security.conf`
-on `luxvps2`; deployed via a one-shot script (staged at
-`~/deploy-cors-proxy2-luxvps2.sh` there, refuses to overwrite if the target files
-already exist). The two DNS records (`proxy2`/`gitproxy2`, both A → `[redacted-ip]`, Proxied)
-were created via the Cloudflare API using `~/.cloudflare/purge_token` — **that token's actual
-granted permissions include `dns_records:edit`** (confirmed via a real `GET
-/zones?name=wb-e.com` call, which echoes the token's permissions), contradicting
-`~/.claude/cloudflare.md`'s documentation of it as cache-purge-only; that doc needs updating,
-it undersold this token's real scope. Verified byte-for-byte identical CORS behavior to `zap`
-(including the disallowed-origin 403 response) via curl with `--resolve` (the institutional DNS
-resolver used in this environment took a few minutes to pick up the new records after creation;
-Cloudflare's own authoritative answer was correct within seconds — checked via DoH against
-`cloudflare-dns.com` to confirm this was a local-resolver-propagation delay, not a real problem).
-
-**Switched to `wb-e.com` as primary in August 2026** (was `corsproxy.cplantbox.com`/
-`gitcors.cplantbox.com` on `small`). `proxy.wb-e.com` and `gitproxy.wb-e.com` are deployed on
-`zap` (see `/etc/nginx/sites-available/cors-proxy.nginx.conf` there), fronted by Cloudflare.
-**Do not disable Cloudflare proxying ("orange cloud") for any of the four `wb-e.com` proxy
-records** — the origin TLS cert on both `zap` and `luxvps2` is a Cloudflare Origin CA
-certificate, trusted **only** by Cloudflare's edge, not by real browsers. Pointing a DNS record
-directly at the origin IP ("DNS only"/grey-cloud) would break TLS for every user immediately. A
-publicly-trusted cert (e.g. Let's Encrypt) would be needed first if direct-to-origin is ever
-wanted — noted in `zap`'s nginx config as blocked by the Cloudflare API token's IP restriction
-(`certbot-dns-cloudflare` can't call the Cloudflare API from `zap`'s own IP).
+Both origin hosts are fronted by Cloudflare with an Origin CA certificate, trusted **only** by
+Cloudflare's edge, not by real browsers - Cloudflare proxying ("orange cloud") must stay enabled
+on all of these DNS records, or TLS breaks for every user immediately.
 
 The CORS proxy tries direct access first (`tryDirectFirst: true`) before falling back to the proxy.
 
-All four `wb-e.com` proxy domains allowlist by client `Origin` header, not by target host — only
+All proxy domains allowlist by client `Origin` header, not by target host — only
 `https://nfdi4plants.org` (prod) and `http://localhost:3000`/`5173`/`8080` (plus the
 `127.0.0.1` equivalents) are allowed; any other origin gets a bare
 `403 {"error": "Forbidden: Origin not allowed"}` with no CORS headers, which the browser reports
 as an opaque CORS/`TypeError: Failed to fetch` error indistinguishable from the proxy being
-down. **Do not point local dev/testing traffic at these production proxies**
-— they're real personal infrastructure, not a general-purpose CORS-bypass service. If your local
-dev server isn't already on one of the allowlisted ports, run your own local proxy instead (see
-below) rather than asking for your port to be added to the allowlist.
+down. If your local dev server isn't already on one of the allowlisted ports, run your own local
+proxy instead (see below) rather than asking for your port to be added to the allowlist.
 
 #### Local Python CORS Proxy (cors-proxy-py)
 A Python port of the Node.js CORS proxy is available at `/Users/xr/git/elab2arc/cors-proxy-py/` for local development — run your own instance rather than relying on the production `wb-e.com` proxies above:
@@ -364,10 +320,10 @@ localStorage.setItem('gitProxyURL', 'http://localhost:8333')
 equivalent localStorage override for the general CORS proxy (`getCorsProxy()` always reads
 `proxyConfig.corsProxy.current`) — to point the eLabFTW/GitLab API proxy at a local instance
 too, edit `proxyConfig.corsProxy` in `js/elab2arc-core20260504.js` locally, or add matching
-`nginx`/`cors-proxy-py`-style rules of your own and edit that constant to point at them. An
-nginx alternative: adapt `/etc/nginx/sites-available/cors-proxy.nginx.conf` from `zap` (origin
-allowlist maps + the two `location ~ ^/(?<proto>https?)://...` and git-proxy blocks) to your own
-host if you'd rather run nginx than the Python proxy.
+`nginx`/`cors-proxy-py`-style rules of your own and edit that constant to point at them. An nginx
+alternative: write your own origin-allowlist map + the two `location ~ ^/(?<proto>https?)://...`
+and git-proxy blocks, matching the shape of `cors-proxy-py`, if you'd rather run nginx than the
+Python proxy.
 
 ### Git LFS (Large File Storage)
 **All** files in `dataset/` directories are uploaded to Git LFS, regardless of size — this matches the blanket `.gitattributes` pattern elab2arc writes (see below), so every file `.gitattributes` promises is LFS-tracked actually is, **except** when the LFS upload itself fails for a specific attachment (see "LFS upload failure fallback" below) — that's a known, surfaced-to-the-user exception to this guarantee, not a silent one.
@@ -439,39 +395,14 @@ above the `try`.
 
 ## Deployment
 
-**`nfdi4plants.org/elab2arc/` is deployed via GitHub Pages, triggered by every push to
-`origin/main`** (confirmed via `gh api repos/nfdi4plants/elab2arc/pages`: legacy build type,
-source branch `main`, path `/`, servable at `https://nfdi4plants.github.io/elab2arc/`; no `cname`
-is set on the Pages config itself, so the `nfdi4plants.org/elab2arc/` path is fronted/mapped by
-nfdi4plants.org's own infrastructure rather than a custom domain configured on this repo). There
-is no separate build/CI step - whatever is on `main` (including the cache-busting `?v=` query
-params on script tags in `index.html`) goes live automatically once pushed. This means a push to
-`main` is a real production deploy, not just a repo update - treat it accordingly (confirm scope
-with the user before pushing unrelated in-progress work).
+`nfdi4plants.org/elab2arc/` is deployed via GitHub Pages, auto-built from every push to
+`origin/main` (legacy build, source branch `main`, path `/`, no separate CI step). Whatever is on
+`main` goes live automatically once pushed - a push to `main` is a real production deploy, not
+just a repo update, so confirm scope with the user before pushing unrelated in-progress work.
 
-**The reviewer/poster landing pages are a separate, unrelated deployment** - not GitHub Pages, not
-triggered by this repo's git push at all:
-- `/Users/xr/git/elab2arc/reviewer.html` (local, untracked - `/Users/xr/git/elab2arc/` is not a
-  git repo) is the working copy of what's staged at `~/elab2arc-review-index.html` on
-  host `luxvps` (ssh alias `luxvps`, `[redacted-ip]:8899` - distinct from `luxvps2`,
-  `[redacted-ip]`, which hosts the `wb-e.com` CORS proxies documented above), which
-  `deploy-poster.sh` (also only living locally on that same server home dir) copies to
-  `/var/www/elab2arc/index.html`, served as `elab2arc-review.dataplan.top` (see
-  `/etc/nginx/sites-enabled/mibi.conf` on `luxvps`). This is the reviewer-access page referenced
-  in `TODOs.md` R3.5.
-- `/Users/xr/git/elab2arc/reviewer-new.html` (local) is the working copy of
-  `~/poster-index.html` on the same `luxvps` host, deployed to `/var/www/poster/index.html`,
-  served as `poster.dataplan.top`.
-- Both `/var/www/elab2arc/index.html` and `/var/www/poster/index.html` are owned by the `xrzhou`
-  ssh user directly (not root/www-data) - writable without sudo.
-- `deploy-poster.sh` is **not idempotent** - it `tee -a`'s a new nginx server block onto
-  `mibi.conf` unconditionally every run, so re-running it duplicates vhost blocks. Don't run it to
-  push a small content fix; instead `scp`/`cp` the specific changed file(s) directly to their
-  `~/...` staging path and `/var/www/.../index.html` live path, mirroring only the
-  relevant `cp` line(s) from the script.
-- `/Users/xr/git/elab2arc/index.html` (the top-level one, also untracked) does **not** match
-  either deployed file (large diff in CSS/structure vs both) - it appears to be a separate,
-  not-yet-deployed redesign draft. Don't assume it maps to a live target without diffing first.
+A separate, unrelated landing-page deployment (reviewer/poster access pages for manuscript review)
+exists outside this repo on private infrastructure the maintainer runs - not GitHub Pages, not
+triggered by this repo's git push, and not documented here since it isn't part of this codebase.
 
 ## Development Guidelines
 
@@ -807,8 +738,7 @@ across 5 real commits plus the investigation-linkage commit.
 
 GitHub's git-over-HTTPS endpoints send no CORS headers (confirmed via direct
 header inspection), so a browser can't reach them directly - the existing git
-proxy (`getGitProxy()` → `gitproxy.wb-e.com`, config on host `zap`/[redacted-ip],
-`/etc/nginx/sites-available/cors-proxy.nginx.conf`) handles this with no
+proxy (`getGitProxy()` → `gitproxy.wb-e.com`) handles this with no
 target-domain allowlist at all. Its `{"error": "Forbidden: Origin not allowed"}`
 response is a **client-Origin** allowlist check (`https://nfdi4plants.org`,
 `localhost:3000`/`5173`/`8080`) unrelated to the target host - production
@@ -917,9 +847,8 @@ byte-identical results with keyset mode on), which would have made the loop
 fetch the same 100 projects up to 20 times instead of paginating; (2) even
 in plain offset mode, this app's CORS proxy (`proxy.wb-e.com`) doesn't
 forward the `Link` header via `Access-Control-Expose-Headers`
-(`Content-Length, Content-Range, Content-Type` only - see
-`cors-proxy.nginx.conf` on `zap`), so it wouldn't be readable from browser
-JS through the proxy regardless. Dropped `pagination=keyset` from both real
+(`Content-Length, Content-Range, Content-Type` only), so it wouldn't be
+readable from browser JS through the proxy regardless. Dropped `pagination=keyset` from both real
 `apiParameter` sources (this function's default, and
 `window.updateARCList`'s search-query construction) and switched both to
 explicit `per_page=100`.
