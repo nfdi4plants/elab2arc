@@ -6991,6 +6991,7 @@ ${res.uploads && res.uploads.length > 0 ?
           break;
 
         case "elabftw":
+        case "elab2arc":
           showTab("elabftwTab");
 
           break;
