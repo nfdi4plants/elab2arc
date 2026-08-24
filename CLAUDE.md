@@ -404,6 +404,22 @@ A separate, unrelated landing-page deployment (reviewer/poster access pages for 
 exists outside this repo on private infrastructure the maintainer runs - not GitHub Pages, not
 triggered by this repo's git push, and not documented here since it isn't part of this codebase.
 
+**DataHUB token scoping for demo/review links (August 2026):** one-click demo links embed a
+DataHUB (GitLab) personal access token as a URL parameter, and the app's ARC list is simply
+whatever `GET /projects?membership=true` returns for that token - the app has no way to filter
+which ARCs are shown beyond what the token itself can see. A GitLab **Personal Access Token**
+is always account-wide: if the underlying account is a member (even Owner) of several ARCs, the
+token can read/write all of them regardless of which one a demo link is "supposed" to target -
+confirmed this the hard way when a demo token meant for one test ARC turned out to also have
+Owner access to unrelated ARCs including a real manuscript one. The fix is a GitLab **Project
+Access Token** created directly on the target project (Settings → Access Tokens) - this creates
+an isolated bot user whose only membership, anywhere, is that one project, so both the write
+access and the ARC list are correctly scoped with no code change needed. When rotating a demo
+token, verify scope empirically before distributing it (check `/personal_access_tokens/self` for
+its scopes, `/projects?membership=true` for what it can see, and ideally a real write-permission
+probe like creating and immediately deleting a throwaway branch on a project it should *not* be
+able to touch) - don't assume a "different token string" is the same as "differently scoped."
+
 ## Development Guidelines
 
 ### Running Locally
