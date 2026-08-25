@@ -1,6 +1,7 @@
 .git
 js/node_modules
 docs
+docker/proxy
 *.md
 .github
 .claude
@@ -8,3 +9,5 @@ __pycache__
 .DS_Store
 Dockerfile
 .dockerignore
+.playwright-mcp
+images/tts_env

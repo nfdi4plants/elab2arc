@@ -10,10 +10,17 @@
 const LFS_SIZE_THRESHOLD = 10 * 1024 * 1024; // 10MB
 const LFS_CONFIG_PATH = '.gitattributes';
 
-// General CORS proxy, also used for LFS uploads: proxy.wb-e.com forwards
-// Authorization headers and allows PUT (see elab2arc-core...js's proxyConfig
-// for the primary/backup pair this domain belongs to).
-const LFS_UPLOAD_PROXY = 'https://proxy.wb-e.com';
+// General CORS proxy, also used for LFS uploads - forwards Authorization headers
+// and allows PUT. Reads elab2arc-core...js's proxyConfig lazily via
+// window.getCorsProxy() (this file loads *before* elab2arc-core in index.html's
+// script order, so this can't be a module-load-time constant - by the time
+// it's actually called, during a real conversion, elab2arc-core has already
+// run and defined window.getCorsProxy). Falls back to the production URL if
+// somehow called before that - shouldn't happen in practice, kept as a safety
+// net rather than a silent undefined.
+function getLfsProxy() {
+  return window.getCorsProxy ? window.getCorsProxy() : 'https://proxy.wb-e.com/';
+}
 
 /**
  * LFS pattern for dataset directories
@@ -208,7 +215,8 @@ async function uploadToLFS(url, auth, fileContent, corsProxy) {
   // The presigned URL from GitLab doesn't have CORS headers for direct browser access
   // Use LFS-specific proxy that supports PUT requests
   if (usedProxy) {
-    const normalizedProxy = LFS_UPLOAD_PROXY.endsWith('/') ? LFS_UPLOAD_PROXY.slice(0, -1) : LFS_UPLOAD_PROXY;
+    const lfsProxy = getLfsProxy();
+    const normalizedProxy = lfsProxy.endsWith('/') ? lfsProxy.slice(0, -1) : lfsProxy;
     finalUploadUrl = `${normalizedProxy}/${uploadUrl}`;
     console.log(`[LFS] Using LFS upload proxy: ${finalUploadUrl}`);
   }

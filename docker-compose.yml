@@ -1,0 +1,24 @@
+# Self-contained elab2arc: `docker compose up` and open http://localhost:8080 -
+# no dependency on the maintainer's wb-e.com infrastructure. See docker/README.md
+# and docker/TODOs.md for the full writeup.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - proxy
+
+  proxy:
+    build:
+      context: ./docker/proxy
+      dockerfile: Dockerfile
+    environment:
+      # Permissive by default - single-tenant self-hosted infra, not shared
+      # production infra. See docker/README.md for the explicit tradeoff.
+      GENERIC_PROXY_ALLOW_ORIGIN: "*"
+    expose:
+      - "9999"
+      - "9998"

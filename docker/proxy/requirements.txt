@@ -1,0 +1,17 @@
+aiohttp>=3.9.0,<4.0
+# aiohttp's auto_decompress needs this to handle upstream responses encoded
+# with Accept-Encoding: br (Brotli) - real browsers advertise it by default,
+# and elab.dataplan.top's eLabFTW instance actually uses it. Confirmed the
+# hard way: without this, aiohttp raised "Can not decode content-encoding:
+# brotli (br). Please install `Brotli`" and the proxy 502'd every real
+# browser request, even though curl (which doesn't request br by default)
+# never reproduced it.
+Brotli>=1.1.0
+# Same reasoning as Brotli above - real Chrome also advertises
+# Accept-Encoding: zstd by default, and aiohttp needs this package installed
+# to auto-decompress a zstd-encoded upstream response. Found this one only
+# after the Brotli fix still left real-browser requests intermittently
+# 502'ing - traced to aiohttp raising the equivalent "please install
+# `zstandard`" error, confirmed via `python3 -c "import zstandard"` failing
+# inside the built image before this was added.
+zstandard>=0.22.0

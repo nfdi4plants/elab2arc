@@ -78,7 +78,22 @@ var conversionStartTime = null; // Track when conversion starts
     // fallback is real host-level redundancy, not just a second domain
     // pointed at the same box. Both are wb-e.com (personal infra) - no more
     // cplantbox.com proxy usage anywhere in this app.
-    const proxyConfig = {
+    //
+    // Self-host awareness (added August 2026, see docker/TODOs.md): these
+    // wb-e.com URLs are the maintainer's own infrastructure, not something a
+    // self-hosted Docker deployment has access to. Only the two known
+    // production origins get the real wb-e.com config, byte-for-byte
+    // unchanged; every other origin (including a self-hosted `docker compose
+    // up` on any host/port) gets same-origin relative paths that the bundled
+    // docker/proxy service answers - see docker/web/nginx.conf for the
+    // /_corsproxy//_gitproxy reverse-proxy locations. There's only one bundled
+    // proxy container in self-host mode, so "backup" is the same URL as
+    // "primary" there - harmless, matches the pre-existing fallback-to-backup
+    // code path without erroring.
+    const PRODUCTION_ORIGINS = ['https://nfdi4plants.org', 'https://nfdi4plants.github.io'];
+    const IS_PRODUCTION_ORIGIN = PRODUCTION_ORIGINS.includes(window.location.origin);
+
+    const proxyConfig = IS_PRODUCTION_ORIGIN ? {
       corsProxy: {
         primary: 'https://proxy.wb-e.com/',
         backup: 'https://proxy2.wb-e.com/',
@@ -90,6 +105,18 @@ var conversionStartTime = null; // Track when conversion starts
         backup: 'https://gitproxy2.wb-e.com',
         current: 'https://gitproxy.wb-e.com'
       }
+    } : {
+      corsProxy: {
+        primary: window.location.origin + '/_corsproxy/',
+        backup: window.location.origin + '/_corsproxy/',
+        current: window.location.origin + '/_corsproxy/',
+        tryDirectFirst: true
+      },
+      gitProxy: {
+        primary: window.location.origin + '/_gitproxy',
+        backup: window.location.origin + '/_gitproxy',
+        current: window.location.origin + '/_gitproxy'
+      }
     };
 
     // Log CORS info message at application startup
@@ -98,6 +125,10 @@ var conversionStartTime = null; // Track when conversion starts
     function getCorsProxy() {
       return proxyConfig.corsProxy.current;
     }
+    // Exposed so git-lfs-service.js (which loads before this file - see
+    // index.html's script order) can read the current proxy lazily at call
+    // time instead of hardcoding its own copy of the same URL.
+    window.getCorsProxy = getCorsProxy;
 
     function getGitProxy() {
       const custom = localStorage.getItem('gitProxyURL');
@@ -2790,7 +2821,7 @@ Date: ${timestamp}`;
       // anything not already explicitly staged with addFileWithLFS still
       // ends up as a real LFS pointer, matching what .gitattributes promises.
       try {
-        const lfsProxy = 'https://proxy.wb-e.com';
+        const lfsProxy = getCorsProxy().replace(/\/$/, '');
         const lfsAuth = `Basic ${btoa('oauth2:' + datahubtoken)}`;
         await gitAddAll(gitRoot, { url: datahubURL, auth: lfsAuth, corsProxy: lfsProxy });
       } catch (stagingError) {
@@ -5881,9 +5912,10 @@ ${res.uploads && res.uploads.length > 0 ?
         // Add file with LFS support for large files
         // Get token using standardized method
         const datahubToken = getDatahubToken();
-        // Use dedicated LFS proxy for LFS API calls - it properly handles CORS headers AND Authorization forwarding
-        // (proxy.wb-e.com forwards Authorization and allows PUT - see git-lfs-service.js's LFS_UPLOAD_PROXY)
-        const lfsProxy = 'https://proxy.wb-e.com';
+        // Use the general CORS proxy for LFS API calls too - it forwards Authorization
+        // headers and allows PUT (see js/modules/git-lfs-service.js's getLfsProxy(),
+        // which reads this same shared source of truth via window.getCorsProxy())
+        const lfsProxy = getCorsProxy().replace(/\/$/, '');
 
         if (window.GitLFSService) {
           // GitLab LFS requires Basic auth with username "oauth2" and token as password
