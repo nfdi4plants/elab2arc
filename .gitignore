@@ -3,3 +3,21 @@ docs/
 CLAUDE.md
 **/.DS_Store
 TESTING.md
+
+# Video production working directories (intermediate takes/scenes, not the
+# finished output) - never commit these, especially tts_env/ which is a ~1GB
+# Kokoro/PyTorch venv, the same one that bloated a Docker image build earlier.
+# images/full_v1/ itself IS tracked (it's the current finished video embedded
+# in the Home tab) except its own qa_frames/ debug scratch subfolder.
+images/intro_v1/
+images/intro_v2/
+images/tutorial_v3/
+images/tutorial_v4/
+images/tutorial_v5/
+images/tutorial_v6/
+images/tutorial_recording_tmp/
+images/tts_env/
+images/full_v1/qa_frames/
+
+# Playwright MCP tool scratch (screenshots/logs from browser automation testing)
+.playwright-mcp/
