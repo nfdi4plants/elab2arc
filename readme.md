@@ -2,7 +2,7 @@
 
 **elab2arc** is a web-based Single Page Application (SPA) that bridges **eLabFTW** (an electronic lab notebook) and **PLANTdataHUB** (a GitLab-based Annotated Research Context (ARC) repository), enabling seamless synchronization of experimental metadata and raw data into **FAIR-compliant ARCs**.
 
-https://github.com/user-attachments/assets/6223d4ec-fd46-4ddd-9bfa-9b0e4a9e780f
+🎥 [Watch the tutorial video](https://github.com/nfdi4plants/elab2arc/blob/main/images/full_v1/elab2arc_full_v1.mp4) (opens on GitHub)
 
 🔗 **Try it now**: [nfdi4plants.org/elab2arc/](https://nfdi4plants.org/elab2arc/)
 
@@ -244,6 +244,74 @@ elab2arc/
 ├── docs/                         # Deployment & architecture docs
 └── TESTING.md                    # Detailed testing guide
 ```
+
+---
+
+## 🍴 Fork & Self-Host
+
+elab2arc is a static client-side app, so forking it and hosting your own copy is
+straightforward - the only extra piece you need is a CORS proxy, explained below.
+
+### 1. Fork and deploy via GitHub Pages
+
+1. Fork [nfdi4plants/elab2arc](https://github.com/nfdi4plants/elab2arc) on GitHub.
+2. In your fork, go to **Settings → Pages** and set **Source** to **Deploy from a
+   branch**, branch `main`, folder `/ (root)`. This is the same mechanism the
+   official hosted instance uses - every push to `main` deploys automatically,
+   with no separate build step.
+3. Your fork is now live at `https://<your-github-username>.github.io/elab2arc/`.
+   To use a custom domain instead (e.g. `xrzhou.com/elab2arc`), add a `CNAME`
+   record at your DNS provider pointing to `<your-github-username>.github.io`,
+   then set that domain under **Settings → Pages → Custom domain** - standard
+   GitHub Pages custom-domain setup, nothing elab2arc-specific.
+
+### 2. You'll need a CORS proxy
+
+Browsers block a page from calling eLabFTW/GitLab/GitHub APIs directly unless
+those APIs send CORS headers allowing your specific origin - most self-hosted
+eLabFTW and GitLab instances don't. The hosted `nfdi4plants.org/elab2arc/`
+instance works around this with the maintainer's own proxy infrastructure,
+which **your fork can't use** - it only allows the official production origin.
+elab2arc detects at load time whether it's running on a known production
+origin and automatically falls back to a proxy path on your own origin
+otherwise, so you just need something answering at that path. Two options:
+
+**Option A - Self-hosted with Docker (recommended):**
+
+```bash
+git clone https://github.com/<your-username>/elab2arc.git
+cd elab2arc
+docker compose up
+```
+
+This bundles the CORS/git/LFS proxy alongside the static site - see
+[`docker/README.md`](docker/README.md) for details. Zero dependency on the
+original maintainer's infrastructure, and it works automatically regardless
+of what origin/port you're running on.
+
+**Option B - Static hosting without a server of your own (e.g. GitHub Pages
+alone):** ⚠️ **this option is incomplete and will not give you a fully working
+app - read this before following it.** elab2arc needs two different proxies:
+one for git clone/push, and a separate one for general eLabFTW/GitLab/GitHub
+REST API calls and LFS uploads. There's a client-side override
+(`localStorage.setItem('gitProxyURL', ...)`) for the *first* one only - the
+general proxy's URL is hardcoded to a same-origin path with no override
+available. So on a GitHub-Pages-only fork (no server of your own to run
+anything), you can redirect git operations to an external proxy, but eLabFTW
+browsing, ARC listing, and LFS uploads have **nowhere to point** and will
+stay broken no matter what you run elsewhere. **Use Option A instead unless
+you specifically only need git clone/push for some other purpose** - this
+path does not add up to a working elab2arc on its own.
+
+If that narrower use case is genuinely what you want: GitHub Pages can't run
+the bundled proxy itself, so run a git-protocol proxy somewhere else you
+control and point elab2arc at it with
+`localStorage.setItem('gitProxyURL', 'https://your-proxy-host')` in the
+browser console. The
+[`cors-proxy-py`](https://github.com/xiaoranzhou/git-cors-proxy-py) project's
+own README has standalone Docker/local instructions for running exactly that
+proxy - but again, it only covers git protocol operations, not the rest of
+what the app needs.
 
 ---
 
