@@ -2067,6 +2067,22 @@ CC BY 4.0
       }
     };
 
+    // GitLab Project/Group Access Tokens are backed by a dedicated bot user
+    // whose username follows a fixed, distinctive pattern - a real human
+    // account never looks like this. Confirmed empirically this session:
+    // both a poster_tests-scoped and a review_test-scoped access token each
+    // created a bot user named exactly this way (e.g.
+    // "project_4425_bot_ce617b02d2dddf8baa318cf585b32755"). Those tokens are
+    // scoped to one existing project/group and cannot create a new top-level
+    // project, unlike a real personal-account PAT - "Create a new ARC" would
+    // just fail if clicked with one of these.
+    // No equivalent check for GitHub here (fine-grained PATs have no
+    // comparable bot-username signal to introspect from the client) - out of
+    // scope for now, GitHub tokens always show the create UI as before.
+    function isProjectOrGroupBotToken(username) {
+      return typeof username === 'string' && /^(project|group)_\d+_bot_/.test(username);
+    }
+
     const fetchUserProjects = async (userId, accessToken, apiParameter = "?per_page=100&order_by=id&sort=desc&membership=true") => {
       try {
         const isGitHub = isGitHubHost();
@@ -2158,7 +2174,12 @@ CC BY 4.0
         // Build the HTML table dynamically
         let tableHTML = '';
         let newIndex = 0;
-        tableHTML += `
+        // Fail open (show the row) unless we positively know this token can't
+        // create new ARCs - window.userId might not be set yet in some edge
+        // case, and that should never hide working UI for everyone else.
+        const canCreateArc = !(window.userId && isProjectOrGroupBotToken(window.userId.username));
+        if (canCreateArc) {
+          tableHTML += `
               <tr>
                 <th scope="row">New ARC</th>
                 <td><input type="text" class="form-control" id="projectnameInput"  placeholder="Project Name" aria-label="Projectname"></td>
@@ -2171,6 +2192,7 @@ CC BY 4.0
                 </td>
               </tr>
             `
+        }
         projects.forEach((project) => {
           if (project.name && project.name.includes("deletion_scheduled")) return;
           if (project.name) { // Ensure the project has a valid name
@@ -3093,6 +3115,9 @@ Date: ${timestamp}`;
     // closed the old one.
     // =============================================================================
     const REVISION_BANNER_DISMISS_KEY = 'elab2arcBannerDismissed_v20260819';
+    // Flip to true to bring the banner back for a future revision period -
+    // everything else (element, offset logic, dismiss button) stays intact.
+    const REVISION_BANNER_ENABLED = false;
 
     window.dismissRevisionBanner = function() {
       const banner = document.getElementById('revisionBanner');
@@ -3114,7 +3139,7 @@ Date: ${timestamp}`;
       const banner = document.getElementById('revisionBanner');
       if (!banner) return;
 
-      if (window.localStorage.getItem(REVISION_BANNER_DISMISS_KEY) === 'true') {
+      if (!REVISION_BANNER_ENABLED || window.localStorage.getItem(REVISION_BANNER_DISMISS_KEY) === 'true') {
         banner.remove();
         return;
       }
