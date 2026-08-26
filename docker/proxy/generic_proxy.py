@@ -103,10 +103,11 @@ def create_app() -> web.Application:
         if request.method == "OPTIONS":
             return web.Response(status=204, headers=_cors_headers(origin))
 
-        # request.match_info['tail'] is everything after this app's mount path
-        # (the "/_corsproxy" prefix is already stripped by aiohttp's subapp
-        # routing - see combined_server.py), which is the literal target URL,
-        # scheme included, exactly as the client constructed it.
+        # This app runs standalone on its own port (see entrypoint.sh) with no
+        # mount prefix of its own - nginx strips the "/_corsproxy" prefix
+        # before forwarding (see docker/web/nginx.conf), so request.match_info
+        # ['tail'] is already just the literal target URL, scheme included,
+        # exactly as the client constructed it.
         target = request.match_info.get("tail", "")
         if request.query_string:
             target = f"{target}?{request.query_string}"

@@ -130,6 +130,13 @@ var conversionStartTime = null; // Track when conversion starts
     // time instead of hardcoding its own copy of the same URL.
     window.getCorsProxy = getCorsProxy;
 
+    // Both LFS call sites in this file build a proxy URL by hand
+    // (`${lfsProxy}/...`), so they need the trailing slash stripped first -
+    // shared here instead of repeating the same .replace() at each call site.
+    function getCorsProxyNoTrailingSlash() {
+      return getCorsProxy().replace(/\/$/, '');
+    }
+
     function getGitProxy() {
       const custom = localStorage.getItem('gitProxyURL');
       if (custom) return custom;
@@ -2079,7 +2086,12 @@ CC BY 4.0
     // No equivalent check for GitHub here (fine-grained PATs have no
     // comparable bot-username signal to introspect from the client) - out of
     // scope for now, GitHub tokens always show the create UI as before.
+    // Explicitly gated on !isGitHubHost() (the same gateway every other
+    // host-specific check in this file uses) rather than relying on the
+    // implicit fact that a GitHub username would never happen to match the
+    // GitLab-specific pattern below.
     function isProjectOrGroupBotToken(username) {
+      if (isGitHubHost()) return false;
       return typeof username === 'string' && /^(project|group)_\d+_bot_/.test(username);
     }
 
@@ -2843,7 +2855,7 @@ Date: ${timestamp}`;
       // anything not already explicitly staged with addFileWithLFS still
       // ends up as a real LFS pointer, matching what .gitattributes promises.
       try {
-        const lfsProxy = getCorsProxy().replace(/\/$/, '');
+        const lfsProxy = getCorsProxyNoTrailingSlash();
         const lfsAuth = `Basic ${btoa('oauth2:' + datahubtoken)}`;
         await gitAddAll(gitRoot, { url: datahubURL, auth: lfsAuth, corsProxy: lfsProxy });
       } catch (stagingError) {
@@ -5940,7 +5952,7 @@ ${res.uploads && res.uploads.length > 0 ?
         // Use the general CORS proxy for LFS API calls too - it forwards Authorization
         // headers and allows PUT (see js/modules/git-lfs-service.js's getLfsProxy(),
         // which reads this same shared source of truth via window.getCorsProxy())
-        const lfsProxy = getCorsProxy().replace(/\/$/, '');
+        const lfsProxy = getCorsProxyNoTrailingSlash();
 
         if (window.GitLFSService) {
           // GitLab LFS requires Basic auth with username "oauth2" and token as password
