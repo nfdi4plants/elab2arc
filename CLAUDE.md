@@ -393,6 +393,19 @@ not just GitHub) threw `ReferenceError: pushProxy is not defined` instead of run
 intended direct→proxy fallback, masking the real error. Fixed by declaring them with `let`
 above the `try`.
 
+**Hardcoded "PLANTDataHUB"/"GitLab URL" messages (fixed September 2026):** push-progress,
+success, and error messages (`commitPush()`, `handleError()`, README-push toasts) used to say
+"PLANTDataHUB" or "GitLab URL" unconditionally, which was only ever accurate for the default
+`git.nfdi4plants.org` host - misleading for anyone using a custom GitLab, GitHub, or other
+DataHub instance. Added `getShortHostLabel(url)` (`elab2arc-core20260504.js`, next to
+`isGitHubHost()`) - protocol-stripped `host` via `new URL(...).host`, falling back to a regex
+strip if the URL doesn't parse - and routed every such message through it (using the specific
+push target `datahubURL` where in scope, `getDatahubURL()` otherwise). Generic messages that
+referenced the app's own `gitlabURL` variable (which can hold a GitHub or custom-instance URL,
+not just GitLab) were reworded from "GitLab URL" to "ARC URL" instead - the sentinel-string
+comparisons against the literal placeholder text `'GitLab URL'` (matching `#gitlabInfo`'s
+default DOM content) were left untouched since those aren't user-facing.
+
 ## Deployment
 
 `nfdi4plants.org/elab2arc/` is deployed via GitHub Pages, auto-built from every push to
@@ -637,7 +650,7 @@ Configured in Token tab (index.html ~line 345). Multi-provider support:
 | `custom` | Custom API | No | User-configured |
 
 Default provider: `dataplan`. The `dataplan` and `dataplan-gemma` providers hard-wire their model in `getSelectedModel()` (`js/modules/llm-service20260504.js`) regardless of `togetherAIModel`:
-- `dataplan` → `openai/gpt-oss-20b` (switched from `Qwen/Qwen3-235B-A22B-Instruct-2507-tput` in July 2026, matching the same change in `dmp-eva`)
+- `dataplan` → `deepseek-ai/DeepSeek-V4-Flash-0731` (switched from `openai/gpt-oss-20b` in September 2026 after gpt-oss-20b was scheduled for removal from the DataPLANT Community Server; `openai/gpt-oss-20b` itself replaced `Qwen/Qwen3-235B-A22B-Instruct-2507-tput` in July 2026, matching the same change in `dmp-eva`). DeepSeek-V4-Flash is a reasoning model that streams `reasoning_content` separately from `content` in each SSE delta — the streaming parser in `callTogetherAI()` only reads `delta.content`, so reasoning text never leaks into the extracted JSON. Verified live against `h.dataplan.top` with a realistic multi-protocol extraction prompt: reasoning + completion together used ~8.6K of the 16K token budget with `finish_reason: "stop"` (not truncated), producing valid, well-linked JSON across 10 chained protocol steps.
 - `dataplan-gemma` → `google/gemma-4-31B-it`
 
 Valid Together.AI models (from `VALID_MODELS`, used only for the `together` provider's model dropdown):

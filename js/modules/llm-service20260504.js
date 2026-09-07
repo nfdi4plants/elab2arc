@@ -185,9 +185,11 @@
       return 'google/gemma-4-31B-it';
     }
 
-    // For dataplan provider, hard-wire the GPT OSS 20B model
+    // For dataplan provider, hard-wire the DeepSeek V4 Flash model
+    // (switched from openai/gpt-oss-20b in September 2026 after gpt-oss-20b was
+    // scheduled for removal from the DataPLANT Community Server)
     if (provider === 'dataplan') {
-      return 'openai/gpt-oss-20b';
+      return 'deepseek-ai/DeepSeek-V4-Flash-0731';
     }
 
     // For other providers, use existing logic
@@ -231,6 +233,8 @@
     } else if (model.includes('gpt-oss-120b')) {
       return 32768; // 32K tokens
     } else if (model.includes('gpt-oss-20b')) {
+      return 131072; // 131K tokens
+    } else if (model.includes('DeepSeek-V4-Flash')) {
       return 131072; // 131K tokens
     }
     return 131072; // Default fallback

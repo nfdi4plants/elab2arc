@@ -279,7 +279,7 @@ otherwise, so you just need something answering at that path. Two options:
 **Option A - Self-hosted with Docker (recommended):**
 
 ```bash
-git clone https://github.com/<your-username>/elab2arc.git
+git clone https://github.com/nfdi4plants/elab2arc.git
 cd elab2arc
 docker compose up
 ```
