@@ -212,10 +212,19 @@
   }
 
   /**
-   * Get fallback model when rate limited
-   * @returns {string} - Fallback model identifier
+   * Get fallback models when rate limited or the primary model errors out.
+   * Provider-aware: the "dataplan" host (h.dataplan.top) does not serve the
+   * Together.AI-only model names below - falling back to
+   * 'Qwen/Qwen3-235B-A22B-Instruct-2507-tput' there would just 404/error a
+   * second time and mask the real problem.
+   * @returns {string[]} - Fallback model identifiers for the current provider
    */
   function getFallbackModels() {
+    const provider = getSelectedProvider();
+    if (provider === 'dataplan' || provider === 'dataplan-gemma') {
+      // Verified reachable on h.dataplan.top independently of the primary model.
+      return ['openai/gpt-oss-120b'];
+    }
     return [
       'Qwen/Qwen3-235B-A22B-Instruct-2507-tput',
       'openai/gpt-oss-120b'
@@ -937,8 +946,14 @@ Return ONLY valid JSON, no additional text.`;
           // Build request body with provider-specific parameters
           const requestBody = {
             model: model,
+            // Reasoning models (DeepSeek, gpt-oss) spend a variable, sometimes large,
+            // share of max_tokens on hidden reasoning before any real content -
+            // eased from 16000 to give headroom on larger/multi-protocol chunks
+            // (a real extraction observed ~6-8K reasoning+content tokens; this
+            // leaves comfortable margin before hitting finish_reason: "length"
+            // with zero usable content).
             max_tokens: (provider === 'dataplan' || provider === 'dataplan-gemma')
-              ? Math.max(options.maxTokens || 8192, 16000)
+              ? Math.max(options.maxTokens || 8192, 28000)
               : (options.maxTokens || 8192),
             temperature: options.temperature !== undefined ? options.temperature : 0.1,
             stream: true, // Enable streaming mode
@@ -963,11 +978,28 @@ Return ONLY valid JSON, no additional text.`;
 
           console.log('[Datamap LLM] Request body keys:', Object.keys(requestBody).join(', '));
 
-          return fetch(endpoint, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(requestBody)
-          });
+          // Guard against a hung/unreachable server - fetch() has no built-in
+          // timeout, so without this an unreachable host (e.g. h.dataplan.top
+          // down) would hang the conversion indefinitely instead of failing
+          // fast into the existing retry/fallback logic below.
+          const REQUEST_TIMEOUT_MS = 90000;
+          const abortController = new AbortController();
+          const timeoutId = setTimeout(() => abortController.abort(), REQUEST_TIMEOUT_MS);
+          try {
+            return await fetch(endpoint, {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify(requestBody),
+              signal: abortController.signal
+            });
+          } catch (fetchError) {
+            if (fetchError.name === 'AbortError') {
+              throw new Error(`Request to ${new URL(endpoint).host} timed out after ${REQUEST_TIMEOUT_MS / 1000}s - the server may be unreachable`);
+            }
+            throw fetchError;
+          } finally {
+            clearTimeout(timeoutId);
+          }
         }, selectedModel, 3, 2000); // Start with selected model, 3 retries, 2s delay
 
         if (!response.ok) {
@@ -986,6 +1018,10 @@ Return ONLY valid JSON, no additional text.`;
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
         let content = '';
+        let reasoningChars = 0;
+        let sawReasoningHeader = false;
+        let sawContentHeader = false;
+        let lastFinishReason = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -1004,10 +1040,35 @@ Return ONLY valid JSON, no additional text.`;
             try {
               // Remove 'data: ' prefix and parse
               const data = JSON.parse(line.slice(6));
-              const delta = data.choices?.[0]?.delta?.content || '';
-              if (delta) {
-                content += delta;
-                appendToLLMStream(delta); // Real-time display in UI
+              const choice = data.choices?.[0];
+              const delta = choice?.delta || {};
+              if (choice?.finish_reason) {
+                lastFinishReason = choice.finish_reason;
+              }
+
+              // Reasoning models (DeepSeek, gpt-oss) stream a separate
+              // reasoning_content field BEFORE any real content - often the
+              // large majority of the response (observed ~90% of chunks on a
+              // real extraction). Without showing it, the debug panel looks
+              // completely empty/stuck for the whole reasoning phase, which
+              // reads as "no output" even though the model is working
+              // normally. Never mixed into `content` (used for JSON parsing).
+              if (delta.reasoning_content) {
+                if (!sawReasoningHeader) {
+                  appendToLLMStream('[thinking...]\n');
+                  sawReasoningHeader = true;
+                }
+                reasoningChars += delta.reasoning_content.length;
+                appendToLLMStream(delta.reasoning_content);
+              }
+
+              if (delta.content) {
+                if (sawReasoningHeader && !sawContentHeader) {
+                  appendToLLMStream('\n\n[response]\n');
+                }
+                sawContentHeader = true;
+                content += delta.content;
+                appendToLLMStream(delta.content); // Real-time display in UI
               }
             } catch (err) {
               console.error('[Datamap LLM] Streaming parse error:', err, 'Line:', line);
@@ -1016,6 +1077,18 @@ Return ONLY valid JSON, no additional text.`;
         }
 
         console.log(`[Datamap LLM] Raw response${chunkInfo} (full):`, content);
+        console.log(`[Datamap LLM] Reasoning chars: ${reasoningChars}, finish_reason: ${lastFinishReason}`);
+
+        // The model can spend the entire max_tokens budget on reasoning and
+        // hit the length limit before emitting any real content - this is a
+        // token-budget problem, not a parse bug, so surface it as one instead
+        // of falling through to the generic "no parseable data" message.
+        if (!content.trim() && lastFinishReason === 'length') {
+          const budgetError = `Model exhausted its token budget on reasoning before producing any output (chunk ${i + 1}/${chunks.length}, ~${reasoningChars} reasoning chars). Try a shorter protocol or increase max_tokens.`;
+          console.warn(`[Datamap LLM] ${budgetError}`);
+          appendToLLMStream(`\n\n[warning] ${budgetError}\n`);
+          lastLLMError = budgetError;
+        }
 
         // If raw prompt mode, return the full content without JSON extraction
         if (options.rawPrompt) {
