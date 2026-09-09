@@ -938,8 +938,36 @@ Example 5 - No data files mentioned:
 - outputs: ["Processed_1", "Processed_2"]
 - dataFiles: ["", ""]
 
+Example 6 - Number of concrete attached files does NOT equal the number of rows
+(e.g. 2 screenshots attached to a protocol with 5 samples, and it's not stated
+which sample each belongs to) - do not deliberate over this, just assign
+files to rows in the order given and pad the rest with empty strings:
+- Protocol: "Attached: plate_layout.png, results_summary.png" (5 samples, no per-sample attribution stated)
+- inputs: ["Sample_1", "Sample_2", "Sample_3", "Sample_4", "Sample_5"]
+- outputs: ["Output_1", "Output_2", "Output_3", "Output_4", "Output_5"]
+- dataFiles: ["plate_layout.png", "results_summary.png", "", "", ""]
+
 Return ONLY valid JSON, no additional text.`;
         }
+
+        // Reasoning models can occasionally fall into a degenerate repetition
+        // loop - the same reasoning paragraph repeated verbatim hundreds of
+        // times until max_tokens is exhausted with zero real content. This is
+        // a sampling-variance failure, not an insufficient-budget one (the
+        // same prompt has been observed to succeed cleanly on a plain retry),
+        // so retry once before giving up rather than just raising max_tokens
+        // further, which would only delay the same loop at higher cost.
+        const MAX_DEGENERATE_ATTEMPTS = 2;
+        let content = '';
+        let reasoningChars = 0;
+        let lastFinishReason = null;
+
+        for (let degenerateAttempt = 1; degenerateAttempt <= MAX_DEGENERATE_ATTEMPTS; degenerateAttempt++) {
+          content = '';
+          reasoningChars = 0;
+          let sawReasoningHeader = false;
+          let sawContentHeader = false;
+          lastFinishReason = null;
 
         // Use retry with exponential backoff and model fallback for resilience
         const { response, model: usedModel } = await retryWithBackoff(async (model) => {
@@ -1017,11 +1045,6 @@ Return ONLY valid JSON, no additional text.`;
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
-        let content = '';
-        let reasoningChars = 0;
-        let sawReasoningHeader = false;
-        let sawContentHeader = false;
-        let lastFinishReason = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -1079,16 +1102,30 @@ Return ONLY valid JSON, no additional text.`;
         console.log(`[Datamap LLM] Raw response${chunkInfo} (full):`, content);
         console.log(`[Datamap LLM] Reasoning chars: ${reasoningChars}, finish_reason: ${lastFinishReason}`);
 
+        // Empty content + finish_reason "length" is the degenerate-repetition
+        // signature (see MAX_DEGENERATE_ATTEMPTS above) - retry the whole
+        // request rather than accepting failure immediately.
+        const isDegenerateFailure = !content.trim() && lastFinishReason === 'length';
+        if (isDegenerateFailure && degenerateAttempt < MAX_DEGENERATE_ATTEMPTS) {
+          const retryMsg = `Model produced no content after ~${reasoningChars} reasoning chars (likely a repetition loop) - retrying (attempt ${degenerateAttempt + 1}/${MAX_DEGENERATE_ATTEMPTS})...`;
+          console.warn(`[Datamap LLM] ${retryMsg}`);
+          appendToLLMStream(`\n\n[retry] ${retryMsg}\n`);
+          continue; // Next degenerateAttempt iteration
+        }
+
         // The model can spend the entire max_tokens budget on reasoning and
         // hit the length limit before emitting any real content - this is a
         // token-budget problem, not a parse bug, so surface it as one instead
         // of falling through to the generic "no parseable data" message.
-        if (!content.trim() && lastFinishReason === 'length') {
-          const budgetError = `Model exhausted its token budget on reasoning before producing any output (chunk ${i + 1}/${chunks.length}, ~${reasoningChars} reasoning chars). Try a shorter protocol or increase max_tokens.`;
+        if (isDegenerateFailure) {
+          const budgetError = `Model exhausted its token budget on reasoning without producing output after ${MAX_DEGENERATE_ATTEMPTS} attempts (chunk ${i + 1}/${chunks.length}, ~${reasoningChars} reasoning chars on last attempt). Try a shorter protocol or increase max_tokens.`;
           console.warn(`[Datamap LLM] ${budgetError}`);
           appendToLLMStream(`\n\n[warning] ${budgetError}\n`);
           lastLLMError = budgetError;
         }
+
+        break; // Exit degenerateAttempt loop - either success or exhausted retries
+        } // end for (degenerateAttempt...)
 
         // If raw prompt mode, return the full content without JSON extraction
         if (options.rawPrompt) {

@@ -7707,8 +7707,16 @@ ${res.uploads && res.uploads.length > 0 ?
     // PROMPT EDITOR FUNCTIONALITY
     // =============================================================================
 
-    // Default prompt template (matches llm-service.js structure)
-    const DEFAULT_PROMPT = {
+    // Superseded default prompt (kept verbatim, unused directly, only so it
+    // can be seeded into Version History as "Original Default" - see the
+    // one-time promptEditorVisited migration below). Was out of sync with
+    // llm-service20260504.js's actual embedded default (still recommended
+    // wildcards like '*.fastq' for dataFiles, which that file's real prompt
+    // explicitly forbids, and predates the Example 6 file-count-mismatch fix)
+    // - anyone who opened the Prompt Editor and clicked Save/Reset would have
+    // had this inferior prompt silently written to customLLMPrompt, overriding
+    // the better embedded default every real (non-editor) user gets for free.
+    const LEGACY_DEFAULT_PROMPT = {
       systemRole: `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.`,
 
       jsonSchema: `Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
@@ -7868,6 +7876,201 @@ Example 5 - No data files mentioned:
 - inputs: ["Sample_1", "Sample_2"]
 - outputs: ["Processed_1", "Processed_2"]
 - dataFiles: ["", ""]
+
+Return ONLY valid JSON, no additional text.`
+    };
+
+    // Current default prompt - kept byte-for-byte in sync with the "default
+    // prompt" branch of callTogetherAI() in llm-service20260504.js (the
+    // template every non-customized user already gets for free). Tuned
+    // around DeepSeek V4 Flash's observed behavior (forbids wildcards/URLs
+    // as dataFiles values, includes NCBITaxon-style ontology examples, and
+    // Example 6 below fixes a real repetition-loop failure mode where the
+    // model would deliberate endlessly over "N concrete files, M sample
+    // rows" mismatches instead of picking a deterministic assignment).
+    const DEFAULT_PROMPT = {
+      systemRole: `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.`,
+
+      jsonSchema: `Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
+{
+  "samples": [
+    {
+      "name": "Sample identifier or name (e.g., Sample_1, Blood_Sample_A, Patient_001)",
+      "organism": "Scientific organism name (e.g., Homo sapiens, Escherichia coli, Arabidopsis thaliana)",
+      "characteristics": [
+        {
+          "category": "Characteristic category (e.g., age, strain, tissue type, genotype, treatment, location, collection date)",
+          "value": "Characteristic value (actual value, not a description)",
+          "unit": "Unit if applicable (e.g., years, °C, mg/L) or empty string",
+          "termSource": "Ontology source (e.g., NCBITaxon for organisms/strains, NCIT, OBI, EFO) or empty string if unknown",
+          "termAccession": "Ontology term ID (e.g., NCBITaxon:562 for E. coli, NCBITaxon:9606 for human) or empty string if unknown"
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "name": "Protocol step name (e.g., Sample Preparation, Measurement, Analysis)",
+      "description": "Brief description of this protocol step",
+      "inputs": ["array of input sample/material names - ONE VALUE PER ROW. For 3 samples, use 3 entries: ['Sample_1', 'Sample_2', 'Sample_3']"],
+      "parameters": [
+        {
+          "name": "parameter name (e.g., temperature, incubation time, buffer concentration)",
+          "value": "actual value if specified in protocol (e.g., '37', '60', '100'), empty string if not specified",
+          "unit": "measurement unit (e.g., °C, min, mM, µL) or empty string",
+          "description": "what this parameter represents"
+        }
+      ],
+      "outputs": ["array of output sample/material names - ONE VALUE PER ROW. Length MUST match inputs. For 3 input samples, use 3 output entries: ['Output_1', 'Output_2', 'Output_3']"],
+      "dataFiles": ["array of CONCRETE data file names only - ONE VALUE PER ROW. MUST match length of inputs/outputs. Can repeat filenames if multiple samples share the same file. Use empty string when only a general description/pattern is given (not a real filename) or when there are no data files. Never use wildcards ('*.fastq') or external storage paths ('smb://...', 'https://...'). Examples: 'results.csv', 'plot.png', ''"]
+    }
+  ]
+}`,
+
+      extractionRules: `CRITICAL - PARAMETER EXTRACTION RULES:
+1. **Extract ALL parameters mentioned in the protocol**, including:
+   - Software/tool names and versions (e.g., "FastQC version", "SPAdes assembler version")
+   - Command-line arguments and flags (e.g., "SLIDINGWINDOW parameter", "k-mer size")
+   - File paths and directories (e.g., "output directory", "reference database path")
+   - Thresholds and cutoffs (e.g., "quality score threshold", "coverage cutoff")
+   - Settings and configurations (e.g., "thread count", "memory allocation")
+   - Physical measurements (e.g., "temperature", "incubation time", "volume")
+   - Chemical concentrations (e.g., "NaCl concentration", "DNA concentration")
+   - Equipment settings (e.g., "centrifuge speed", "voltage")
+
+2. **For bioinformatics/computational protocols**, extract:
+   - Software tool names (e.g., "Trimmomatic", "FastQC", "SPAdes")
+   - Version numbers (even if not specified, include as parameter)
+   - Algorithm parameters (e.g., "minimum read length", "quality threshold")
+   - Reference databases (e.g., "NCBI RefSeq", "UniProt database")
+   - File format specifications (e.g., "FASTQ format", "GFF3 format")
+
+3. **If a parameter value is mentioned**, include it in the description field
+4. **If a parameter is implied but not detailed**, still include it with empty unit
+5. **Even if parameters array would be empty**, try to infer at least 2-3 key parameters from context
+
+IMPORTANT - SAMPLE EXTRACTION:
+1. **Extract sample information** from protocol:
+   - Sample names/identifiers mentioned in the protocol
+   - Organism or source material (human, bacteria, plant, cell line, etc.)
+   - Sample characteristics (age, tissue type, genotype, treatment, condition, etc.)
+   - If no specific samples mentioned, create generic samples (e.g., "Sample_1", "Sample_2")
+
+IMPORTANT - PROTOCOL LINKING:
+1. **Link protocols sequentially** - CRITICAL:
+   - The OUTPUT of one protocol MUST EXACTLY MATCH the INPUT of the next protocol
+   - Example: Protocol 1 outputs "Trimmed reads" → Protocol 2 inputs "Trimmed reads" (exact match!)
+   - DO NOT use generic terms like "data" or "result" - be specific
+2. **Protocol naming**:
+   - Use clear names (e.g., "Quality Control", "Trimming", "Assembly", "Annotation")
+   - If multiple steps, create separate protocol objects
+3. **First protocol inputs**:
+   - Should reference sample names from the samples array
+   - Or use specific material names (e.g., "Raw sequencing data from Sample_1")
+4. **Tools/software are parameters**, NOT outputs
+5. **Protocol REF (Reference)**:
+   - Each protocol should reference the source protocol file
+   - The "description" field can include: "See detailed protocol in: [protocol file path]"
+   - This helps link the extracted data back to the original documentation
+
+IMPORTANT - DATA FILE LINKING:
+1. **Array length rule** - CRITICAL:
+   - dataFiles array MUST have SAME LENGTH as inputs/outputs arrays
+   - If 3 inputs → 3 dataFiles entries (one per row/sample)
+   - If 2 outputs → 2 dataFiles entries
+2. **Duplication for shared files**:
+   - Multiple samples in ONE file → REPEAT the filename
+   - Example: 3 samples in "measurements.xlsx" → ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+3. **Individual files per sample**:
+   - Each sample has its own file → list each filename
+   - Example: ["sample1.csv", "sample2.csv", "sample3.csv"]
+4. **Mixed scenarios**:
+   - Some samples share a file, others don't → repeat as needed
+   - Example: ["batch1.csv", "batch1.csv", "sample3_only.csv"]
+5. **File name extraction - ONLY use a value when a concrete, specific filename is stated**:
+   - Explicit names: "saved as results.csv" → "results.csv"
+   - Images: "Figure 1 (plot.png)" → "plot.png"
+   - Do NOT invent a name or pattern when only a general description is given
+     (e.g. "FASTQ files generated for each sample", "exported to CSV") - use
+     an empty string for that entry instead. These files are never actually
+     attached to the ARC as literal "*.fastq" or "*.csv", so writing a
+     wildcard/pattern here creates a reference to a file that doesn't exist.
+6. **Never use a value that isn't a real, standalone filename**:
+   - No wildcards or patterns: "*.fastq", "*.csv", "sample_*.txt" are NOT
+     valid dataFiles values - use "" instead
+   - No URLs or network paths describing where data is stored externally:
+     "smb://server/path/...", "https://...", "ftp://..." are NOT valid
+     dataFiles values (they describe an external storage location, not a
+     file committed to this ARC) - use "" instead
+7. **No data files**:
+   - If no files mentioned → use empty strings: ["", "", ""]
+   - Or omit dataFiles field entirely (backward compatible)`,
+
+      examples: `EXAMPLES:
+**Good parameter extraction with values and units**:
+- {"name": "Temperature", "value": "37", "unit": "°C", "description": "Incubation temperature"}
+- {"name": "FastQC version", "value": "0.11.9", "unit": "", "description": "Quality control tool version"}
+- {"name": "Minimum read length", "value": "50", "unit": "bp", "description": "Threshold for read trimming"}
+
+Note: Parameters are stored as free text with units combined (e.g., "37 °C"), not as ontology terms.
+
+**Good protocol linking**:
+- Protocol 1: inputs: ["Raw sequencing data"], outputs: ["Quality report", "Trimmed reads"]
+- Protocol 2: inputs: ["Trimmed reads"], outputs: ["Assembled contigs"]
+- Protocol 3: inputs: ["Assembled contigs"], outputs: ["Annotated genomes"]
+
+**Good sample extraction with characteristics**:
+Sample with location and collection date:
+- {"name": "Sample_1", "organism": "Escherichia coli", "characteristics": [
+    {"category": "strain", "value": "K-12", "unit": "", "termSource": "NCBITaxon", "termAccession": "NCBITaxon:83333"},
+    {"category": "Location", "value": "Lab A", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C25341"},
+    {"category": "Collection Date", "value": "2024-01-15", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}
+  ]}
+
+Sample with treatment:
+- {"name": "Sample_2", "organism": "Mus musculus", "characteristics": [
+    {"category": "age", "value": "8", "unit": "weeks", "termSource": "UO", "termAccession": "UO:0000034"},
+    {"category": "treatment", "value": "Drug X", "unit": "mg/kg", "termSource": "", "termAccession": ""}
+  ]}
+
+**Good data file linking**:
+Example 1 - Shared measurement file (3 samples, 1 file):
+- Protocol: "All samples measured together in measurements.xlsx"
+- inputs: ["Plant_A", "Plant_B", "Plant_C"]
+- outputs: ["Measurement_A", "Measurement_B", "Measurement_C"]
+- dataFiles: ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+
+Example 2 - Individual sequencing files (2 samples, 2 files):
+- Protocol: "Each sample sequenced separately: sample1.fastq, sample2.fastq"
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Reads_1", "Reads_2"]
+- dataFiles: ["sample1.fastq", "sample2.fastq"]
+
+Example 3 - Mixed scenario (some shared, some individual):
+- Protocol: "Samples 1-2 analyzed together in batch1.csv, sample 3 processed separately as sample3.csv"
+- inputs: ["S1", "S2", "S3"]
+- outputs: ["Result_1", "Result_2", "Result_3"]
+- dataFiles: ["batch1.csv", "batch1.csv", "sample3.csv"]
+
+Example 4 - Only a general description, no concrete filename (leave empty):
+- Protocol: "FASTQ files generated for each sample" / "Data stored on smb://server/path"
+- inputs: ["Sample_A", "Sample_B"]
+- outputs: ["Sequencing_A", "Sequencing_B"]
+- dataFiles: ["", ""]  (no wildcard pattern, no external storage path - neither is a real filename)
+
+Example 5 - No data files mentioned:
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Processed_1", "Processed_2"]
+- dataFiles: ["", ""]
+
+Example 6 - Number of concrete attached files does NOT equal the number of rows
+(e.g. 2 screenshots attached to a protocol with 5 samples, and it's not stated
+which sample each belongs to) - do not deliberate over this, just assign
+files to rows in the order given and pad the rest with empty strings:
+- Protocol: "Attached: plate_layout.png, results_summary.png" (5 samples, no per-sample attribution stated)
+- inputs: ["Sample_1", "Sample_2", "Sample_3", "Sample_4", "Sample_5"]
+- outputs: ["Output_1", "Output_2", "Output_3", "Output_4", "Output_5"]
+- dataFiles: ["plate_layout.png", "results_summary.png", "", "", ""]
 
 Return ONLY valid JSON, no additional text.`
     };
@@ -8140,6 +8343,23 @@ Return ONLY valid JSON, no additional text.`
         if (welcomeAlert) {
           welcomeAlert.style.display = 'block';
         }
+
+        // One-time seeding: promptEditorVisited being unset implies
+        // customLLMPrompt was never set either (the only code that writes it
+        // lives inside this modal), so this can't clobber a real
+        // customization. Preserve the superseded prompt as a named, restorable
+        // version, save the current DeepSeek-tuned default as a second named
+        // version, and make it the active prompt - so it shows up correctly
+        // in Version History (rather than silently only living in
+        // customLLMPrompt) and the choice persists across runs via the same
+        // localStorage key callTogetherAI() already reads.
+        if (!localStorage.getItem('customLLMPrompt')) {
+          savePromptVersion(LEGACY_DEFAULT_PROMPT, 'Original Default (pre-DeepSeek tuning)');
+          savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default)');
+          localStorage.setItem('customLLMPrompt', JSON.stringify(DEFAULT_PROMPT));
+          renderVersionHistoryList();
+        }
+
         // Mark as visited
         localStorage.setItem('promptEditorVisited', 'true');
       }
@@ -8267,13 +8487,26 @@ Return ONLY valid JSON, no additional text.`
         const dateStr = timestamp.toLocaleDateString() + ', ' + timestamp.toLocaleTimeString();
         const isFirst = index === 0;
         const versionNumber = history.length - index;
+        // Named versions (e.g. "DeepSeek (Recommended Default)") were only
+        // ever stored, never rendered - the description sat in a data
+        // attribute nobody looked at, making named versions indistinguishable
+        // from generic auto-timestamped ones in this list. Auto-generated
+        // "Saved on <date>" descriptions are suppressed here since dateStr
+        // is already shown right next to it - only a real custom label adds
+        // information.
+        const rawDesc = version.description || '';
+        const hasCustomLabel = rawDesc && !rawDesc.startsWith('Saved on ');
+        const escapedDesc = hasCustomLabel ? rawDesc.replace(/[&<>"']/g, c => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c])) : '';
 
         return `
-          <div class="list-group-item" data-version-id="${version.promptId}" data-version-number="${versionNumber}" data-version-date="${dateStr}" data-version-desc="${version.description || ''}">
+          <div class="list-group-item" data-version-id="${version.promptId}" data-version-number="${versionNumber}" data-version-date="${dateStr}" data-version-desc="${escapedDesc}">
             <div class="d-flex w-100 justify-content-between align-items-center gap-2">
               <div class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
                 <strong class="text-nowrap">Version ${versionNumber}</strong>
                 ${isFirst ? '<span class="badge bg-success">Latest</span>' : ''}
+                ${escapedDesc ? `<span class="badge bg-info text-dark text-nowrap">${escapedDesc}</span>` : ''}
                 <span class="text-muted small text-nowrap">${dateStr}</span>
               </div>
               <div class="btn-group btn-group-sm" role="group">
