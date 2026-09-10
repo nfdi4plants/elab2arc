@@ -806,12 +806,57 @@
             const protocol = llmData.protocols[i];
             const processNr = i + 1;
 
-            // If this is not the first process, link inputs to previous outputs
+            // If this is not the first process, link inputs to previous outputs.
+            //
+            // Only relink when the model's own inputs don't already
+            // correspond to the previous step's outputs (compared by SET,
+            // ignoring repetition/order) - a real regression, confirmed via
+            // Playwright against real 85318 data: "Sample Preparation"'s own
+            // inputs were already correctly rule-6-repeated
+            // (["BAS33_R1","BAS33_R1","BAS33_R2","BAS33_R2",...], 12 entries,
+            // 6 unique names, exactly matching a one-to-many split into 2
+            // libraries per sample), but this unconditional overwrite
+            // replaced it with the previous step's raw 6-item outputs array,
+            // discarding the repetition and collapsing a correct 12-row
+            // table's inputs down to 6 wrong values (reconcileProtocolIO
+            // then padded that back to 12 rows by repeating the LAST entry,
+            // producing 6 real values followed by 6 copies of one bogus
+            // repeat - worse than the original mismatch it was meant to
+            // prevent).
+            //
+            // When a genuine discontinuity exists (the sets differ - e.g.
+            // the model phrased this step's outputs slightly differently
+            // than the next step's inputs), still relink, but preserve
+            // cardinality: if this protocol's own outputs are a whole
+            // multiple of the previous outputs (a one-to-many split),
+            // repeat each previous output that many times instead of a raw
+            // copy, matching the exact repetition convention rule 6 asks
+            // the model to use. Otherwise (1:1, or a many-to-one pooling
+            // step) the previous behavior - a raw copy - is already
+            // correct, since reconcileProtocolIO() pads a shorter outputs
+            // array to match without needing inputs to be pre-expanded.
             if (i > 0) {
               const prevProtocol = llmData.protocols[i - 1];
-              if (prevProtocol.outputs && prevProtocol.outputs.length > 0) {
-                protocol.inputs = prevProtocol.outputs;
-                console.log(`[ISA Elab2Arc] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
+              const prevOutputs = prevProtocol.outputs;
+              if (prevOutputs && prevOutputs.length > 0) {
+                const currentInputs = protocol.inputs || [];
+                const prevOutputSet = new Set(prevOutputs);
+                const currentInputSet = new Set(currentInputs);
+                const setsMatch = prevOutputSet.size === currentInputSet.size &&
+                  [...prevOutputSet].every(v => currentInputSet.has(v));
+
+                if (!setsMatch) {
+                  const thisOutputsLen = (protocol.outputs || []).length;
+                  if (thisOutputsLen > 0 && thisOutputsLen % prevOutputs.length === 0) {
+                    const repeatFactor = thisOutputsLen / prevOutputs.length;
+                    protocol.inputs = repeatFactor === 1
+                      ? prevOutputs
+                      : prevOutputs.flatMap(name => Array(repeatFactor).fill(name));
+                  } else {
+                    protocol.inputs = prevOutputs;
+                  }
+                  console.log(`[ISA Elab2Arc] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
+                }
               }
             }
 

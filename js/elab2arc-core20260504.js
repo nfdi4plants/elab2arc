@@ -1414,6 +1414,18 @@ CC BY 4.0
           if (settled) return;
           settled = true;
           try {
+            // Force an immediate paint of the network's CURRENT node
+            // positions before reading the canvas. Without this, capturing
+            // on 'afterDrawing' alone fires on the very first paint - before
+            // vis-network's hierarchical+physics layout has spread nodes
+            // out - producing a non-blank but visually useless graph with
+            // every node crushed into a near-vertical stack. Confirmed
+            // against a real pushed PNG from a live conversion: the file
+            // had real content (not blank/white) but every node sat within
+            // a ~400px-wide column instead of spanning the full hierarchy.
+            if (network && typeof network.redraw === 'function') {
+              network.redraw();
+            }
             const canvas = container.querySelector('canvas');
             if (!canvas || canvas.width < 10 || canvas.height < 10) {
               console.warn(`[LLM Helper] Cannot capture PNG for ${cacheKey} (${reason}): canvas missing or too small`);
@@ -1432,21 +1444,26 @@ CC BY 4.0
           }
         };
 
-        // vis-network's 'afterDrawing' event fires right after each real
-        // canvas paint - the correct, documented hook for "has this
-        // actually been drawn yet". The previous implementation captured on
-        // fixed setTimeout delays (800ms/2200ms), which assumed
-        // requestAnimationFrame keeps pace with wall-clock time. Browsers do
-        // NOT guarantee that: Chrome/Firefox throttle or fully pause rAF
-        // callbacks once a tab loses focus, so a real conversion left
-        // running in a backgrounded tab could hit those deadlines with zero
-        // frames ever painted onto this offscreen canvas - captured and
-        // saved as a blank/white PNG. Waiting for a real paint event instead
-        // is immune to tab-focus throttling. The 15s fallback below only
-        // matters if 'afterDrawing' genuinely never fires (e.g. an extremely
-        // dense graph, or a vis-network internals change).
+        // Wait for vis-network's own 'stabilizationIterationsDone' event -
+        // fired once the hierarchicalRepulsion physics has actually
+        // converged on final node positions - rather than any fixed delay
+        // or the first 'afterDrawing' paint (see the comment in capture()
+        // above for why that undershoots). Verified live: for the real
+        // 85318 dataset this fires in single-digit milliseconds and
+        // produces node x/y ranges spanning the network the way the
+        // hierarchical layout intends, instead of collapsing onto one axis.
+        // The previous 'afterDrawing'-only approach was itself a fix for a
+        // genuinely different failure mode (truly blank canvas when a
+        // conversion runs in a backgrounded tab, since requestAnimationFrame
+        // is throttled there) - that risk doesn't apply here:
+        // 'stabilizationIterationsDone' is driven by vis-network's physics
+        // loop, not rAF-gated painting, so it still fires even if the tab
+        // never gets a paint tick; the redraw() above then forces the one
+        // paint we actually need once positions are known. 15s fallback in
+        // case stabilization somehow never fires (e.g. a vis-network
+        // internals change).
         if (network && typeof network.once === 'function') {
-          network.once('afterDrawing', () => capture('afterDrawing'));
+          network.once('stabilizationIterationsDone', () => capture('stabilized'));
         }
         setTimeout(() => capture('fallback-timeout'), 15000);
       });
