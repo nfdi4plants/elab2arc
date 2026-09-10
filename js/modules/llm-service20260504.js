@@ -983,13 +983,25 @@ Return ONLY valid JSON, no additional text.`;
             max_tokens: (provider === 'dataplan' || provider === 'dataplan-gemma')
               ? Math.max(options.maxTokens || 8192, 28000)
               : (options.maxTokens || 8192),
-            temperature: options.temperature !== undefined ? options.temperature : 0.1,
+            // DeepSeek's own model card explicitly recommends temperature 0.6
+            // (range 0.5-0.7) with top_p 0.95 for its reasoning models "to
+            // reduce repetition or incoherence" - counter-intuitively, LOW
+            // temperature (this code previously used 0.1 for every provider)
+            // appears to worsen the repetition-degeneracy loop fixed above,
+            // not reduce it. Scoped to DeepSeek specifically since this
+            // guidance is model-family-specific, not a general LLM default.
+            temperature: options.temperature !== undefined ? options.temperature
+              : (model.toLowerCase().includes('deepseek') ? 0.6 : 0.1),
             stream: true, // Enable streaming mode
             messages: [{
               role: 'user',
               content: promptTemplate
             }]
           };
+
+          if (options.temperature === undefined && model.toLowerCase().includes('deepseek')) {
+            requestBody.top_p = 0.95;
+          }
 
           // Disable thinking/reasoning mode for providers that support it
           // This prevents the model from generating analysis text before the JSON response

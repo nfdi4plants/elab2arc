@@ -8075,6 +8075,20 @@ files to rows in the order given and pad the rest with empty strings:
 Return ONLY valid JSON, no additional text.`
     };
 
+    // Versioned prompt migration. Bump PROMPT_SEED_VERSION and append the
+    // superseded object to KNOWN_DEFAULT_PROMPTS every time DEFAULT_PROMPT
+    // changes meaningfully - this is what makes future updates actually
+    // reach existing users. A first attempt at this gated seeding on
+    // promptEditorVisited (a flag already true for anyone who'd ever opened
+    // this modal, even in a session predating the seeding logic entirely) -
+    // confirmed live via a real user's localStorage dump that this left them
+    // permanently stuck on a stale prompt with no way to ever get re-seeded,
+    // since that boolean flag can only ever be set once. A plain "seeded yes
+    // no" boolean has the same one-shot problem; a version NUMBER compared
+    // with < lets every future bump re-run for everyone still behind.
+    const PROMPT_SEED_VERSION = 2; // 1 = pre-DeepSeek tuning, 2 = DeepSeek (Example 6, no wildcards, temp 0.6)
+    const KNOWN_DEFAULT_PROMPTS = [LEGACY_DEFAULT_PROMPT, DEFAULT_PROMPT];
+
     // Load custom prompt from localStorage or use default
     function loadPromptFromStorage() {
       const saved = localStorage.getItem('customLLMPrompt');
@@ -8343,25 +8357,47 @@ Return ONLY valid JSON, no additional text.`
         if (welcomeAlert) {
           welcomeAlert.style.display = 'block';
         }
-
-        // One-time seeding: promptEditorVisited being unset implies
-        // customLLMPrompt was never set either (the only code that writes it
-        // lives inside this modal), so this can't clobber a real
-        // customization. Preserve the superseded prompt as a named, restorable
-        // version, save the current DeepSeek-tuned default as a second named
-        // version, and make it the active prompt - so it shows up correctly
-        // in Version History (rather than silently only living in
-        // customLLMPrompt) and the choice persists across runs via the same
-        // localStorage key callTogetherAI() already reads.
-        if (!localStorage.getItem('customLLMPrompt')) {
-          savePromptVersion(LEGACY_DEFAULT_PROMPT, 'Original Default (pre-DeepSeek tuning)');
-          savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default)');
-          localStorage.setItem('customLLMPrompt', JSON.stringify(DEFAULT_PROMPT));
-          renderVersionHistoryList();
-        }
-
         // Mark as visited
         localStorage.setItem('promptEditorVisited', 'true');
+      }
+
+      // Versioned prompt migration - see PROMPT_SEED_VERSION/KNOWN_DEFAULT_PROMPTS
+      // above for why this uses a version number rather than a one-shot flag.
+      const seededVersion = parseInt(localStorage.getItem('promptSeedVersion') || '0', 10);
+      if (seededVersion < PROMPT_SEED_VERSION) {
+        const existingRaw = localStorage.getItem('customLLMPrompt');
+        let existingIsKnownDefault = !existingRaw;
+        if (existingRaw) {
+          try {
+            const parsed = JSON.stringify(JSON.parse(existingRaw));
+            existingIsKnownDefault = KNOWN_DEFAULT_PROMPTS.some(p => JSON.stringify(p) === parsed);
+          } catch (e) { /* malformed saved prompt - leave existingIsKnownDefault false, don't touch it */ }
+        }
+        // Only promote the current default to active if there's no
+        // customization at all, or the existing one exactly matches some
+        // prior shipped default (i.e. the user never actually edited
+        // anything, just had it auto-saved) - a real, different
+        // customization is never overwritten.
+        const history = loadPromptHistory();
+        if (!history.some(v => v.description === 'Original Default (pre-DeepSeek tuning)')) {
+          savePromptVersion(LEGACY_DEFAULT_PROMPT, 'Original Default (pre-DeepSeek tuning)');
+        }
+        if (!history.some(v => v.description === 'DeepSeek (Recommended Default)')) {
+          savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default)');
+        }
+        if (existingIsKnownDefault) {
+          localStorage.setItem('customLLMPrompt', JSON.stringify(DEFAULT_PROMPT));
+          // Textareas above were already populated from the pre-migration
+          // loadPromptFromStorage() call - refresh them so what's displayed
+          // matches what's now actually active, without requiring a re-open.
+          document.getElementById('systemRoleInput').value = DEFAULT_PROMPT.systemRole;
+          document.getElementById('jsonSchemaInput').value = DEFAULT_PROMPT.jsonSchema;
+          document.getElementById('extractionRulesInput').value = DEFAULT_PROMPT.extractionRules;
+          document.getElementById('examplesInput').value = DEFAULT_PROMPT.examples;
+          updateFullPromptPreview();
+        }
+        renderVersionHistoryList();
+        localStorage.setItem('promptSeedVersion', String(PROMPT_SEED_VERSION));
       }
     });
 
