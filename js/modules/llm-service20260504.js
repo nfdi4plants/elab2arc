@@ -847,6 +847,20 @@ IMPORTANT - PROTOCOL LINKING:
    - Each protocol should reference the source protocol file${metadata.protocolPath ? ` (${metadata.protocolPath})` : ''}
    - The "description" field can include: "See detailed protocol in: [protocol file path]"
    - This helps link the extracted data back to the original documentation
+6. **One-to-many or many-to-one transformations (e.g. barcoding, splitting into
+   replicates, pooling)** - CRITICAL, resolve immediately, do not deliberate:
+   - inputs/outputs arrays MUST still be the same length as each other (this
+     rule is never relaxed) - achieve this by REPEATING an entry, never by
+     omitting one side or inventing a combined placeholder name.
+   - One input producing N outputs (e.g. 6 DNA samples each barcoded into 2
+     libraries = 12 libraries): repeat each input entry once per output it
+     produces, so both arrays end up the same longer length.
+     Example: inputs: ["Sample_1","Sample_1","Sample_2","Sample_2"],
+     outputs: ["Library_1a","Library_1b","Library_2a","Library_2b"]
+   - N inputs producing one output (e.g. pooling 3 samples into 1 pooled
+     library): repeat the single output entry once per input.
+     Example: inputs: ["Sample_1","Sample_2","Sample_3"],
+     outputs: ["Pooled_library","Pooled_library","Pooled_library"]
 
 IMPORTANT - DATA FILE LINKING:
 1. **Array length rule** - CRITICAL:
@@ -983,15 +997,20 @@ Return ONLY valid JSON, no additional text.`;
             max_tokens: (provider === 'dataplan' || provider === 'dataplan-gemma')
               ? Math.max(options.maxTokens || 8192, 28000)
               : (options.maxTokens || 8192),
-            // DeepSeek's own model card explicitly recommends temperature 0.6
-            // (range 0.5-0.7) with top_p 0.95 for its reasoning models "to
-            // reduce repetition or incoherence" - counter-intuitively, LOW
-            // temperature (this code previously used 0.1 for every provider)
-            // appears to worsen the repetition-degeneracy loop fixed above,
-            // not reduce it. Scoped to DeepSeek specifically since this
-            // guidance is model-family-specific, not a general LLM default.
+            // Verified against the actual deepseek-ai/DeepSeek-V4-Flash-0731
+            // model card (huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731,
+            // cross-checked against together.ai's model page): "For local
+            // deployment, we recommend setting the sampling parameters to
+            // temperature = 1.0, with top_p = 0.95 for agentic scenarios and
+            // top_p = 1.0 otherwise." This structured-extraction task is
+            // closer to their own "agentic/tool-use" evaluation setup than
+            // free-form chat, so top_p 0.95 applies. (An earlier version of
+            // this comment cited temperature 0.6 - that's DeepSeek-R1's
+            // guidance, a different model, mistakenly applied here.) Scoped
+            // to DeepSeek specifically since this is model-family-specific,
+            // not a general LLM default.
             temperature: options.temperature !== undefined ? options.temperature
-              : (model.toLowerCase().includes('deepseek') ? 0.6 : 0.1),
+              : (model.toLowerCase().includes('deepseek') ? 1.0 : 0.1),
             stream: true, // Enable streaming mode
             messages: [{
               role: 'user',
@@ -1001,6 +1020,19 @@ Return ONLY valid JSON, no additional text.`;
 
           if (options.temperature === undefined && model.toLowerCase().includes('deepseek')) {
             requestBody.top_p = 0.95;
+            // Empirically confirmed the repetition-degeneracy loop is
+            // stochastic, not deterministic per-prompt - the exact same
+            // ambiguous prompt (dataFiles count matching row count, but one
+            // file clearly shared and two not attributable to any sample)
+            // looped in one real run and completed cleanly in 5/6 raw API
+            // trials with no penalty at all. repetition_penalty directly
+            // targets this failure mode (penalizes recently-generated tokens
+            // from reappearing, which is exactly what a repeated-paragraph
+            // loop does) rather than relying only on temperature/top_p or
+            // catching it after the fact via retry. 1.1 is a conservative
+            // value - confirmed via live testing not to break normal
+            // extraction (valid JSON, sensible content, no missing fields).
+            requestBody.repetition_penalty = 1.1;
           }
 
           // Disable thinking/reasoning mode for providers that support it
