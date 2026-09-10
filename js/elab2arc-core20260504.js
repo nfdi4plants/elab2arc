@@ -8552,6 +8552,77 @@ Return ONLY valid JSON, no additional text.`
 
     // ========== END PROMPT VERSION HISTORY ==========
 
+    // Versioned prompt migration - see PROMPT_SEED_VERSION/KNOWN_DEFAULT_PROMPTS
+    // above for why this uses a version number rather than a one-shot flag.
+    //
+    // Runs unconditionally on every page load (called directly below, inside
+    // this DOMContentLoaded handler) rather than only from the Prompt Editor
+    // modal's 'show.bs.modal' listener. It used to run ONLY on modal-open -
+    // but llm-service20260504.js's callTogetherAI() reads customLLMPrompt
+    // from localStorage and uses it verbatim whenever the key exists at all,
+    // completely bypassing its own up-to-date built-in prompt. That means
+    // any user who ever opened the Prompt Editor even once (which seeds
+    // customLLMPrompt) keeps calling the LLM with whatever was seeded back
+    // then, forever, until they happen to reopen that modal again - most
+    // users never do. Gating a fix that's supposed to reach "everyone still
+    // on an unedited default" behind a UI panel most people never open
+    // defeats the point of the migration. Running it on load instead means
+    // the very next page visit self-heals, no user action required.
+    function runPromptSeedMigration() {
+      const seededVersion = parseInt(localStorage.getItem('promptSeedVersion') || '0', 10);
+      if (seededVersion >= PROMPT_SEED_VERSION) return;
+
+      const existingRaw = localStorage.getItem('customLLMPrompt');
+      let existingIsKnownDefault = !existingRaw;
+      if (existingRaw) {
+        try {
+          const parsed = JSON.stringify(JSON.parse(existingRaw));
+          existingIsKnownDefault = KNOWN_DEFAULT_PROMPTS.some(p => JSON.stringify(p) === parsed);
+        } catch (e) { /* malformed saved prompt - leave existingIsKnownDefault false, don't touch it */ }
+      }
+      // Only promote the current default to active if there's no
+      // customization at all, or the existing one exactly matches some
+      // prior shipped default (i.e. the user never actually edited
+      // anything, just had it auto-saved) - a real, different
+      // customization is never overwritten.
+      // Each entry's description is versioned (v1/v2/v3...) so a later
+      // PROMPT_SEED_VERSION bump adds a genuinely new history row instead
+      // of being silently skipped because a same-named but stale-content
+      // entry (from a prior seeding) already satisfies the description
+      // check - this exact collision (both v2 and v3 wanting the plain
+      // label "DeepSeek (Recommended Default)") is why the versioning
+      // migration re-firing for v3 would otherwise still leave the old
+      // rule-6-less prompt as the only thing named "Recommended Default"
+      // in a v2 user's history.
+      const history = loadPromptHistory();
+      if (!history.some(v => v.description === 'Original Default (pre-DeepSeek tuning)')) {
+        savePromptVersion(LEGACY_DEFAULT_PROMPT, 'Original Default (pre-DeepSeek tuning)');
+      }
+      if (!history.some(v => v.description === 'DeepSeek (Recommended Default) v2')) {
+        savePromptVersion(DEFAULT_PROMPT_V2, 'DeepSeek (Recommended Default) v2');
+      }
+      if (!history.some(v => v.description === 'DeepSeek (Recommended Default) v3')) {
+        savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default) v3');
+      }
+      if (existingIsKnownDefault) {
+        localStorage.setItem('customLLMPrompt', JSON.stringify(DEFAULT_PROMPT));
+        // Refresh the editor textareas too, in case the modal happens to
+        // already be open (or gets opened right after) - so what's
+        // displayed always matches what's now actually active.
+        const systemRoleInput = document.getElementById('systemRoleInput');
+        if (systemRoleInput) {
+          systemRoleInput.value = DEFAULT_PROMPT.systemRole;
+          document.getElementById('jsonSchemaInput').value = DEFAULT_PROMPT.jsonSchema;
+          document.getElementById('extractionRulesInput').value = DEFAULT_PROMPT.extractionRules;
+          document.getElementById('examplesInput').value = DEFAULT_PROMPT.examples;
+          updateFullPromptPreview();
+        }
+      }
+      renderVersionHistoryList();
+      localStorage.setItem('promptSeedVersion', String(PROMPT_SEED_VERSION));
+    }
+    runPromptSeedMigration();
+
     // Initialize prompt editor when modal is shown
     document.getElementById('promptEditorModal')?.addEventListener('show.bs.modal', function() {
       const currentPrompt = loadPromptFromStorage();
@@ -8577,56 +8648,13 @@ Return ONLY valid JSON, no additional text.`
         localStorage.setItem('promptEditorVisited', 'true');
       }
 
-      // Versioned prompt migration - see PROMPT_SEED_VERSION/KNOWN_DEFAULT_PROMPTS
-      // above for why this uses a version number rather than a one-shot flag.
-      const seededVersion = parseInt(localStorage.getItem('promptSeedVersion') || '0', 10);
-      if (seededVersion < PROMPT_SEED_VERSION) {
-        const existingRaw = localStorage.getItem('customLLMPrompt');
-        let existingIsKnownDefault = !existingRaw;
-        if (existingRaw) {
-          try {
-            const parsed = JSON.stringify(JSON.parse(existingRaw));
-            existingIsKnownDefault = KNOWN_DEFAULT_PROMPTS.some(p => JSON.stringify(p) === parsed);
-          } catch (e) { /* malformed saved prompt - leave existingIsKnownDefault false, don't touch it */ }
-        }
-        // Only promote the current default to active if there's no
-        // customization at all, or the existing one exactly matches some
-        // prior shipped default (i.e. the user never actually edited
-        // anything, just had it auto-saved) - a real, different
-        // customization is never overwritten.
-        // Each entry's description is versioned (v1/v2/v3...) so a later
-        // PROMPT_SEED_VERSION bump adds a genuinely new history row instead
-        // of being silently skipped because a same-named but stale-content
-        // entry (from a prior seeding) already satisfies the description
-        // check - this exact collision (both v2 and v3 wanting the plain
-        // label "DeepSeek (Recommended Default)") is why the versioning
-        // migration re-firing for v3 would otherwise still leave the old
-        // rule-6-less prompt as the only thing named "Recommended Default"
-        // in a v2 user's history.
-        const history = loadPromptHistory();
-        if (!history.some(v => v.description === 'Original Default (pre-DeepSeek tuning)')) {
-          savePromptVersion(LEGACY_DEFAULT_PROMPT, 'Original Default (pre-DeepSeek tuning)');
-        }
-        if (!history.some(v => v.description === 'DeepSeek (Recommended Default) v2')) {
-          savePromptVersion(DEFAULT_PROMPT_V2, 'DeepSeek (Recommended Default) v2');
-        }
-        if (!history.some(v => v.description === 'DeepSeek (Recommended Default) v3')) {
-          savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default) v3');
-        }
-        if (existingIsKnownDefault) {
-          localStorage.setItem('customLLMPrompt', JSON.stringify(DEFAULT_PROMPT));
-          // Textareas above were already populated from the pre-migration
-          // loadPromptFromStorage() call - refresh them so what's displayed
-          // matches what's now actually active, without requiring a re-open.
-          document.getElementById('systemRoleInput').value = DEFAULT_PROMPT.systemRole;
-          document.getElementById('jsonSchemaInput').value = DEFAULT_PROMPT.jsonSchema;
-          document.getElementById('extractionRulesInput').value = DEFAULT_PROMPT.extractionRules;
-          document.getElementById('examplesInput').value = DEFAULT_PROMPT.examples;
-          updateFullPromptPreview();
-        }
-        renderVersionHistoryList();
-        localStorage.setItem('promptSeedVersion', String(PROMPT_SEED_VERSION));
-      }
+      // Migration already ran unconditionally on page load (see
+      // runPromptSeedMigration() above) - re-run here too in case the modal
+      // is opened extremely early (e.g. an automated/test flow triggering
+      // 'show.bs.modal' before this script's own DOMContentLoaded body has
+      // finished running). Cheap no-op otherwise since the version guard
+      // inside short-circuits immediately.
+      runPromptSeedMigration();
     });
 
     // Update full prompt preview when any tab is changed
