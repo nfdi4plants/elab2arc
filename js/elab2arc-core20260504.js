@@ -1242,9 +1242,20 @@ CC BY 4.0
         });
       }
 
+      const adHocNodeIds = {};
+
       if (llmData.protocols) {
         llmData.protocols.forEach((protocol, pIdx) => {
           const pid = 'protocol_' + pIdx;
+          // Reconcile inputs/outputs to one common, index-paired length -
+          // the SAME reconciliation createProcessTable() applies when
+          // building the xlsx (see reconcileProtocolIO() in
+          // isa-generation-20260422-1145.js), so the graph and the xlsx
+          // never disagree about which input produced which output.
+          const io = (window.Elab2ArcISA && window.Elab2ArcISA.reconcileProtocolIO)
+            ? window.Elab2ArcISA.reconcileProtocolIO(protocol)
+            : { rowCount: 0, inputs: protocol.inputs || [], outputs: protocol.outputs || [] };
+
           const paramTooltip = protocol.parameters && protocol.parameters.length
             ? 'Parameters:\n' + protocol.parameters.map(p =>
                 '• ' + p.name + ': ' + (p.value || '-') + (p.unit ? ' ' + p.unit : '')
@@ -1268,12 +1279,13 @@ CC BY 4.0
           });
 
           if (protocol.inputs) {
-            protocol.inputs.forEach((inputName) => {
-              const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName];
+            io.inputs.forEach((inputName) => {
+              const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName] || adHocNodeIds[inputName];
               if (sourceId) {
                 edges.push({ from: sourceId, to: pid, label: 'input', arrows: 'to', color: { color: '#6c757d' }, font: { color: '#212529', size: 10 } });
               } else {
                 const adHocId = 'input_' + (nodeId++);
+                adHocNodeIds[inputName] = adHocId;
                 nodes.push({ id: adHocId, label: inputName, shape: 'ellipse', color: { background: '#6f42c1', border: '#59359a' }, font: { color: '#212529', size: 12 } });
                 edges.push({ from: adHocId, to: pid, label: 'input', arrows: 'to', color: { color: '#6c757d' }, font: { color: '#212529', size: 10 } });
               }
@@ -1281,7 +1293,7 @@ CC BY 4.0
           }
 
           if (protocol.outputs) {
-            protocol.outputs.forEach((outputName) => {
+            io.outputs.forEach((outputName) => {
               let oid = outputNodeIds[outputName];
               if (!oid) {
                 oid = 'output_' + (nodeId++);
@@ -1290,6 +1302,31 @@ CC BY 4.0
               }
               edges.push({ from: pid, to: oid, label: 'output', arrows: 'to', color: { color: '#6c757d' }, font: { color: '#212529', size: 10 } });
             });
+          }
+
+          // Direct, index-paired edges preserving the exact row-level
+          // input->output correspondence that reconcileProtocolIO()/rule 6
+          // guarantee. Without these, the hub edges above make a
+          // one-input/two-output split visually indistinguishable from an
+          // unrelated many-to-many fan, since every input edge and every
+          // output edge only ever touches the shared protocol box - there's
+          // no way to see, e.g., that BAS33_R1 specifically produced BOTH
+          // BAS33_R1_1 and BAS33_R1_2 rather than some other combination.
+          for (let i = 0; i < io.rowCount; i++) {
+            const inputName = io.inputs[i];
+            const outputName = io.outputs[i];
+            if (!inputName || !outputName) continue;
+            const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName] || adHocNodeIds[inputName];
+            const targetId = outputNodeIds[outputName];
+            if (sourceId && targetId && sourceId !== targetId) {
+              edges.push({
+                from: sourceId, to: targetId,
+                dashes: true, arrows: 'to',
+                color: { color: '#adb5bd', opacity: 0.55 }, width: 1,
+                smooth: { type: 'curvedCW', roundness: 0.12 + (i % 4) * 0.06 },
+                title: `Row ${i + 1} via "${protocol.name || 'Protocol'}": ${inputName} → ${outputName}`
+              });
+            }
           }
         });
       }
@@ -1314,6 +1351,7 @@ CC BY 4.0
   .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
   .box { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
   .diamond { width: 10px; height: 10px; transform: rotate(45deg); display: inline-block; }
+  .dash { width: 16px; height: 0; border-top: 2px dashed #adb5bd; display: inline-block; }
 </style>
 </head>
 <body>
@@ -1325,6 +1363,7 @@ CC BY 4.0
   <span><span class="box" style="background:#dbeafe;border:1px solid #93c5fd;"></span> Protocol</span>
   <span><span class="diamond" style="background:#fd7e14;"></span> Output</span>
   <span><span class="dot" style="background:#6f42c1;"></span> Ad-hoc Input</span>
+  <span><span class="dash"></span> Traces which input produced which output</span>
 </div>
 <script>
   const nodes = new vis.DataSet(${nodesJson});
@@ -1367,49 +1406,49 @@ CC BY 4.0
         }
 
         container.style.display = 'block';
-        renderLLMGraph(llmData, containerId);
+        const network = renderLLMGraph(llmData, containerId);
 
-        // Capture graph as PNG after vis-network stabilization
-        // Use multiple attempts: quick check at 800ms, fallback at 2000ms
-        let captured = false;
+        let settled = false;
 
-        const attemptCapture = (attempt) => {
+        const capture = (reason) => {
+          if (settled) return;
+          settled = true;
           try {
             const canvas = container.querySelector('canvas');
-            if (!canvas) {
-              console.warn(`[LLM Helper] Attempt ${attempt}: No canvas found in`, containerId);
-              return false;
+            if (!canvas || canvas.width < 10 || canvas.height < 10) {
+              console.warn(`[LLM Helper] Cannot capture PNG for ${cacheKey} (${reason}): canvas missing or too small`);
+              resolve(null);
+              return;
             }
-            console.log(`[LLM Helper] Attempt ${attempt}: Canvas size ${canvas.width}x${canvas.height}`);
-            if (canvas.width < 10 || canvas.height < 10) {
-              console.warn(`[LLM Helper] Attempt ${attempt}: Canvas too small, waiting longer...`);
-              return false;
-            }
+            const pngDataUrl = canvas.toDataURL('image/png');
             if (cacheKey && window._previewLLMCache && window._previewLLMCache[cacheKey]) {
-              const pngDataUrl = canvas.toDataURL('image/png');
               window._previewLLMCache[cacheKey].pngDataUrl = pngDataUrl;
-              console.log('[LLM Helper] Captured graph PNG for', cacheKey, `(${pngDataUrl.length} chars)`);
-              captured = true;
-              resolve(pngDataUrl);
-              return true;
             }
+            console.log(`[LLM Helper] Captured graph PNG for ${cacheKey} (${reason}, ${pngDataUrl.length} chars)`);
+            resolve(pngDataUrl);
           } catch (capErr) {
             console.warn('[LLM Helper] Could not capture graph PNG:', capErr);
-          }
-          return false;
-        };
-
-        setTimeout(() => {
-          if (!captured) attemptCapture(1);
-        }, 800);
-
-        setTimeout(() => {
-          if (!captured) {
-            if (attemptCapture(2)) return;
-            console.warn('[LLM Helper] Failed to capture PNG after 2 attempts for', cacheKey);
             resolve(null);
           }
-        }, 2200);
+        };
+
+        // vis-network's 'afterDrawing' event fires right after each real
+        // canvas paint - the correct, documented hook for "has this
+        // actually been drawn yet". The previous implementation captured on
+        // fixed setTimeout delays (800ms/2200ms), which assumed
+        // requestAnimationFrame keeps pace with wall-clock time. Browsers do
+        // NOT guarantee that: Chrome/Firefox throttle or fully pause rAF
+        // callbacks once a tab loses focus, so a real conversion left
+        // running in a backgrounded tab could hit those deadlines with zero
+        // frames ever painted onto this offscreen canvas - captured and
+        // saved as a blank/white PNG. Waiting for a real paint event instead
+        // is immune to tab-focus throttling. The 15s fallback below only
+        // matters if 'afterDrawing' genuinely never fires (e.g. an extremely
+        // dense graph, or a vis-network internals change).
+        if (network && typeof network.once === 'function') {
+          network.once('afterDrawing', () => capture('afterDrawing'));
+        }
+        setTimeout(() => capture('fallback-timeout'), 15000);
       });
     }
 
@@ -1541,6 +1580,7 @@ CC BY 4.0
       const sampleNodeIds = {};
       const outputNodeIds = {};
       const protocolNodeIds = {};
+      const adHocNodeIds = {};
 
       // --- Create sample nodes ---
       if (llmData.samples) {
@@ -1572,6 +1612,15 @@ CC BY 4.0
           const pid = `protocol_${pIdx}`;
           protocolNodeIds[protocol.name] = pid;
 
+          // Reconcile inputs/outputs to one common, index-paired length -
+          // the SAME reconciliation createProcessTable() applies when
+          // building the xlsx (see reconcileProtocolIO() in
+          // isa-generation-20260422-1145.js), so the graph and the xlsx
+          // never disagree about which input produced which output.
+          const io = (window.Elab2ArcISA && window.Elab2ArcISA.reconcileProtocolIO)
+            ? window.Elab2ArcISA.reconcileProtocolIO(protocol)
+            : { rowCount: 0, inputs: protocol.inputs || [], outputs: protocol.outputs || [] };
+
           // Build multiline label: name + separator + parameters
           const paramLines = protocol.parameters && protocol.parameters.length
             ? protocol.parameters.map(p =>
@@ -1602,8 +1651,8 @@ CC BY 4.0
 
           // Inputs → Protocol
           if (protocol.inputs) {
-            protocol.inputs.forEach((inputName) => {
-              const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName];
+            io.inputs.forEach((inputName) => {
+              const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName] || adHocNodeIds[inputName];
               if (sourceId) {
                 edges.add({
                   from: sourceId,
@@ -1616,6 +1665,7 @@ CC BY 4.0
               } else {
                 // Create ad-hoc input node if not seen before
                 const adHocId = `input_${nodeId++}`;
+                adHocNodeIds[inputName] = adHocId;
                 nodes.add({
                   id: adHocId,
                   label: inputName,
@@ -1637,7 +1687,7 @@ CC BY 4.0
 
           // Protocol → Outputs
           if (protocol.outputs) {
-            protocol.outputs.forEach((outputName) => {
+            io.outputs.forEach((outputName) => {
               let oid = outputNodeIds[outputName];
               if (!oid) {
                 oid = `output_${nodeId++}`;
@@ -1660,6 +1710,31 @@ CC BY 4.0
                 font: { color: '#212529', size: 10 }
               });
             });
+          }
+
+          // Direct, index-paired edges preserving the exact row-level
+          // input->output correspondence that reconcileProtocolIO()/rule 6
+          // guarantee. Without these, the hub edges above make a
+          // one-input/two-output split visually indistinguishable from an
+          // unrelated many-to-many fan, since every input edge and every
+          // output edge only ever touches the shared protocol box - there's
+          // no way to see, e.g., that BAS33_R1 specifically produced BOTH
+          // BAS33_R1_1 and BAS33_R1_2 rather than some other combination.
+          for (let i = 0; i < io.rowCount; i++) {
+            const inputName = io.inputs[i];
+            const outputName = io.outputs[i];
+            if (!inputName || !outputName) continue;
+            const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName] || adHocNodeIds[inputName];
+            const targetId = outputNodeIds[outputName];
+            if (sourceId && targetId && sourceId !== targetId) {
+              edges.add({
+                from: sourceId, to: targetId,
+                dashes: true, arrows: 'to',
+                color: { color: '#adb5bd', opacity: 0.55 }, width: 1,
+                smooth: { type: 'curvedCW', roundness: 0.12 + (i % 4) * 0.06 },
+                title: `Row ${i + 1} via "${protocol.name || 'Protocol'}": ${inputName} → ${outputName}`
+              });
+            }
           }
         });
       }
@@ -1703,13 +1778,15 @@ CC BY 4.0
       };
 
       container.innerHTML = '';
-      new vis.Network(container, { nodes, edges }, options);
+      const network = new vis.Network(container, { nodes, edges }, options);
 
       const loadingEl = document.getElementById('llmGraphLoading');
       if (loadingEl) loadingEl.classList.add('d-none');
       container.style.display = 'block';
       const legendEl = document.getElementById('llmGraphLegend');
       if (legendEl) legendEl.classList.remove('d-none');
+
+      return network;
     }
 
 

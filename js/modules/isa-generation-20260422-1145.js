@@ -460,6 +460,67 @@
   }
 
   /**
+   * Reconcile a protocol's inputs/outputs/dataFiles arrays to one common row
+   * count, padding any shorter array by repeating its last entry.
+   *
+   * Rule 6 in the LLM prompt (one-to-many/many-to-one transformations) tells
+   * the model to repeat whichever side is shorter so inputs.length always
+   * equals outputs.length - but that's guidance to a stochastic model, not a
+   * hard constraint, and llmData cached from before rule 6 existed can still
+   * be replayed (e.g. "Using pre-captured graph PNG from cache" in
+   * elab2arc-core20260504.js reuses old data without re-running the LLM).
+   * Without this reconciliation, createProcessTable() below fed mismatched
+   * arrays straight into ArcTable.AddColumn(), which either throws (caught
+   * by this function's own outer try/catch, silently discarding the ENTIRE
+   * process table - not just the one bad column) or hands ARCtrl columns of
+   * different lengths, producing an xlsx row that has an input cell but no
+   * matching output cell - the "not all output has input" symptom seen on a
+   * real converted assay.
+   *
+   * Exposed on window.Elab2ArcISA so elab2arc-core20260504.js's graph
+   * renderers can reconcile the exact same way before drawing input/output
+   * edges - the xlsx table and the graph must never disagree about which
+   * input produced which output.
+   * @param {Object} protocol - Protocol object with inputs/outputs/dataFiles
+   * @returns {{rowCount:number, inputs:string[], outputs:string[], dataFiles:string[]|null, mismatched:boolean}}
+   */
+  function reconcileProtocolIO(protocol) {
+    const inputs = (protocol.inputs || []).slice();
+    const outputs = (protocol.outputs || []).slice();
+    const hasDataFilesField = Array.isArray(protocol.dataFiles);
+    const dataFiles = hasDataFilesField ? protocol.dataFiles.slice() : null;
+
+    const rowCount = Math.max(
+      inputs.length,
+      outputs.length,
+      dataFiles ? dataFiles.length : 0,
+      1
+    );
+
+    const padToLength = (arr, label) => {
+      if (arr.length === 0 || arr.length === rowCount) return arr;
+      const padded = arr.slice(0, rowCount);
+      const lastValue = arr[arr.length - 1];
+      while (padded.length < rowCount) padded.push(lastValue);
+      console.warn(
+        `[IO Reconcile] Protocol "${protocol.name || 'unnamed'}": ${label} had ${arr.length} entr${arr.length === 1 ? 'y' : 'ies'}, ` +
+        `expected ${rowCount} - padded by repeating the last entry ("${lastValue}").`
+      );
+      return padded;
+    };
+
+    return {
+      rowCount,
+      inputs: padToLength(inputs, 'inputs'),
+      outputs: padToLength(outputs, 'outputs'),
+      dataFiles: dataFiles ? padToLength(dataFiles, 'dataFiles') : null,
+      mismatched: (inputs.length > 0 && inputs.length !== rowCount) ||
+                  (outputs.length > 0 && outputs.length !== rowCount) ||
+                  (dataFiles !== null && dataFiles.length > 0 && dataFiles.length !== rowCount)
+    };
+  }
+
+  /**
    * Helper: Create a process table from LLM-extracted protocol data
    * @param {Object} protocol - Protocol object with inputs, parameters, outputs
    * @param {number} processNr - Process number for naming
@@ -477,24 +538,30 @@
 
       console.log(`[ISA Elab2Arc] Creating process table "${tableName}" for: ${protocol?.name || 'unnamed protocol'}`);
 
+      // Reconcile inputs/outputs/dataFiles to one common row count BEFORE
+      // building any column - see reconcileProtocolIO() above. rowCount must
+      // be known first: even the "no inputs specified" fallback below needs
+      // to be sized off it, so every column in this table ends up the same
+      // length no matter which array (if any) was short.
+      const io = reconcileProtocolIO(protocol);
+      const rowCount = io.rowCount;
+
       // Add Input column(s)
       if (protocol.inputs && protocol.inputs.length > 0) {
         const inputHeader = window.arctrl.CompositeHeader.input(window.arctrl.IOType.source());
-        const inputCells = protocol.inputs.map(inp =>
+        const inputCells = io.inputs.map(inp =>
           window.arctrl.CompositeCell.createFreeText(safeString(inp))
         );
         processTable.AddColumn(inputHeader, inputCells);
-        console.log(`  - Added ${protocol.inputs.length} input(s)`);
+        console.log(`  - Added ${inputCells.length} input(s)`);
       } else {
-        // Default input if none specified
+        // Default input if none specified - sized to rowCount (which may
+        // have been driven by outputs/dataFiles even though inputs is empty)
         processTable.AddColumn(
           window.arctrl.CompositeHeader.input(window.arctrl.IOType.source()),
-          [window.arctrl.CompositeCell.createFreeText("Sample")]
+          Array(rowCount).fill(null).map(() => window.arctrl.CompositeCell.createFreeText("Sample"))
         );
       }
-
-      // Determine number of rows based on inputs (needed for all columns)
-      const rowCount = Math.max(1, protocol.inputs?.length || 1);
 
       // Add Protocol REF column with file path if available
       const protocolRefHeader = window.arctrl.CompositeHeader.protocolREF();
@@ -568,7 +635,7 @@
       // here - the ISA consumer (e.g. arc-export) already resolves Output
       // [Data] values relative to that folder itself; prefixing here on top
       // of that produced doubled paths like "dataset/dataset/...".
-      const rawDataFiles = protocol.dataFiles || [];
+      const rawDataFiles = io.dataFiles || [];
       const resolvedDataFiles = rawDataFiles.map(f => {
         const fileStr = safeString(f);
         if (fileStr.trim() === '') return { raw: fileStr, resolved: '' };
@@ -599,10 +666,10 @@
 
         let outputCells;
         if (protocol.outputs && protocol.outputs.length > 0) {
-          outputCells = protocol.outputs.map(out =>
+          outputCells = io.outputs.map(out =>
             window.arctrl.CompositeCell.createFreeText(safeString(out))
           );
-          console.log(`  - Added Output [Sample] column with ${protocol.outputs.length} output(s)`);
+          console.log(`  - Added Output [Sample] column with ${outputCells.length} output(s)`);
         } else {
           // Default output if none specified
           outputCells = Array(rowCount).fill(null).map(() =>
@@ -1353,6 +1420,7 @@
     createSampleTable: createSampleTable,
     createDefaultProcessTable: createDefaultProcessTable,
     createProcessTable: createProcessTable,
+    reconcileProtocolIO: reconcileProtocolIO,
     generateIsaAssayElab2arcWithDatamap: generateIsaAssayElab2arcWithDatamap,
     generateIsaStudy: generateIsaStudy,
     generateIsaInvestigation: generateIsaInvestigation,
