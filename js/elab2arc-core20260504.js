@@ -7888,7 +7888,12 @@ Return ONLY valid JSON, no additional text.`
     // Example 6 below fixes a real repetition-loop failure mode where the
     // model would deliberate endlessly over "N concrete files, M sample
     // rows" mismatches instead of picking a deterministic assignment).
-    const DEFAULT_PROMPT = {
+    // DEFAULT_PROMPT_V2: the DeepSeek-tuned prompt as it existed before the
+    // rule-6 cardinality fix (one-to-many/many-to-one transformations) was
+    // added to PROTOCOL LINKING below. Preserved verbatim (not derived at
+    // runtime) so it stays recognizable in KNOWN_DEFAULT_PROMPTS/Version
+    // History even after DEFAULT_PROMPT itself moves on again.
+    const DEFAULT_PROMPT_V2 = {
       systemRole: `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.`,
 
       jsonSchema: `Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
@@ -8075,6 +8080,207 @@ files to rows in the order given and pad the rest with empty strings:
 Return ONLY valid JSON, no additional text.`
     };
 
+    const DEFAULT_PROMPT = {
+      systemRole: `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.`,
+
+      jsonSchema: `Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
+{
+  "samples": [
+    {
+      "name": "Sample identifier or name (e.g., Sample_1, Blood_Sample_A, Patient_001)",
+      "organism": "Scientific organism name (e.g., Homo sapiens, Escherichia coli, Arabidopsis thaliana)",
+      "characteristics": [
+        {
+          "category": "Characteristic category (e.g., age, strain, tissue type, genotype, treatment, location, collection date)",
+          "value": "Characteristic value (actual value, not a description)",
+          "unit": "Unit if applicable (e.g., years, °C, mg/L) or empty string",
+          "termSource": "Ontology source (e.g., NCBITaxon for organisms/strains, NCIT, OBI, EFO) or empty string if unknown",
+          "termAccession": "Ontology term ID (e.g., NCBITaxon:562 for E. coli, NCBITaxon:9606 for human) or empty string if unknown"
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "name": "Protocol step name (e.g., Sample Preparation, Measurement, Analysis)",
+      "description": "Brief description of this protocol step",
+      "inputs": ["array of input sample/material names - ONE VALUE PER ROW. For 3 samples, use 3 entries: ['Sample_1', 'Sample_2', 'Sample_3']"],
+      "parameters": [
+        {
+          "name": "parameter name (e.g., temperature, incubation time, buffer concentration)",
+          "value": "actual value if specified in protocol (e.g., '37', '60', '100'), empty string if not specified",
+          "unit": "measurement unit (e.g., °C, min, mM, µL) or empty string",
+          "description": "what this parameter represents"
+        }
+      ],
+      "outputs": ["array of output sample/material names - ONE VALUE PER ROW. Length MUST match inputs. For 3 input samples, use 3 output entries: ['Output_1', 'Output_2', 'Output_3']"],
+      "dataFiles": ["array of CONCRETE data file names only - ONE VALUE PER ROW. MUST match length of inputs/outputs. Can repeat filenames if multiple samples share the same file. Use empty string when only a general description/pattern is given (not a real filename) or when there are no data files. Never use wildcards ('*.fastq') or external storage paths ('smb://...', 'https://...'). Examples: 'results.csv', 'plot.png', ''"]
+    }
+  ]
+}`,
+
+      extractionRules: `CRITICAL - PARAMETER EXTRACTION RULES:
+1. **Extract ALL parameters mentioned in the protocol**, including:
+   - Software/tool names and versions (e.g., "FastQC version", "SPAdes assembler version")
+   - Command-line arguments and flags (e.g., "SLIDINGWINDOW parameter", "k-mer size")
+   - File paths and directories (e.g., "output directory", "reference database path")
+   - Thresholds and cutoffs (e.g., "quality score threshold", "coverage cutoff")
+   - Settings and configurations (e.g., "thread count", "memory allocation")
+   - Physical measurements (e.g., "temperature", "incubation time", "volume")
+   - Chemical concentrations (e.g., "NaCl concentration", "DNA concentration")
+   - Equipment settings (e.g., "centrifuge speed", "voltage")
+
+2. **For bioinformatics/computational protocols**, extract:
+   - Software tool names (e.g., "Trimmomatic", "FastQC", "SPAdes")
+   - Version numbers (even if not specified, include as parameter)
+   - Algorithm parameters (e.g., "minimum read length", "quality threshold")
+   - Reference databases (e.g., "NCBI RefSeq", "UniProt database")
+   - File format specifications (e.g., "FASTQ format", "GFF3 format")
+
+3. **If a parameter value is mentioned**, include it in the description field
+4. **If a parameter is implied but not detailed**, still include it with empty unit
+5. **Even if parameters array would be empty**, try to infer at least 2-3 key parameters from context
+
+IMPORTANT - SAMPLE EXTRACTION:
+1. **Extract sample information** from protocol:
+   - Sample names/identifiers mentioned in the protocol
+   - Organism or source material (human, bacteria, plant, cell line, etc.)
+   - Sample characteristics (age, tissue type, genotype, treatment, condition, etc.)
+   - If no specific samples mentioned, create generic samples (e.g., "Sample_1", "Sample_2")
+
+IMPORTANT - PROTOCOL LINKING:
+1. **Link protocols sequentially** - CRITICAL:
+   - The OUTPUT of one protocol MUST EXACTLY MATCH the INPUT of the next protocol
+   - Example: Protocol 1 outputs "Trimmed reads" → Protocol 2 inputs "Trimmed reads" (exact match!)
+   - DO NOT use generic terms like "data" or "result" - be specific
+2. **Protocol naming**:
+   - Use clear names (e.g., "Quality Control", "Trimming", "Assembly", "Annotation")
+   - If multiple steps, create separate protocol objects
+3. **First protocol inputs**:
+   - Should reference sample names from the samples array
+   - Or use specific material names (e.g., "Raw sequencing data from Sample_1")
+4. **Tools/software are parameters**, NOT outputs
+5. **Protocol REF (Reference)**:
+   - Each protocol should reference the source protocol file
+   - The "description" field can include: "See detailed protocol in: [protocol file path]"
+   - This helps link the extracted data back to the original documentation
+6. **One-to-many or many-to-one transformations (e.g. barcoding, splitting into
+   replicates, pooling)** - CRITICAL, resolve immediately, do not deliberate:
+   - inputs/outputs arrays MUST still be the same length as each other (this
+     rule is never relaxed) - achieve this by REPEATING an entry, never by
+     omitting one side or inventing a combined placeholder name.
+   - One input producing N outputs (e.g. 6 DNA samples each barcoded into 2
+     libraries = 12 libraries): repeat each input entry once per output it
+     produces, so both arrays end up the same longer length.
+     Example: inputs: ["Sample_1","Sample_1","Sample_2","Sample_2"],
+     outputs: ["Library_1a","Library_1b","Library_2a","Library_2b"]
+   - N inputs producing one output (e.g. pooling 3 samples into 1 pooled
+     library): repeat the single output entry once per input.
+     Example: inputs: ["Sample_1","Sample_2","Sample_3"],
+     outputs: ["Pooled_library","Pooled_library","Pooled_library"]
+
+IMPORTANT - DATA FILE LINKING:
+1. **Array length rule** - CRITICAL:
+   - dataFiles array MUST have SAME LENGTH as inputs/outputs arrays
+   - If 3 inputs → 3 dataFiles entries (one per row/sample)
+   - If 2 outputs → 2 dataFiles entries
+2. **Duplication for shared files**:
+   - Multiple samples in ONE file → REPEAT the filename
+   - Example: 3 samples in "measurements.xlsx" → ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+3. **Individual files per sample**:
+   - Each sample has its own file → list each filename
+   - Example: ["sample1.csv", "sample2.csv", "sample3.csv"]
+4. **Mixed scenarios**:
+   - Some samples share a file, others don't → repeat as needed
+   - Example: ["batch1.csv", "batch1.csv", "sample3_only.csv"]
+5. **File name extraction - ONLY use a value when a concrete, specific filename is stated**:
+   - Explicit names: "saved as results.csv" → "results.csv"
+   - Images: "Figure 1 (plot.png)" → "plot.png"
+   - Do NOT invent a name or pattern when only a general description is given
+     (e.g. "FASTQ files generated for each sample", "exported to CSV") - use
+     an empty string for that entry instead. These files are never actually
+     attached to the ARC as literal "*.fastq" or "*.csv", so writing a
+     wildcard/pattern here creates a reference to a file that doesn't exist.
+6. **Never use a value that isn't a real, standalone filename**:
+   - No wildcards or patterns: "*.fastq", "*.csv", "sample_*.txt" are NOT
+     valid dataFiles values - use "" instead
+   - No URLs or network paths describing where data is stored externally:
+     "smb://server/path/...", "https://...", "ftp://..." are NOT valid
+     dataFiles values (they describe an external storage location, not a
+     file committed to this ARC) - use "" instead
+7. **No data files**:
+   - If no files mentioned → use empty strings: ["", "", ""]
+   - Or omit dataFiles field entirely (backward compatible)`,
+
+      examples: `EXAMPLES:
+**Good parameter extraction with values and units**:
+- {"name": "Temperature", "value": "37", "unit": "°C", "description": "Incubation temperature"}
+- {"name": "FastQC version", "value": "0.11.9", "unit": "", "description": "Quality control tool version"}
+- {"name": "Minimum read length", "value": "50", "unit": "bp", "description": "Threshold for read trimming"}
+
+Note: Parameters are stored as free text with units combined (e.g., "37 °C"), not as ontology terms.
+
+**Good protocol linking**:
+- Protocol 1: inputs: ["Raw sequencing data"], outputs: ["Quality report", "Trimmed reads"]
+- Protocol 2: inputs: ["Trimmed reads"], outputs: ["Assembled contigs"]
+- Protocol 3: inputs: ["Assembled contigs"], outputs: ["Annotated genomes"]
+
+**Good sample extraction with characteristics**:
+Sample with location and collection date:
+- {"name": "Sample_1", "organism": "Escherichia coli", "characteristics": [
+    {"category": "strain", "value": "K-12", "unit": "", "termSource": "NCBITaxon", "termAccession": "NCBITaxon:83333"},
+    {"category": "Location", "value": "Lab A", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C25341"},
+    {"category": "Collection Date", "value": "2024-01-15", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}
+  ]}
+
+Sample with treatment:
+- {"name": "Sample_2", "organism": "Mus musculus", "characteristics": [
+    {"category": "age", "value": "8", "unit": "weeks", "termSource": "UO", "termAccession": "UO:0000034"},
+    {"category": "treatment", "value": "Drug X", "unit": "mg/kg", "termSource": "", "termAccession": ""}
+  ]}
+
+**Good data file linking**:
+Example 1 - Shared measurement file (3 samples, 1 file):
+- Protocol: "All samples measured together in measurements.xlsx"
+- inputs: ["Plant_A", "Plant_B", "Plant_C"]
+- outputs: ["Measurement_A", "Measurement_B", "Measurement_C"]
+- dataFiles: ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+
+Example 2 - Individual sequencing files (2 samples, 2 files):
+- Protocol: "Each sample sequenced separately: sample1.fastq, sample2.fastq"
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Reads_1", "Reads_2"]
+- dataFiles: ["sample1.fastq", "sample2.fastq"]
+
+Example 3 - Mixed scenario (some shared, some individual):
+- Protocol: "Samples 1-2 analyzed together in batch1.csv, sample 3 processed separately as sample3.csv"
+- inputs: ["S1", "S2", "S3"]
+- outputs: ["Result_1", "Result_2", "Result_3"]
+- dataFiles: ["batch1.csv", "batch1.csv", "sample3.csv"]
+
+Example 4 - Only a general description, no concrete filename (leave empty):
+- Protocol: "FASTQ files generated for each sample" / "Data stored on smb://server/path"
+- inputs: ["Sample_A", "Sample_B"]
+- outputs: ["Sequencing_A", "Sequencing_B"]
+- dataFiles: ["", ""]  (no wildcard pattern, no external storage path - neither is a real filename)
+
+Example 5 - No data files mentioned:
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Processed_1", "Processed_2"]
+- dataFiles: ["", ""]
+
+Example 6 - Number of concrete attached files does NOT equal the number of rows
+(e.g. 2 screenshots attached to a protocol with 5 samples, and it's not stated
+which sample each belongs to) - do not deliberate over this, just assign
+files to rows in the order given and pad the rest with empty strings:
+- Protocol: "Attached: plate_layout.png, results_summary.png" (5 samples, no per-sample attribution stated)
+- inputs: ["Sample_1", "Sample_2", "Sample_3", "Sample_4", "Sample_5"]
+- outputs: ["Output_1", "Output_2", "Output_3", "Output_4", "Output_5"]
+- dataFiles: ["plate_layout.png", "results_summary.png", "", "", ""]
+
+Return ONLY valid JSON, no additional text.`
+    };
+
     // Versioned prompt migration. Bump PROMPT_SEED_VERSION and append the
     // superseded object to KNOWN_DEFAULT_PROMPTS every time DEFAULT_PROMPT
     // changes meaningfully - this is what makes future updates actually
@@ -8086,8 +8292,18 @@ Return ONLY valid JSON, no additional text.`
     // since that boolean flag can only ever be set once. A plain "seeded yes
     // no" boolean has the same one-shot problem; a version NUMBER compared
     // with < lets every future bump re-run for everyone still behind.
-    const PROMPT_SEED_VERSION = 2; // 1 = pre-DeepSeek tuning, 2 = DeepSeek (Example 6, no wildcards, temp 0.6)
-    const KNOWN_DEFAULT_PROMPTS = [LEGACY_DEFAULT_PROMPT, DEFAULT_PROMPT];
+    //
+    // v3 bump note: bumping this version was ALSO forgotten the first time
+    // rule 6 (one-to-many/many-to-one transformations) was added below to
+    // llm-service20260504.js's embedded prompt - this file's DEFAULT_PROMPT
+    // went stale a second time, the exact bug this versioning exists to
+    // prevent, confirmed live via a real user still hitting the
+    // repetition-loop after the "fix" because their seeded customLLMPrompt
+    // was frozen on the pre-rule-6 text. DEFAULT_PROMPT_V2 preserves that
+    // now-superseded object so it can still be recognized as "an old
+    // unedited default" and safely upgraded.
+    const PROMPT_SEED_VERSION = 3; // 1 = pre-DeepSeek tuning, 2 = DeepSeek (Example 6, no wildcards), 3 = + cardinality-change rule 6, temp 1.0/top_p 0.95/repetition_penalty
+    const KNOWN_DEFAULT_PROMPTS = [LEGACY_DEFAULT_PROMPT, DEFAULT_PROMPT_V2, DEFAULT_PROMPT];
 
     // Load custom prompt from localStorage or use default
     function loadPromptFromStorage() {
@@ -8378,12 +8594,24 @@ Return ONLY valid JSON, no additional text.`
         // prior shipped default (i.e. the user never actually edited
         // anything, just had it auto-saved) - a real, different
         // customization is never overwritten.
+        // Each entry's description is versioned (v1/v2/v3...) so a later
+        // PROMPT_SEED_VERSION bump adds a genuinely new history row instead
+        // of being silently skipped because a same-named but stale-content
+        // entry (from a prior seeding) already satisfies the description
+        // check - this exact collision (both v2 and v3 wanting the plain
+        // label "DeepSeek (Recommended Default)") is why the versioning
+        // migration re-firing for v3 would otherwise still leave the old
+        // rule-6-less prompt as the only thing named "Recommended Default"
+        // in a v2 user's history.
         const history = loadPromptHistory();
         if (!history.some(v => v.description === 'Original Default (pre-DeepSeek tuning)')) {
           savePromptVersion(LEGACY_DEFAULT_PROMPT, 'Original Default (pre-DeepSeek tuning)');
         }
-        if (!history.some(v => v.description === 'DeepSeek (Recommended Default)')) {
-          savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default)');
+        if (!history.some(v => v.description === 'DeepSeek (Recommended Default) v2')) {
+          savePromptVersion(DEFAULT_PROMPT_V2, 'DeepSeek (Recommended Default) v2');
+        }
+        if (!history.some(v => v.description === 'DeepSeek (Recommended Default) v3')) {
+          savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default) v3');
         }
         if (existingIsKnownDefault) {
           localStorage.setItem('customLLMPrompt', JSON.stringify(DEFAULT_PROMPT));
