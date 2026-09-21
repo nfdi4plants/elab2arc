@@ -16,7 +16,7 @@ video {
 }
   </style>
   <link href="./css/bootstrap.min.css?v=20260505" rel="stylesheet">
-  <link href="./css/custom0929.css?v=20260505" rel="stylesheet" />
+  <link href="./css/custom0929.css?v=20260921" rel="stylesheet" />
   <link href="./css/bs5-intro-tour.css?v=20260505" rel="stylesheet" />
   <link href="./css/MEMfsGUI0929.css?v=20260505" rel="stylesheet" />
   <link href="./css/elabGUI1305.css?v=20260505" rel="stylesheet" />
@@ -44,7 +44,13 @@ video {
           style=" margin: 8px 20px 8px 12px; left: 0px; padding-top: 4px;" />
       </a>
 
+      <button class="navbar-toggler border-0 ms-auto" type="button" data-bs-toggle="collapse"
+        data-bs-target="#mainNavbarCollapse" aria-controls="mainNavbarCollapse" aria-expanded="false"
+        aria-label="Toggle navigation" id="mainNavbarToggler">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
+      <div class="collapse navbar-collapse" id="mainNavbarCollapse">
 
       <button type="button" name="navBtn" onclick="location.href=location.href.split('#')[0]+'#elab'"
         class="btn d-none  nav-linkc px-3" id="submitNavBtn">
@@ -103,6 +109,8 @@ video {
         <a id="ghlink" class=" p-2 nav-linkc" target="_blank" href="https://github.com/nfdi4plants/elab2arc"><img
             src="images/github-mark-white.png?v=20260505" alt="Elab2ARC GitHub URL" style="width:2rem;height:2rem;"> Github</a>
       </span>
+
+      </div>
     </div>
 
   </nav>
@@ -1376,7 +1384,7 @@ video {
   <script src="./js/modules/alt-input-convert-20260730.js?v=20260730" type="text/javascript" charset="utf-8"></script>
 
   <!-- Main application core -->
-  <script src="./js/elab2arc-core20260504.js?v=20260910h" type="text/javascript" charset="utf-8"></script>
+  <script src="./js/elab2arc-core20260504.js?v=20260921b" type="text/javascript" charset="utf-8"></script>
 
   <!-- vis-network for LLM process graph visualization -->
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js?v=20260505"></script>

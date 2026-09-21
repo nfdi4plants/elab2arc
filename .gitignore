@@ -21,3 +21,10 @@ images/full_v1/qa_frames/
 
 # Playwright MCP tool scratch (screenshots/logs from browser automation testing)
 .playwright-mcp/
+
+# tests/e2e Playwright CI harness (added Sep 2026, see e2e-conversion.yml)
+tests/e2e/node_modules/
+tests/e2e/playwright-report/
+tests/e2e/test-results/
+tests/e2e/new-commit.sha
+tests/e2e/output/

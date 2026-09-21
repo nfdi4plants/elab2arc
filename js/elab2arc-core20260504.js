@@ -90,7 +90,14 @@ var conversionStartTime = null; // Track when conversion starts
     // proxy container in self-host mode, so "backup" is the same URL as
     // "primary" there - harmless, matches the pre-existing fallback-to-backup
     // code path without erroring.
-    const PRODUCTION_ORIGINS = ['https://nfdi4plants.org', 'https://nfdi4plants.github.io'];
+    // TEMPORARY LOCAL TESTING ONLY (added 2026-09-21, revert before committing):
+    // 'http://localhost:8080' added so this local `python3 -m http.server 8080`
+    // instance uses the real wb-e.com proxies (localhost:8080 is already on
+    // their Origin allowlist) instead of the self-host same-origin
+    // /_corsproxy//_gitproxy paths, which this plain static server doesn't
+    // serve. Needed to exercise a real eLabFTW fetch + DataHub push end to
+    // end against elab2arc_test for mobile-navbar testing.
+    const PRODUCTION_ORIGINS = ['https://nfdi4plants.org', 'https://nfdi4plants.github.io', 'http://localhost:8080'];
     const IS_PRODUCTION_ORIGIN = PRODUCTION_ORIGINS.includes(window.location.origin);
 
     const proxyConfig = IS_PRODUCTION_ORIGIN ? {
@@ -7339,6 +7346,12 @@ ${res.uploads && res.uploads.length > 0 ?
       })
       window.scrollTo({ top: 0, behavior: 'smooth' });
       document.getElementById("kblink").href = kblinkJSON[name.replace("Tab", "")]
+      // Close the mobile hamburger menu after navigating - no-op on desktop
+      // (collapse stays permanently shown there) or if already collapsed.
+      const navCollapseEl = document.getElementById('mainNavbarCollapse');
+      if (navCollapseEl && navCollapseEl.classList.contains('show') && window.bootstrap) {
+        bootstrap.Collapse.getOrCreateInstance(navCollapseEl).hide();
+      }
     }
 
     function setTargetPath(path) {

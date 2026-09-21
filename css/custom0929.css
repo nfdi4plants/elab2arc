@@ -357,6 +357,59 @@ transition: background-color 0.15s ease-in-out;
 	flex-warp:no-warp;
 }
 
+/* Mobile hamburger menu (below the navbar-expand-lg breakpoint, 992px).
+   #mainNavbar keeps a fixed 3.25rem box at all widths (main's padding-top and
+   #toastContainer positioning both assume that height) - so the opened menu
+   is rendered as a dropdown panel anchored under the top bar instead of
+   letting Bootstrap grow the navbar's own box, which is what caused the
+   two-line wrap this replaces. #mainNavbar is itself position:fixed
+   (.fixed-top), so it's the containing block for this absolutely-positioned
+   panel - `top:100%` anchors to the bottom of the navbar's own box wherever
+   that box currently is, rather than a hardcoded viewport offset. This keeps
+   the panel correctly placed even if the (currently disabled)
+   revisionBanner's initRevisionBanner()/applyOffset() JS pushes #mainNavbar
+   down via `nav.style.top` for a re-enabled banner - no coupling needed. */
+@media (max-width: 991.98px) {
+  #mainNavbar .navbar-toggler {
+    box-shadow: none !important;
+  }
+  #mainNavbar .navbar-collapse {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - 3.25rem);
+    overflow-y: auto;
+    background: rgb(45, 62, 80);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.25rem 0 0.75rem;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  }
+  #mainNavbar .navbar-collapse .nav-linkc {
+    width: 100%;
+    height: auto;
+    min-height: 2.75rem;
+    text-align: left;
+    justify-content: flex-start;
+  }
+  #mainNavbar .navbar-collapse .ms-auto {
+    margin-left: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin-top: 0.25rem;
+    padding-top: 0.25rem;
+  }
+  #mainNavbar .navbar-collapse .ms-auto .dropdown {
+    width: 100%;
+  }
+  #mainNavbar .navbar-collapse #advancedDropdownBtn {
+    display: block;
+  }
+}
+
 .scrollspy-example {
     position: relative;
     height: calc(100vh - 180px);
