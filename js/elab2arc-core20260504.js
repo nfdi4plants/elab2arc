@@ -8239,7 +8239,11 @@ files to rows in the order given and pad the rest with empty strings:
 Return ONLY valid JSON, no additional text.`
     };
 
-    const DEFAULT_PROMPT = {
+    // DEFAULT_PROMPT_V3: the prompt this editor offered until October 2026 (DeepSeek-tuned, cardinality rule 6).
+    // It had drifted from the embedded prompt of llm-service20260504.js (no per-row parameter values, older
+    // examples), so the Prompt Editor showed - and Save/Reset wrote - a prompt older than prompt version 6.
+    // Kept verbatim so KNOWN_DEFAULT_PROMPTS can still recognise it as an unedited default and upgrade it.
+    const DEFAULT_PROMPT_V3 = {
       systemRole: `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.`,
 
       jsonSchema: `Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
@@ -8440,6 +8444,248 @@ files to rows in the order given and pad the rest with empty strings:
 Return ONLY valid JSON, no additional text.`
     };
 
+    // DEFAULT_PROMPT: prompt version 6 = the embedded default of llm-service20260504.js, section by section
+    // (generated from it; tests/unit/prompt-editor-default.test.js fails if the two ever drift apart again).
+    const DEFAULT_PROMPT = {
+      systemRole: `You are a scientific data extraction assistant. Analyze this experimental protocol and extract structured information.`,
+
+      jsonSchema: `Extract and return ONLY a JSON object (no markdown, no explanation) with this structure:
+{
+  "samples": [
+    {
+      "name": "Sample identifier or name (e.g., Sample_1, Blood_Sample_A, Patient_001)",
+      "organism": "Scientific organism name (e.g., Homo sapiens, Escherichia coli, Arabidopsis thaliana)",
+      "characteristics": [
+        {
+          "category": "Characteristic category (e.g., age, strain, tissue type, genotype, treatment, location, collection date)",
+          "value": "Characteristic value (actual value, not a description)",
+          "unit": "Unit if applicable (e.g., years, °C, mg/L) or empty string",
+          "termSource": "Ontology source (e.g., NCBITaxon for organisms/strains, NCIT, OBI, EFO) or empty string if unknown",
+          "termAccession": "Ontology term ID (e.g., NCBITaxon:562 for E. coli, NCBITaxon:9606 for human) or empty string if unknown"
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "name": "Protocol step name (e.g., Sample Preparation, Measurement, Analysis)",
+      "description": "Brief description of this protocol step",
+      "inputs": ["array of input sample/material names - ONE VALUE PER ROW. For 3 samples, use 3 entries: ['Sample_1', 'Sample_2', 'Sample_3']"],
+      "parameters": [
+        {
+          "name": "parameter name (e.g., temperature, incubation time, buffer concentration)",
+          "value": "actual value if specified in protocol (e.g., '37', '60', '100'), empty string if not specified. If the value DIFFERS BETWEEN ROWS (e.g. an OD measured per sample), an array with ONE VALUE PER ROW, same length as inputs: ['0.27', '0.36', '0.33']",
+          "unit": "measurement unit (e.g., °C, min, mM, µL) or empty string",
+          "description": "what this parameter represents"
+        }
+      ],
+      "outputs": ["array of output sample/material names - ONE VALUE PER ROW. Length MUST match inputs. For 3 input samples, use 3 output entries: ['Output_1', 'Output_2', 'Output_3']"],
+      "dataFiles": ["array of CONCRETE data file names only - ONE VALUE PER ROW. MUST match length of inputs/outputs. Can repeat filenames if multiple samples share the same file. Use empty string when only a general description/pattern is given (not a real filename) or when there are no data files. Never use wildcards ('*.fastq') or external storage paths ('smb://...', 'https://...'). Examples: 'results.csv', 'plot.png', ''"]
+    }
+  ]
+}`,
+
+      extractionRules: `CRITICAL - PARAMETER EXTRACTION RULES:
+1. **Extract ALL parameters mentioned in the protocol**, including:
+   - Software/tool names and versions (e.g., "FastQC version", "SPAdes assembler version")
+   - Command-line arguments and flags (e.g., "SLIDINGWINDOW parameter", "k-mer size")
+   - File paths and directories (e.g., "output directory", "reference database path")
+   - Thresholds and cutoffs (e.g., "quality score threshold", "coverage cutoff")
+   - Settings and configurations (e.g., "thread count", "memory allocation")
+   - Physical measurements (e.g., "temperature", "incubation time", "volume")
+   - Chemical concentrations (e.g., "NaCl concentration", "DNA concentration")
+   - Equipment settings (e.g., "centrifuge speed", "voltage")
+
+2. **For bioinformatics/computational protocols**, extract:
+   - Software tool names (e.g., "Trimmomatic", "FastQC", "SPAdes")
+   - Version numbers (even if not specified, include as parameter)
+   - Algorithm parameters (e.g., "minimum read length", "quality threshold")
+   - Reference databases (e.g., "NCBI RefSeq", "UniProt database")
+   - File format specifications (e.g., "FASTQ format", "GFF3 format")
+
+3. **If a parameter value is mentioned**, include it in the description field
+4. **If a parameter is implied but not detailed**, still include it with empty unit
+5. **Even if parameters array would be empty**, try to find at least 2-3 key parameters stated in the protocol (never invent a value)
+6. **Per-row values** - CRITICAL when a value differs between the rows of one protocol:
+   - Use an ARRAY for "value" with exactly one entry per row, in the same order as inputs/outputs
+     (e.g. the OD, concentration, volume, time or date recorded for each sample, run or library)
+   - Keep a single string when the value is the same for every row
+   - Put measured values here, on the step where they were measured - NOT in sample characteristics
+   - Example (3 cultures washed): inputs ["WT", "Mutant", "Biosensor"],
+     {"name": "OD after washing", "value": ["0.27", "0.36", "0.33"], "unit": ""}
+   - A table with N rows carries every per-row value the entry recorded as an N-entry array (each
+     OD, volume, time) - do not drop readings because there are many rows.
+
+IMPORTANT - SAMPLE EXTRACTION:
+1. **Extract sample information** from protocol:
+   - Sample names/identifiers mentioned in the protocol
+   - Organism or source material (human, bacteria, plant, cell line, etc.)
+   - Sample characteristics (age, tissue type, genotype, treatment, condition, etc.)
+   - If no specific samples mentioned, create generic samples (e.g., "Sample_1", "Sample_2")
+2. **Record the experiment as it was performed, not only the method** - CRITICAL:
+   - FIRST enumerate every run (each date/heading where the procedure was performed) x every culture
+     in it: one samples entry per run x culture - NEVER one per strain (8 runs x 3 cultures = 24 samples, not 3).
+   - All runs using the SAME procedure share ONE protocol per step (its rows = every run's cultures) -
+     do not create one protocol per run; only an actually changed procedure is a separate protocol.
+   - If the entry records the same procedure performed several times (runs, dates, batches, replicates),
+     every physical sample of every run is its own sample with a unique name (e.g. add the run date or
+     run ID: "2024-03-05_Sample_A", "Run2_Sample_A"), and each protocol has one row per sample per run.
+   - The name prefix is the run's OWN date or label as written next to that run in the entry
+     (its inoculation/start date) - NEVER the entry's creation date or title date.
+   - Different versions of a procedure (e.g. a pilot run and a later modified protocol) are separate protocols.
+   - Preparations described in the entry (media, reagents, dilution series) and side procedures (e.g. sending
+     samples for sequencing) are protocols of their own, with the materials used as inputs.
+3. **Never summarise values that differ**: do not write ranges ("20-25", "2-3 h") or "sometimes X" when the
+   entry states the individual values - give each row its own value (parameter rule 6).
+4. **Keep every recorded measurement** (e.g. each OD reading, volume, concentration, time, date) as written,
+   on the row of the sample it was measured on. Never state a value the entry does not contain; use "" instead.
+5. **Use the entry's own labels** for materials and parameters (do not rename or re-classify them).
+
+IMPORTANT - PROTOCOL LINKING:
+1. **Link protocols sequentially** - CRITICAL:
+   - The OUTPUT of one protocol MUST EXACTLY MATCH the INPUT of the next protocol
+   - Example: Protocol 1 outputs "Trimmed reads" → Protocol 2 inputs "Trimmed reads" (exact match!)
+   - DO NOT use generic terms like "data" or "result" - be specific
+   - A step's output name must DIFFER from its input name: append the step to the sample name
+     (input "2024-03-05_Sample_A" -> output "2024-03-05_Sample_A_washed"), so the material
+     keeps its identity but moves forward. Never copy the inputs array into outputs unchanged.
+2. **Protocol naming**:
+   - Use clear names (e.g., "Quality Control", "Trimming", "Assembly", "Annotation")
+   - If multiple steps, create separate protocol objects
+3. **First protocol inputs**:
+   - Should reference sample names from the samples array
+   - Or use specific material names (e.g., "Raw sequencing data from Sample_1")
+4. **Tools/software are parameters**, NOT outputs
+5. **Protocol REF (Reference)**:
+   - Each protocol should reference the source protocol file
+   - The "description" field can include: "See detailed protocol in: [protocol file path]"
+   - This helps link the extracted data back to the original documentation
+6. **One-to-many or many-to-one transformations (e.g. barcoding, splitting into
+   replicates, pooling)** - CRITICAL, resolve immediately, do not deliberate:
+   - inputs/outputs arrays MUST still be the same length as each other (this
+     rule is never relaxed) - achieve this by REPEATING an entry, never by
+     omitting one side or inventing a combined placeholder name.
+   - One input producing N outputs (e.g. 6 DNA samples each barcoded into 2
+     libraries = 12 libraries): repeat each input entry once per output it
+     produces, so both arrays end up the same longer length.
+     Example: inputs: ["Sample_1","Sample_1","Sample_2","Sample_2"],
+     outputs: ["Library_1a","Library_1b","Library_2a","Library_2b"]
+   - N inputs producing one output (e.g. pooling 3 samples into 1 pooled
+     library): repeat the single output entry once per input.
+     Example: inputs: ["Sample_1","Sample_2","Sample_3"],
+     outputs: ["Pooled_library","Pooled_library","Pooled_library"]
+7. **Gradients expand the rows** - CRITICAL: one row per sample x condition when every sample gets
+   several conditions (e.g. each dilution of a treatment), repeating inputs; the condition is a
+   per-row parameter. 2 cultures x 4 CCCP concentrations = 8 rows:
+   inputs ["C1","C1","C1","C1","C2","C2","C2","C2"], outputs ["C1_100uM",...,"C2_0uM"],
+   {"name": "CCCP concentration", "value": ["100","10","1","0","100","10","1","0"], "unit": "µM"}
+8. **Order**: steps that prepare or verify the starting materials come FIRST - reagent/media
+   preparation, and sequencing submission of the source strains/plasmids (that always comes first,
+   before the culture/processing chain); then the experimental chain in execution order.
+
+IMPORTANT - DATA FILE LINKING:
+1. **Array length rule** - CRITICAL:
+   - dataFiles array MUST have SAME LENGTH as inputs/outputs arrays
+   - If 3 inputs → 3 dataFiles entries (one per row/sample)
+   - If 2 outputs → 2 dataFiles entries
+2. **Duplication for shared files**:
+   - Multiple samples in ONE file → REPEAT the filename
+   - Example: 3 samples in "measurements.xlsx" → ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+3. **Individual files per sample**:
+   - Each sample has its own file → list each filename
+   - Example: ["sample1.csv", "sample2.csv", "sample3.csv"]
+4. **Mixed scenarios**:
+   - Some samples share a file, others don't → repeat as needed
+   - Example: ["batch1.csv", "batch1.csv", "sample3_only.csv"]
+5. **File name extraction - ONLY use a value when a concrete, specific filename is stated**:
+   - Explicit names: "saved as results.csv" → "results.csv"
+   - Images: "Figure 1 (plot.png)" → "plot.png"
+   - Do NOT invent a name or pattern when only a general description is given
+     (e.g. "FASTQ files generated for each sample", "exported to CSV") - use
+     an empty string for that entry instead. These files are never actually
+     attached to the ARC as literal "*.fastq" or "*.csv", so writing a
+     wildcard/pattern here creates a reference to a file that doesn't exist.
+6. **Never use a value that isn't a real, standalone filename**:
+   - No wildcards or patterns: "*.fastq", "*.csv", "sample_*.txt" are NOT
+     valid dataFiles values - use "" instead
+   - No URLs or network paths describing where data is stored externally:
+     "smb://server/path/...", "https://...", "ftp://..." are NOT valid
+     dataFiles values (they describe an external storage location, not a
+     file committed to this ARC) - use "" instead
+7. **No data files**:
+   - If no files mentioned → use empty strings: ["", "", ""]
+   - Or omit dataFiles field entirely (backward compatible)`,
+
+      examples: `EXAMPLES:
+**Good parameter extraction with values and units**:
+- {"name": "Temperature", "value": "37", "unit": "°C", "description": "Incubation temperature"}
+- {"name": "FastQC version", "value": "0.11.9", "unit": "", "description": "Quality control tool version"}
+- {"name": "Minimum read length", "value": "50", "unit": "bp", "description": "Threshold for read trimming"}
+- {"name": "DNA concentration", "value": ["12.1", "15.4", "9.8"], "unit": "ng/µl", "description": "Qubit reading per library (one per row)"}
+
+Note: Parameters are stored as free text with units combined (e.g., "37 °C"), not as ontology terms.
+
+**Good protocol linking**:
+- Protocol 1: inputs: ["Raw sequencing data"], outputs: ["Quality report", "Trimmed reads"]
+- Protocol 2: inputs: ["Trimmed reads"], outputs: ["Assembled contigs"]
+- Protocol 3: inputs: ["Assembled contigs"], outputs: ["Annotated genomes"]
+
+**Good sample extraction with characteristics**:
+Sample with location and collection date:
+- {"name": "Sample_1", "organism": "Escherichia coli", "characteristics": [
+    {"category": "strain", "value": "K-12", "unit": "", "termSource": "NCBITaxon", "termAccession": "NCBITaxon:83333"},
+    {"category": "Location", "value": "Lab A", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C25341"},
+    {"category": "Collection Date", "value": "2024-01-15", "unit": "", "termSource": "NCIT", "termAccession": "NCIT:C81286"}
+  ]}
+
+Sample with treatment:
+- {"name": "Sample_2", "organism": "Mus musculus", "characteristics": [
+    {"category": "age", "value": "8", "unit": "weeks", "termSource": "UO", "termAccession": "UO:0000034"},
+    {"category": "treatment", "value": "Drug X", "unit": "mg/kg", "termSource": "", "termAccession": ""}
+  ]}
+
+**Good data file linking**:
+Example 1 - Shared measurement file (3 samples, 1 file):
+- Protocol: "All samples measured together in measurements.xlsx"
+- inputs: ["Plant_A", "Plant_B", "Plant_C"]
+- outputs: ["Measurement_A", "Measurement_B", "Measurement_C"]
+- dataFiles: ["measurements.xlsx", "measurements.xlsx", "measurements.xlsx"]
+
+Example 2 - Individual sequencing files (2 samples, 2 files):
+- Protocol: "Each sample sequenced separately: sample1.fastq, sample2.fastq"
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Reads_1", "Reads_2"]
+- dataFiles: ["sample1.fastq", "sample2.fastq"]
+
+Example 3 - Mixed scenario (some shared, some individual):
+- Protocol: "Samples 1-2 analyzed together in batch1.csv, sample 3 processed separately as sample3.csv"
+- inputs: ["S1", "S2", "S3"]
+- outputs: ["Result_1", "Result_2", "Result_3"]
+- dataFiles: ["batch1.csv", "batch1.csv", "sample3.csv"]
+
+Example 4 - Only a general description, no concrete filename (leave empty):
+- Protocol: "FASTQ files generated for each sample" / "Data stored on smb://server/path"
+- inputs: ["Sample_A", "Sample_B"]
+- outputs: ["Sequencing_A", "Sequencing_B"]
+- dataFiles: ["", ""]  (no wildcard pattern, no external storage path - neither is a real filename)
+
+Example 5 - No data files mentioned:
+- inputs: ["Sample_1", "Sample_2"]
+- outputs: ["Processed_1", "Processed_2"]
+- dataFiles: ["", ""]
+
+Example 6 - Number of concrete attached files does NOT equal the number of rows
+(e.g. 2 screenshots attached to a protocol with 5 samples, and it's not stated
+which sample each belongs to) - do not deliberate over this, just assign
+files to rows in the order given and pad the rest with empty strings:
+- Protocol: "Attached: plate_layout.png, results_summary.png" (5 samples, no per-sample attribution stated)
+- inputs: ["Sample_1", "Sample_2", "Sample_3", "Sample_4", "Sample_5"]
+- outputs: ["Output_1", "Output_2", "Output_3", "Output_4", "Output_5"]
+- dataFiles: ["plate_layout.png", "results_summary.png", "", "", ""]
+
+Return ONLY valid JSON, no additional text.`
+    };
+
     // Versioned prompt migration. Bump PROMPT_SEED_VERSION and append the
     // superseded object to KNOWN_DEFAULT_PROMPTS every time DEFAULT_PROMPT
     // changes meaningfully - this is what makes future updates actually
@@ -8461,8 +8707,8 @@ Return ONLY valid JSON, no additional text.`
     // was frozen on the pre-rule-6 text. DEFAULT_PROMPT_V2 preserves that
     // now-superseded object so it can still be recognized as "an old
     // unedited default" and safely upgraded.
-    const PROMPT_SEED_VERSION = 3; // 1 = pre-DeepSeek tuning, 2 = DeepSeek (Example 6, no wildcards), 3 = + cardinality-change rule 6, temp 1.0/top_p 0.95/repetition_penalty
-    const KNOWN_DEFAULT_PROMPTS = [LEGACY_DEFAULT_PROMPT, DEFAULT_PROMPT_V2, DEFAULT_PROMPT];
+    const PROMPT_SEED_VERSION = 4; // 1 = pre-DeepSeek tuning, 2 = DeepSeek (Example 6, no wildcards), 3 = + cardinality-change rule 6, temp 1.0/top_p 0.95/repetition_penalty, 4 = prompt version 6 (editor default synced with llm-service)
+    const KNOWN_DEFAULT_PROMPTS = [LEGACY_DEFAULT_PROMPT, DEFAULT_PROMPT_V2, DEFAULT_PROMPT_V3, DEFAULT_PROMPT];
 
     // Load custom prompt from localStorage or use default
     function loadPromptFromStorage() {
@@ -8761,7 +9007,10 @@ Return ONLY valid JSON, no additional text.`
         savePromptVersion(DEFAULT_PROMPT_V2, 'DeepSeek (Recommended Default) v2');
       }
       if (!history.some(v => v.description === 'DeepSeek (Recommended Default) v3')) {
-        savePromptVersion(DEFAULT_PROMPT, 'DeepSeek (Recommended Default) v3');
+        savePromptVersion(DEFAULT_PROMPT_V3, 'DeepSeek (Recommended Default) v3');
+      }
+      if (!history.some(v => v.description === 'Prompt version 6 (Recommended Default) v4')) {
+        savePromptVersion(DEFAULT_PROMPT, 'Prompt version 6 (Recommended Default) v4');
       }
       if (existingIsKnownDefault) {
         localStorage.setItem('customLLMPrompt', JSON.stringify(DEFAULT_PROMPT));
