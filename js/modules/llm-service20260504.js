@@ -185,11 +185,11 @@
       return 'google/gemma-4-31B-it';
     }
 
-    // For dataplan provider, hard-wire the DeepSeek V4 Flash model
-    // (switched from openai/gpt-oss-20b in September 2026 after gpt-oss-20b was
-    // scheduled for removal from the DataPLANT Community Server)
+    // For dataplan provider, hard-wire the DeepSeek V4.1 Flash model
+    // (switched from DeepSeek-V4-Flash-0731 in September 2026; V4-Flash-0731
+    // had replaced openai/gpt-oss-20b after its removal from the server)
     if (provider === 'dataplan') {
-      return 'deepseek-ai/DeepSeek-V4-Flash-0731';
+      return 'deepseek-ai/DeepSeek-V4.1-Flash';
     }
 
     // For other providers, use existing logic
@@ -243,7 +243,7 @@
       return 32768; // 32K tokens
     } else if (model.includes('gpt-oss-20b')) {
       return 131072; // 131K tokens
-    } else if (model.includes('DeepSeek-V4-Flash')) {
+    } else if (model.includes('DeepSeek-V4')) {
       return 131072; // 131K tokens
     }
     return 131072; // Default fallback
@@ -791,7 +791,7 @@ Extract and return ONLY a JSON object (no markdown, no explanation) with this st
       "parameters": [
         {
           "name": "parameter name (e.g., temperature, incubation time, buffer concentration)",
-          "value": "actual value if specified in protocol (e.g., '37', '60', '100'), empty string if not specified",
+          "value": "actual value if specified in protocol (e.g., '37', '60', '100'), empty string if not specified. If the value DIFFERS BETWEEN ROWS (e.g. an OD measured per sample), an array with ONE VALUE PER ROW, same length as inputs: ['0.27', '0.36', '0.33']",
           "unit": "measurement unit (e.g., °C, min, mM, µL) or empty string",
           "description": "what this parameter represents"
         }
@@ -822,7 +822,16 @@ CRITICAL - PARAMETER EXTRACTION RULES:
 
 3. **If a parameter value is mentioned**, include it in the description field
 4. **If a parameter is implied but not detailed**, still include it with empty unit
-5. **Even if parameters array would be empty**, try to infer at least 2-3 key parameters from context
+5. **Even if parameters array would be empty**, try to find at least 2-3 key parameters stated in the protocol (never invent a value)
+6. **Per-row values** - CRITICAL when a value differs between the rows of one protocol:
+   - Use an ARRAY for "value" with exactly one entry per row, in the same order as inputs/outputs
+     (e.g. the OD, concentration, volume, time or date recorded for each sample, run or library)
+   - Keep a single string when the value is the same for every row
+   - Put measured values here, on the step where they were measured - NOT in sample characteristics
+   - Example (3 cultures washed): inputs ["WT", "Mutant", "Biosensor"],
+     {"name": "OD after washing", "value": ["0.27", "0.36", "0.33"], "unit": ""}
+   - A table with N rows carries every per-row value the entry recorded as an N-entry array (each
+     OD, volume, time) - do not drop readings because there are many rows.
 
 IMPORTANT - SAMPLE EXTRACTION:
 1. **Extract sample information** from protocol:
@@ -830,12 +839,33 @@ IMPORTANT - SAMPLE EXTRACTION:
    - Organism or source material (human, bacteria, plant, cell line, etc.)
    - Sample characteristics (age, tissue type, genotype, treatment, condition, etc.)
    - If no specific samples mentioned, create generic samples (e.g., "Sample_1", "Sample_2")
+2. **Record the experiment as it was performed, not only the method** - CRITICAL:
+   - FIRST enumerate every run (each date/heading where the procedure was performed) x every culture
+     in it: one samples entry per run x culture - NEVER one per strain (8 runs x 3 cultures = 24 samples, not 3).
+   - All runs using the SAME procedure share ONE protocol per step (its rows = every run's cultures) -
+     do not create one protocol per run; only an actually changed procedure is a separate protocol.
+   - If the entry records the same procedure performed several times (runs, dates, batches, replicates),
+     every physical sample of every run is its own sample with a unique name (e.g. add the run date or
+     run ID: "2024-03-05_Sample_A", "Run2_Sample_A"), and each protocol has one row per sample per run.
+   - The name prefix is the run's OWN date or label as written next to that run in the entry
+     (its inoculation/start date) - NEVER the entry's creation date or title date.
+   - Different versions of a procedure (e.g. a pilot run and a later modified protocol) are separate protocols.
+   - Preparations described in the entry (media, reagents, dilution series) and side procedures (e.g. sending
+     samples for sequencing) are protocols of their own, with the materials used as inputs.
+3. **Never summarise values that differ**: do not write ranges ("20-25", "2-3 h") or "sometimes X" when the
+   entry states the individual values - give each row its own value (parameter rule 6).
+4. **Keep every recorded measurement** (e.g. each OD reading, volume, concentration, time, date) as written,
+   on the row of the sample it was measured on. Never state a value the entry does not contain; use "" instead.
+5. **Use the entry's own labels** for materials and parameters (do not rename or re-classify them).
 
 IMPORTANT - PROTOCOL LINKING:
 1. **Link protocols sequentially** - CRITICAL:
    - The OUTPUT of one protocol MUST EXACTLY MATCH the INPUT of the next protocol
    - Example: Protocol 1 outputs "Trimmed reads" → Protocol 2 inputs "Trimmed reads" (exact match!)
    - DO NOT use generic terms like "data" or "result" - be specific
+   - A step's output name must DIFFER from its input name: append the step to the sample name
+     (input "2024-03-05_Sample_A" -> output "2024-03-05_Sample_A_washed"), so the material
+     keeps its identity but moves forward. Never copy the inputs array into outputs unchanged.
 2. **Protocol naming**:
    - Use clear names (e.g., "Quality Control", "Trimming", "Assembly", "Annotation")
    - If multiple steps, create separate protocol objects
@@ -861,6 +891,14 @@ IMPORTANT - PROTOCOL LINKING:
      library): repeat the single output entry once per input.
      Example: inputs: ["Sample_1","Sample_2","Sample_3"],
      outputs: ["Pooled_library","Pooled_library","Pooled_library"]
+7. **Gradients expand the rows** - CRITICAL: one row per sample x condition when every sample gets
+   several conditions (e.g. each dilution of a treatment), repeating inputs; the condition is a
+   per-row parameter. 2 cultures x 4 CCCP concentrations = 8 rows:
+   inputs ["C1","C1","C1","C1","C2","C2","C2","C2"], outputs ["C1_100uM",...,"C2_0uM"],
+   {"name": "CCCP concentration", "value": ["100","10","1","0","100","10","1","0"], "unit": "µM"}
+8. **Order**: steps that prepare or verify the starting materials come FIRST - reagent/media
+   preparation, and sequencing submission of the source strains/plasmids (that always comes first,
+   before the culture/processing chain); then the experimental chain in execution order.
 
 IMPORTANT - DATA FILE LINKING:
 1. **Array length rule** - CRITICAL:
@@ -900,6 +938,7 @@ ${chunks.length > 1 ? 'NOTE: This is part of a larger protocol, extract what you
 - {"name": "Temperature", "value": "37", "unit": "°C", "description": "Incubation temperature"}
 - {"name": "FastQC version", "value": "0.11.9", "unit": "", "description": "Quality control tool version"}
 - {"name": "Minimum read length", "value": "50", "unit": "bp", "description": "Threshold for read trimming"}
+- {"name": "DNA concentration", "value": ["12.1", "15.4", "9.8"], "unit": "ng/µl", "description": "Qubit reading per library (one per row)"}
 
 Note: Parameters are stored as free text with units combined (e.g., "37 °C"), not as ontology terms.
 
@@ -997,10 +1036,11 @@ Return ONLY valid JSON, no additional text.`;
             max_tokens: (provider === 'dataplan' || provider === 'dataplan-gemma')
               ? Math.max(options.maxTokens || 8192, 28000)
               : (options.maxTokens || 8192),
-            // Verified against the actual deepseek-ai/DeepSeek-V4-Flash-0731
-            // model card (huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731,
-            // cross-checked against together.ai's model page): "For local
-            // deployment, we recommend setting the sampling parameters to
+            // Verified against the deepseek-ai/DeepSeek-V4-Flash-0731 model
+            // card (huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731,
+            // cross-checked against together.ai's model page) and carried over
+            // to DeepSeek-V4.1-Flash: "For local deployment, we recommend
+            // setting the sampling parameters to
             // temperature = 1.0, with top_p = 0.95 for agentic scenarios and
             // top_p = 1.0 otherwise." This structured-extraction task is
             // closer to their own "agentic/tool-use" evaluation setup than
@@ -1503,7 +1543,7 @@ Return ONLY valid JSON, no additional text.`;
           const pid = 'protocol_' + pIdx;
           const paramTooltip = protocol.parameters && protocol.parameters.length
             ? 'Parameters:\n' + protocol.parameters.map(p =>
-                '• ' + p.name + ': ' + (p.value || '-') + (p.unit ? ' ' + p.unit : '')
+                '• ' + p.name + ': ' + (Array.isArray(p.value) ? p.value.join(' | ') + ' (per row)' : (p.value || '-')) + (p.unit ? ' ' + p.unit : '')
               ).join('\n')
             : undefined;
 

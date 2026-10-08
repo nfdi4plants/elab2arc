@@ -1,0 +1,11 @@
+{
+  "name": "elab2arc-unit",
+  "private": true,
+  "description": "Node unit tests for js/modules/isa-generation (loaded with the real ARCtrl bundle under jsdom)",
+  "scripts": {
+    "test": "node resolve-protocol-inputs.test.js && node person-order.test.js && node per-row-parameters.test.js && node download-link-strip.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

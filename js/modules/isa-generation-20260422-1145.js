@@ -233,6 +233,63 @@
   }
 
   /**
+   * Create an ARCtrl Person from named fields.
+   *
+   * ARCtrl 3's positional signature is
+   *   Person.create(orcid, lastName, firstName, midInitials, email, phone, fax,
+   *                 address, affiliation, roles, comments)
+   * (ARCtrl src/Core/Person.fs and its own JS test). Every elab2arc call used to pass
+   * firstName before lastName, which swapped the two names in every generated ISA file.
+   * All Person creation goes through this helper so the order can't be mixed up at a
+   * call site again. Empty-string fallbacks avoid ARCtrl 3's GetHashCode TypeError on
+   * undefined values (see CLAUDE.md, "ARCtrl 3.0.1 Migration Notes").
+   *
+   * @param {Object} fields - { orcid, firstName, lastName, midInitials, email, phone, fax,
+   *   address, affiliation, roles, comments }
+   * @returns {Person}
+   */
+  function createPerson({ orcid, firstName, lastName, midInitials, email, phone, fax, address,
+                          affiliation, roles = [], comments = [] } = {}) {
+    return window.arctrl.Person.create(
+      orcid,
+      lastName || '',
+      firstName || '',
+      midInitials,
+      email || '',
+      phone, fax, address,
+      affiliation || '',
+      roles,
+      comments
+    );
+  }
+
+  /**
+   * Repair contacts written by elab2arc before the name-order fix: a contact that is
+   * exactly the swapped form of the given person (FirstName === lastName and
+   * LastName === firstName) gets its names swapped back, in place. Only exact swapped
+   * pairs of the given person are touched; every other contact is left unchanged.
+   * Assay and study files heal by themselves because they are fully rewritten on every
+   * conversion; the investigation is read and saved back, so it needs this repair.
+   *
+   * @param {Person[]} contacts - ARCtrl Person list (e.g. investigation.Contacts)
+   * @param {string} firstName
+   * @param {string} lastName
+   * @returns {number} number of repaired contacts
+   */
+  function repairSwappedContacts(contacts, firstName, lastName) {
+    if (!contacts || !firstName || !lastName || firstName === lastName) return 0;
+    let repaired = 0;
+    for (const contact of contacts) {
+      if (contact.FirstName === lastName && contact.LastName === firstName) {
+        contact.FirstName = firstName;
+        contact.LastName = lastName;
+        repaired++;
+      }
+    }
+    return repaired;
+  }
+
+  /**
    * Merge and deduplicate contacts list
    * @param {Array} contactsList - Array of contact objects
    * @returns {Array} - Deduplicated contacts
@@ -330,6 +387,10 @@
           window.arctrl.CompositeHeader.input(window.arctrl.IOType.source()),
           [window.arctrl.CompositeCell.createFreeText("Sample_1")]
         );
+        sampleTable.AddColumn(
+          window.arctrl.CompositeHeader.output(window.arctrl.IOType.sample()),
+          [window.arctrl.CompositeCell.createFreeText("Sample_1")]
+        );
         console.log(`  - Created default sample table with 1 sample`);
         return sampleTable;
       }
@@ -410,6 +471,12 @@
         console.log(`  - Added characteristic: ${category} (${termSource || 'no term source'})`);
       });
 
+      // Every table ends with an output: the samples themselves, chaining into
+      // the first process table's Input [Source Name]
+      const outputHeader = window.arctrl.CompositeHeader.output(window.arctrl.IOType.sample());
+      const outputCells = samples.map(s => window.arctrl.CompositeCell.createFreeText(s.name || "Sample"));
+      sampleTable.AddColumn(outputHeader, outputCells);
+
       return sampleTable;
     } catch (error) {
       console.error('[ISA Elab2Arc] Error creating sample table:', error);
@@ -417,6 +484,10 @@
       const fallbackTable = window.arctrl.ArcTable.init("samples");
       fallbackTable.AddColumn(
         window.arctrl.CompositeHeader.input(window.arctrl.IOType.source()),
+        [window.arctrl.CompositeCell.createFreeText("Sample_1")]
+      );
+      fallbackTable.AddColumn(
+        window.arctrl.CompositeHeader.output(window.arctrl.IOType.sample()),
         [window.arctrl.CompositeCell.createFreeText("Sample_1")]
       );
       return fallbackTable;
@@ -481,8 +552,15 @@
    * renderers can reconcile the exact same way before drawing input/output
    * edges - the xlsx table and the graph must never disagree about which
    * input produced which output.
-   * @param {Object} protocol - Protocol object with inputs/outputs/dataFiles
-   * @returns {{rowCount:number, inputs:string[], outputs:string[], dataFiles:string[]|null, mismatched:boolean}}
+   *
+   * Parameter values are per row too: `parameters[k].value` is either one
+   * value for every row, or an array with one entry per row (e.g. the OD
+   * measured for each culture). paramValues[k] is that column, rowCount
+   * strings long. A 1-entry array is broadcast; an array of any other length
+   * is not a per-row column (e.g. an LLM listing several values for a single
+   * row) and is written joined, on every row, as before per-row values.
+   * @param {Object} protocol - Protocol object with inputs/outputs/dataFiles/parameters
+   * @returns {{rowCount:number, inputs:string[], outputs:string[], dataFiles:string[]|null, paramValues:string[][], mismatched:boolean}}
    */
   function reconcileProtocolIO(protocol) {
     const inputs = (protocol.inputs || []).slice();
@@ -509,15 +587,123 @@
       return padded;
     };
 
+    const paramValues = (protocol.parameters || []).map(param => {
+      const value = param ? param.value : undefined;
+      if (Array.isArray(value) && (value.length === rowCount || value.length === 1)) {
+        return value.length === rowCount ? value.map(safeString) : Array(rowCount).fill(safeString(value[0]));
+      }
+      if (Array.isArray(value) && value.length > 1) {
+        console.warn(
+          `[IO Reconcile] Protocol "${protocol.name || 'unnamed'}": parameter "${safeString(param.name)}" has ${value.length} values ` +
+          `for ${rowCount} row(s) - not per-row, written joined on every row.`
+        );
+      }
+      return Array(rowCount).fill(safeString(value));
+    });
+
     return {
       rowCount,
       inputs: padToLength(inputs, 'inputs'),
       outputs: padToLength(outputs, 'outputs'),
       dataFiles: dataFiles ? padToLength(dataFiles, 'dataFiles') : null,
+      paramValues,
       mismatched: (inputs.length > 0 && inputs.length !== rowCount) ||
                   (outputs.length > 0 && outputs.length !== rowCount) ||
                   (dataFiles !== null && dataFiles.length > 0 && dataFiles.length !== rowCount)
     };
+  }
+
+  /**
+   * Resolve every protocol's inputs against the materials that exist
+   * upstream of it, WITHOUT assuming the protocols form one linear chain.
+   *
+   * The previous rule ("if protocol i's input set differs from protocol
+   * i-1's outputs, replace the inputs with those outputs") silently
+   * corrupted any entry with more than one chain - e.g. a reagent
+   * preparation or a sequencing side-protocol listed after a culture chain
+   * got the culture outputs as its inputs, and a step that consumes only
+   * part of the previous outputs (only Library 1 of 2 is sequenced) gained
+   * fabricated rows. Verified against real golden-standard data
+   * (eLabFTW 63609: 58 overwritten cells; 85318: one invented row).
+   *
+   * Per input value (row r of protocol i), in order:
+   *   1. kept if it is a known material: a sample name, an output of any
+   *      earlier protocol, or an output of an earlier row of protocol i
+   *      itself (serial dilutions inside one table);
+   *   2. otherwise, if exactly one known material matches it after
+   *      normalisation (case, whitespace/punctuation, plural "s") it is
+   *      replaced by that material - this repairs the LLM phrasing
+   *      differences the old rule was written for ("Trimmed read" vs
+   *      "Trimmed reads"), preferring the previous protocol's outputs;
+   *   3. otherwise kept unchanged: a new starting material (e.g. "Glucose").
+   * A protocol with NO inputs still inherits the previous protocol's
+   * outputs, repeated to match its own output count when that count is a
+   * whole multiple (the rule-6 one-to-many convention).
+   *
+   * Non-mutating. Used by both the xlsx generation and the graph renderers
+   * in elab2arc-core, so the table and the graph always agree.
+   *
+   * @param {{samples?: Object[], protocols?: Object[]}} llmData
+   * @returns {string[][]} resolved inputs, one array per protocol
+   */
+  function resolveProtocolInputs(llmData) {
+    const protocols = (llmData && llmData.protocols) || [];
+    const normalise = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, '').replace(/s$/, '');
+    const known = new Set(((llmData && llmData.samples) || []).map(s => s && s.name).filter(Boolean));
+
+    const uniqueNormalisedMatch = (value, candidates) => {
+      const key = normalise(value);
+      const hits = [...new Set(candidates)].filter(c => normalise(c) === key);
+      return hits.length === 1 ? hits[0] : null;
+    };
+
+    return protocols.map((protocol, i) => {
+      const inputs = (protocol.inputs || []).slice();
+      const outputs = protocol.outputs || [];
+      const prevOutputs = i > 0 ? (protocols[i - 1].outputs || []) : [];
+      let resolved;
+
+      if (inputs.length === 0 && prevOutputs.length > 0) {
+        resolved = (outputs.length > 0 && outputs.length % prevOutputs.length === 0)
+          ? prevOutputs.flatMap(name => Array(outputs.length / prevOutputs.length).fill(name))
+          : prevOutputs.slice();
+      } else {
+        resolved = inputs.map((value, row) => {
+          if (known.has(value) || outputs.slice(0, row).includes(value)) return value;
+          return uniqueNormalisedMatch(value, prevOutputs)
+            || uniqueNormalisedMatch(value, [...known])
+            || value;
+        });
+      }
+      outputs.forEach(o => known.add(o));
+      return resolved;
+    });
+  }
+
+  /**
+   * Helper: Excel-safe, unique table name from the protocol name (sheet names are
+   * limited to 31 chars and may not contain : \ / ? * [ ]). Falls back to
+   * "process nr. N" when the protocol has no usable name.
+   * @param {string} protocolName
+   * @param {number} processNr
+   * @param {Set<string>} used - lower-cased names already taken (seeded with "samples")
+   * @returns {string}
+   */
+  function uniqueTableName(protocolName, processNr, used) {
+    let base = safeString(protocolName).trim()
+      .replace(/[\\/?*[\]:]/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (!base) base = `process nr. ${processNr}`;
+    if (base.length > 31) base = base.slice(0, 31);
+    let name = base;
+    for (let n = 2; used.has(name.toLowerCase()); n++) {
+      const suffix = `_${n}`;
+      name = base.slice(0, 31 - suffix.length) + suffix;
+    }
+    used.add(name.toLowerCase());
+    return name;
   }
 
   /**
@@ -529,11 +715,17 @@
    *   assay/study's data folder (dataset/ or resources/), used to validate
    *   LLM-extracted "data file" output values before writing them into the
    *   ISA table. Pass null if no manifest is available.
+   * @param {Set<string>|null} upstreamOutputs - Names of every output of the
+   *   protocols that come before this one in llmData.protocols. When every
+   *   input of this protocol is such an output, the input column is
+   *   Input [Sample Name] (a chained step); otherwise Input [Source Name]
+   *   (starting materials). Pass null to always get Source.
+   * @param {string|null} tableName - Table/sheet name; defaults to "process nr. N".
    * @returns {ArcTable} - Process table
    */
-  function createProcessTable(protocol, processNr, protocolInfo = null, datasetFiles = null) {
+  function createProcessTable(protocol, processNr, protocolInfo = null, datasetFiles = null, upstreamOutputs = null, tableName = null) {
     try {
-      const tableName = `process nr. ${processNr}`;
+      tableName = tableName || `process nr. ${processNr}`;
       const processTable = window.arctrl.ArcTable.init(tableName);
 
       console.log(`[ISA Elab2Arc] Creating process table "${tableName}" for: ${protocol?.name || 'unnamed protocol'}`);
@@ -546,14 +738,20 @@
       const io = reconcileProtocolIO(protocol);
       const rowCount = io.rowCount;
 
+      // Chained step? The output sample names of one protocol are the input of
+      // the next (prompt linking rule) - such inputs are Samples, not Sources.
+      const chained = upstreamOutputs && protocol.inputs && protocol.inputs.length > 0
+        && io.inputs.every(inp => upstreamOutputs.has(safeString(inp).trim()));
+
       // Add Input column(s)
       if (protocol.inputs && protocol.inputs.length > 0) {
-        const inputHeader = window.arctrl.CompositeHeader.input(window.arctrl.IOType.source());
+        const inputHeader = window.arctrl.CompositeHeader.input(
+          chained ? window.arctrl.IOType.sample() : window.arctrl.IOType.source());
         const inputCells = io.inputs.map(inp =>
           window.arctrl.CompositeCell.createFreeText(safeString(inp))
         );
         processTable.AddColumn(inputHeader, inputCells);
-        console.log(`  - Added ${inputCells.length} input(s)`);
+        console.log(`  - Added ${inputCells.length} input(s) [${chained ? 'Sample' : 'Source'}]`);
       } else {
         // Default input if none specified - sized to rowCount (which may
         // have been driven by outputs/dataFiles even though inputs is empty)
@@ -587,20 +785,20 @@
       // They accept Term or Unitized cells with OntologyAnnotation
       if (protocol.parameters && protocol.parameters.length > 0) {
 
-        for (const param of protocol.parameters) {
+        protocol.parameters.forEach((param, paramIndex) => {
           try {
             // Create parameter header - use safeString to ensure name is valid
             const paramName = safeString(param.name) || `Parameter`;
             const paramOA = new window.arctrl.OntologyAnnotation(paramName, "", "");
             const paramHeader = window.arctrl.CompositeHeader.parameter(paramOA);
 
-            // Create cells for each row with value if provided
-            // Use safeString to handle objects/arrays from LLM
-            const paramValue = safeString(param.value);
+            // One value per row (reconcileProtocolIO: a single value is repeated,
+            // a per-row array gives each row its own value)
+            const rowValues = io.paramValues[paramIndex];
             const paramUnit = safeString(param.unit);
 
             // Parameters are term columns - use OntologyAnnotation for values
-            const paramCells = Array(rowCount).fill(null).map(() => {
+            const paramCells = rowValues.map(paramValue => {
               if (!paramValue || paramValue.trim() === '') {
                 // No value provided - empty term cell
                 return window.arctrl.CompositeCell.createTerm(new window.arctrl.OntologyAnnotation("", "", ""));
@@ -618,14 +816,15 @@
             });
 
             processTable.AddColumn(paramHeader, paramCells);
-            const valueInfo = paramValue ? ` = ${paramValue}` : '';
+            const distinct = [...new Set(rowValues)];
+            const valueInfo = distinct.length > 1 ? ` = ${distinct.length} per-row values` : (distinct[0] ? ` = ${distinct[0]}` : '');
             const unitInfo = paramUnit ? ` ${paramUnit}` : '';
             console.log(`  - Added parameter: ${paramName}${valueInfo}${unitInfo} (${rowCount} row(s))`);
           } catch (paramError) {
             console.error(`[ISA Elab2Arc] Error adding parameter "${safeString(param?.name)}":`, paramError);
             // Skip this parameter and continue with others
           }
-        }
+        });
       }
 
       // Determine output type: Data if any dataFiles value resolves to a real
@@ -712,7 +911,8 @@
    * Generate isa.assay.xlsx using ARCtrl with metadata + multi-protocol datamap
    * Creates a multi-sheet workbook:
    * - Sheet 1: Sample table
-   * - Sheet 2+: Process tables named "process nr. 1", "process nr. 2", etc.
+   * - Sheet 2+: Process tables named after the protocol (Excel-safe, unique;
+   *   "process nr. 1", "process nr. 2", etc. when the protocol has no name).
    * @param {string} assayPath - Path to assay directory
    * @param {string} assayName - Assay identifier
    * @param {Object} metadata - Metadata object with user info
@@ -755,17 +955,14 @@
         const comments_p = window.arctrl.Comment.create("generation log", "generated by elab2arc");
         console.log(`[ISA Elab2Arc] Created comments_p:`, comments_p);
 
-        person = window.arctrl.Person.create(
-          void 0,
+        person = createPerson({
           firstName,
-          familyName,
-          void 0,
+          lastName: familyName,
           email,
-          void 0, void 0, void 0,
           affiliation,
-          [roles],
-          [comments_p]
-        );
+          roles: [roles],
+          comments: [comments_p]
+        });
         console.log(`[ISA Elab2Arc] Created person successfully:`, person);
       } catch (personError) {
         console.error(`[ISA Elab2Arc] Error creating person:`, personError);
@@ -802,66 +999,26 @@
 
         // ========== SHEETS 2+: Process Tables (one per protocol) ==========
         if (llmData.protocols && llmData.protocols.length > 0) {
+          // Resolve inputs against upstream materials without assuming one
+          // linear chain - see resolveProtocolInputs(). The graph renderers
+          // in elab2arc-core call the same function, so table and graph agree.
+          const resolvedInputs = resolveProtocolInputs(llmData);
+          const usedTableNames = new Set(['samples']);
+          const upstreamOutputs = new Set();
           for (let i = 0; i < llmData.protocols.length; i++) {
             const protocol = llmData.protocols[i];
             const processNr = i + 1;
 
-            // If this is not the first process, link inputs to previous outputs.
-            //
-            // Only relink when the model's own inputs don't already
-            // correspond to the previous step's outputs (compared by SET,
-            // ignoring repetition/order) - a real regression, confirmed via
-            // Playwright against real 85318 data: "Sample Preparation"'s own
-            // inputs were already correctly rule-6-repeated
-            // (["BAS33_R1","BAS33_R1","BAS33_R2","BAS33_R2",...], 12 entries,
-            // 6 unique names, exactly matching a one-to-many split into 2
-            // libraries per sample), but this unconditional overwrite
-            // replaced it with the previous step's raw 6-item outputs array,
-            // discarding the repetition and collapsing a correct 12-row
-            // table's inputs down to 6 wrong values (reconcileProtocolIO
-            // then padded that back to 12 rows by repeating the LAST entry,
-            // producing 6 real values followed by 6 copies of one bogus
-            // repeat - worse than the original mismatch it was meant to
-            // prevent).
-            //
-            // When a genuine discontinuity exists (the sets differ - e.g.
-            // the model phrased this step's outputs slightly differently
-            // than the next step's inputs), still relink, but preserve
-            // cardinality: if this protocol's own outputs are a whole
-            // multiple of the previous outputs (a one-to-many split),
-            // repeat each previous output that many times instead of a raw
-            // copy, matching the exact repetition convention rule 6 asks
-            // the model to use. Otherwise (1:1, or a many-to-one pooling
-            // step) the previous behavior - a raw copy - is already
-            // correct, since reconcileProtocolIO() pads a shorter outputs
-            // array to match without needing inputs to be pre-expanded.
-            if (i > 0) {
-              const prevProtocol = llmData.protocols[i - 1];
-              const prevOutputs = prevProtocol.outputs;
-              if (prevOutputs && prevOutputs.length > 0) {
-                const currentInputs = protocol.inputs || [];
-                const prevOutputSet = new Set(prevOutputs);
-                const currentInputSet = new Set(currentInputs);
-                const setsMatch = prevOutputSet.size === currentInputSet.size &&
-                  [...prevOutputSet].every(v => currentInputSet.has(v));
-
-                if (!setsMatch) {
-                  const thisOutputsLen = (protocol.outputs || []).length;
-                  if (thisOutputsLen > 0 && thisOutputsLen % prevOutputs.length === 0) {
-                    const repeatFactor = thisOutputsLen / prevOutputs.length;
-                    protocol.inputs = repeatFactor === 1
-                      ? prevOutputs
-                      : prevOutputs.flatMap(name => Array(repeatFactor).fill(name));
-                  } else {
-                    protocol.inputs = prevOutputs;
-                  }
-                  console.log(`[ISA Elab2Arc] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
-                }
-              }
+            const before = protocol.inputs || [];
+            if (resolvedInputs[i].length !== before.length || resolvedInputs[i].some((v, r) => v !== before[r])) {
+              protocol.inputs = resolvedInputs[i];
+              console.log(`[ISA Elab2Arc] Resolved process ${processNr} inputs against upstream materials: ${protocol.inputs.join(', ')}`);
             }
 
-            const processTable = createProcessTable(protocol, processNr, protocolInfo, realDatasetFiles);
+            const tableName = uniqueTableName(protocol.name, processNr, usedTableNames);
+            const processTable = createProcessTable(protocol, processNr, protocolInfo, realDatasetFiles, upstreamOutputs, tableName);
             allTables.push(processTable);
+            (protocol.outputs || []).forEach(o => { const s = safeString(o).trim(); if (s) upstreamOutputs.add(s); });
 
             comments.push(window.arctrl.Comment.create(
               `process_${processNr}_name`,
@@ -952,7 +1109,9 @@
       myAssay.Description = assayDescription;
 
       myAssay.Tables = allTables;
-      myAssay.Contacts = contacts;
+      // ArcAssay stores people in Performers (ArcStudy/ArcInvestigation use Contacts);
+      // assigning myAssay.Contacts was silently ignored, leaving ASSAY PERFORMERS empty.
+      myAssay.Performers = contacts;
       myAssay.Comments = safeComments;
 
       console.log(`[ISA Elab2Arc] ArcAssay created with Title="${assayTitle}", Description="${assayDescription.substring(0, 50)}...", ${allTables.length} tables`);
@@ -1014,21 +1173,26 @@
 
         // ========== SHEETS 2+: Process Tables (one per protocol) ==========
         if (llmData.protocols && llmData.protocols.length > 0) {
+          const resolvedInputs = resolveProtocolInputs(llmData);
+          const usedTableNames = new Set(['samples']);
+          const upstreamOutputs = new Set();
           for (let i = 0; i < llmData.protocols.length; i++) {
             const protocol = llmData.protocols[i];
             const processNr = i + 1;
 
-            // If this is not the first process, link inputs to previous outputs
-            if (i > 0) {
-              const prevProtocol = llmData.protocols[i - 1];
-              if (prevProtocol.outputs && prevProtocol.outputs.length > 0) {
-                protocol.inputs = prevProtocol.outputs;
-                console.log(`[ISA Gen] Linked process ${processNr} inputs to process ${processNr - 1} outputs: ${protocol.inputs.join(', ')}`);
-              }
+            // Same upstream resolution as the assay path (resolveProtocolInputs);
+            // the old unconditional "inputs = previous outputs" overwrite
+            // discarded rule-6 repetition and corrupted multi-chain entries.
+            const before = protocol.inputs || [];
+            if (resolvedInputs[i].length !== before.length || resolvedInputs[i].some((v, r) => v !== before[r])) {
+              protocol.inputs = resolvedInputs[i];
+              console.log(`[ISA Gen] Resolved process ${processNr} inputs against upstream materials: ${protocol.inputs.join(', ')}`);
             }
 
-            const processTable = createProcessTable(protocol, processNr, protocolInfo, realResourceFiles);
+            const tableName = uniqueTableName(protocol.name, processNr, usedTableNames);
+            const processTable = createProcessTable(protocol, processNr, protocolInfo, realResourceFiles, upstreamOutputs, tableName);
             allTables.push(processTable);
+            (protocol.outputs || []).forEach(o => { const s = safeString(o).trim(); if (s) upstreamOutputs.add(s); });
           }
 
           console.log(`[ISA Gen] Created ${llmData.protocols.length} process table(s) for study`);
@@ -1076,19 +1240,14 @@
         const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
         const comments_p = window.arctrl.Comment.create("generation log", "generated by elab2arc");
 
-        person = window.arctrl.Person.create(
-          void 0,  // ORCID
-          safeMetadata.firstName || '',
-          safeMetadata.lastName || '',
-          void 0,  // MidInitials
-          safeMetadata.email || '',
-          void 0,  // Phone
-          void 0,  // Fax
-          void 0,  // Address
-          safeMetadata.affiliation || '',
-          [roles],
-          [comments_p]
-        );
+        person = createPerson({
+          firstName: safeMetadata.firstName,
+          lastName: safeMetadata.lastName,
+          email: safeMetadata.email,
+          affiliation: safeMetadata.affiliation,
+          roles: [roles],
+          comments: [comments_p]
+        });
       }
 
       // Create ArcStudy with all tables (pass tables during creation)
@@ -1148,19 +1307,14 @@
         const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
         const comments_p = window.arctrl.Comment.create("generation log", "generated by elab2arc");
 
-        const person = window.arctrl.Person.create(
-          void 0,  // ORCID
-          metadata.firstName || '',
-          metadata.lastName || '',
-          void 0,  // MidInitials
-          metadata.email || '',
-          void 0,  // Phone
-          void 0,  // Fax
-          void 0,  // Address
-          metadata.affiliation || '',
-          [roles],
-          [comments_p]
-        );
+        const person = createPerson({
+          firstName: metadata.firstName,
+          lastName: metadata.lastName,
+          email: metadata.email,
+          affiliation: metadata.affiliation,
+          roles: [roles],
+          comments: [comments_p]
+        });
 
         arcInvestigation.Contacts = [person];
       }
@@ -1215,6 +1369,12 @@
       const workbook = await window.Xlsx.fromXlsxFile(isaPath);
       const investigation = window.arctrl.XlsxController.Investigation.fromFsWorkbook(workbook);
       console.log(`[ISA Gen] Read existing investigation from: ${isaPath}`);
+      // Contacts written before the name-order fix have first/last name swapped;
+      // repair the converting user's entry (persisted by saveInvestigation()).
+      const repaired = repairSwappedContacts(investigation.Contacts, metadata.firstName, metadata.lastName);
+      if (repaired > 0) {
+        console.log(`[ISA Gen] Repaired ${repaired} investigation contact(s) with swapped first/last name`);
+      }
       return investigation;
     } catch (readError) {
       // No existing investigation - create new one
@@ -1230,22 +1390,52 @@
       // Add contact info
       if (metadata.firstName || metadata.lastName || metadata.email) {
         const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
-        const person = window.arctrl.Person.create(
-          void 0,
-          metadata.firstName || '',
-          metadata.lastName || '',
-          void 0,
-          metadata.email || '',
-          void 0, void 0, void 0,
-          metadata.affiliation || '',
-          [roles],
-          [window.arctrl.Comment.create("generation log", "generated by elab2arc")]
-        );
+        const person = createPerson({
+          firstName: metadata.firstName,
+          lastName: metadata.lastName,
+          email: metadata.email,
+          affiliation: metadata.affiliation,
+          roles: [roles],
+          comments: [window.arctrl.Comment.create("generation log", "generated by elab2arc")]
+        });
         investigation.Contacts = [person];
       }
 
       return investigation;
     }
+  }
+
+  /**
+   * Fill the investigation fields that the invenio validation package requires but that are still empty
+   * (an investigation created earlier, e.g. by "create new ARC", has an empty description).
+   * Existing, non-empty values are never overwritten.
+   */
+  function completeInvestigationMetadata(investigation, metadata = {}) {
+    if (!(investigation.Description || '').trim() && metadata.description) {
+      investigation.Description = metadata.description;
+    }
+  }
+
+  /**
+   * Make sure the eLabFTW owner of an entry is a contact of the investigation, with the e-mail, ORCID and
+   * affiliation eLabFTW knows (invenio needs at least one contact that has all three). A contact with the same
+   * name is completed field by field (empty fields only), otherwise a new contact is added. Values that
+   * eLabFTW does not provide stay empty: nothing is invented.
+   */
+  function addInvestigationContact(investigation, { firstName, lastName, email, orcid, affiliation } = {}) {
+    if (!firstName && !lastName) return;
+    const existing = Array.from(investigation.Contacts).find(c => c.FirstName === (firstName || '') && c.LastName === (lastName || ''));
+    if (existing) {
+      if (!existing.EMail && email) existing.EMail = email;
+      if (!existing.ORCID && orcid) existing.ORCID = orcid;
+      if (!existing.Affiliation && affiliation) existing.Affiliation = affiliation;
+      return;
+    }
+    const roles = new window.arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
+    investigation.Contacts = [...Array.from(investigation.Contacts), createPerson({
+      orcid, firstName, lastName, email, affiliation, roles: [roles],
+      comments: [window.arctrl.Comment.create("generation log", "generated by elab2arc")]
+    })];
   }
 
   /**
@@ -1461,16 +1651,22 @@
     extractDatasetInfo: extractDatasetInfo,
     extractProtocolInfo: extractProtocolInfo,
     mergeContactsUnique: mergeContactsUnique,
+    createPerson: createPerson,
+    repairSwappedContacts: repairSwappedContacts,
     generateIsaAssay: generateIsaAssay,
     createSampleTable: createSampleTable,
     createDefaultProcessTable: createDefaultProcessTable,
     createProcessTable: createProcessTable,
+    uniqueTableName: uniqueTableName,
     reconcileProtocolIO: reconcileProtocolIO,
+    resolveProtocolInputs: resolveProtocolInputs,
     generateIsaAssayElab2arcWithDatamap: generateIsaAssayElab2arcWithDatamap,
     generateIsaStudy: generateIsaStudy,
     generateIsaInvestigation: generateIsaInvestigation,
     updateIsaInvestigation: updateIsaInvestigation,
     readOrCreateInvestigation: readOrCreateInvestigation,
+    completeInvestigationMetadata: completeInvestigationMetadata,
+    addInvestigationContact: addInvestigationContact,
     saveInvestigation: saveInvestigation,
     registerStudyToInvestigation: registerStudyToInvestigation,
     registerAssayToInvestigation: registerAssayToInvestigation

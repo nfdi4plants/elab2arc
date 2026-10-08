@@ -215,7 +215,9 @@ Both studies and assays support multi-sheet annotation tables when LLM data is a
 | Sample table from LLM | ✅ Yes | ✅ Yes |
 | Process tables from LLM protocols | ✅ Yes (multi-sheet) | ✅ Yes (multi-sheet) |
 | Basic metadata (title, description) | ✅ Yes | ✅ Yes |
-| Contact/person info | ✅ Yes | ✅ Yes |
+| Contact/person info | ✅ Yes (`ArcAssay.Performers`; before September 2026 the code set `myAssay.Contacts`, which ARCtrl ignores, so assay xlsx files had no performer) | ✅ Yes (`ArcStudy.Contacts`) |
+
+**Person name order (fixed September 2026):** ARCtrl 3.0.1's signature is `Person.create(orcid, lastName, firstName, …)` (`src/Core/Person.fs`). All 10 elab2arc calls used to pass firstName first, so the names were swapped in every ISA file. Always create people through `Elab2ArcISA.createPerson({ firstName, lastName, email, affiliation, roles, comments })`, never with a positional `Person.create`. Investigation contacts written before the fix are repaired on read: `readOrCreateInvestigation()` calls `repairSwappedContacts()` for the converting user, and `saveInvestigation()` persists the repair. Assay and study files are rewritten on every conversion. Regression test: `tests/unit/person-order.test.js` (run `npm test` in `tests/unit/`).
 
 **Generated Excel Structure:**
 | Sheet | Name | Columns |
@@ -224,7 +226,9 @@ Both studies and assays support multi-sheet annotation tables when LLM data is a
 | 2 | "process nr. 1" | Input, Protocol REF, Parameters, Output |
 | 3+ | "process nr. N" | Input, Protocol REF, Parameters, Output |
 
-**Process Linking:** Outputs from process N-1 automatically become inputs for process N.
+**Process Linking:** `resolveProtocolInputs(llmData)` (`isa-generation-20260422-1145.js`, shared by the xlsx paths and both graph renderers in core) resolves each input against the upstream materials: sample names, the outputs of *any* earlier protocol, and earlier rows of the same protocol. It does not assume one linear chain. Unknown names that match exactly one known material after normalisation (case, punctuation, plural "s") are repaired. Other unknown names stay as new starting materials. Only a protocol with *no* inputs inherits the previous protocol's outputs. The old rule, "inputs = previous outputs whenever the sets differ", corrupted multi-chain entries and partial consumption (fixed September 2026; regression test `tests/unit/resolve-protocol-inputs.test.js`).
+
+**Per-row parameter values:** `parameters[k].value` is a string (same on every row) or an array with one entry per row (e.g. an OD per sample; prompt parameter rule 6). `reconcileProtocolIO()` returns `paramValues` (each parameter as a rowCount-long column; a 1-entry array is broadcast, any other length is written joined on every row with a warning) and `createProcessTable()` writes one cell per row. Test: `tests/unit/per-row-parameters.test.js`. Known gap: the chunk merge in `llm-service` (multi-chunk entries) de-duplicates inputs/outputs and keeps only the first chunk's parameters, so rows can misalign.
 
 **Key Functions:** `js/modules/isa-generation-20260422-1145.js`
 - `createSampleTable(samples)` - Create sample table from LLM-extracted data
@@ -539,30 +543,23 @@ fs === window.FS.fs  // Should return: true
 
 ### ARCtrl 3.0.1 Migration Notes (March 2026)
 
-**GetHashCode TypeError Fix:**
-ARCtrl 3.0.1's internal F# hashing fails when `undefined` values are passed to constructors. Always provide empty string fallbacks for optional metadata fields:
+**GetHashCode TypeError Fix + name order:**
+ARCtrl 3.0.1's internal F# hashing fails when `undefined` values are passed to constructors, and `Person.create` is positional with **lastName before firstName**. Both pitfalls are handled by one helper, so always use it:
 
 ```javascript
-// CORRECT - with fallbacks
-const person = window.arctrl.Person.create(
-  void 0,
-  metadata.firstName || '',      // Fallback required
-  metadata.familyName || '',     // Fallback required
-  void 0,
-  metadata.email || '',          // Fallback required
-  void 0, void 0, void 0,
-  metadata.affiliation || '',    // Fallback required
-  [roles],
-  [comments_p]
-);
+// CORRECT - named fields; createPerson() maps them to ARCtrl's
+// (orcid, lastName, firstName, midInitials, email, ...) order and adds '' fallbacks
+const person = Elab2ArcISA.createPerson({
+  firstName: metadata.firstName,
+  lastName: metadata.familyName,
+  email: metadata.email,
+  affiliation: metadata.affiliation,
+  roles: [roles],
+  comments: [comments_p]
+});
 
-// INCORRECT - causes GetHashCode error
-const person = window.arctrl.Person.create(
-  void 0,
-  metadata.firstName,   // undefined causes error
-  metadata.familyName,  // undefined causes error
-  // ...
-);
+// INCORRECT - positional call: firstName lands in LastName (and undefined -> GetHashCode error)
+const person = window.arctrl.Person.create(void 0, metadata.firstName, metadata.familyName /* ... */);
 ```
 
 **Directory Creation Before Write:**
@@ -584,7 +581,7 @@ async function saveInvestigation(gitRoot, investigation) {
 ```
 
 **Files modified for 3.0.1 compatibility:**
-- `js/modules/isa-generation-20260422-1145.js` - Added `|| ''` fallbacks for all Person.create calls
+- `js/modules/isa-generation-20260422-1145.js` - `createPerson()` helper (named fields, `|| ''` fallbacks, correct lastName/firstName order)
 - `js/modules/isa-generation-20260422-1145.js` - Added directory creation in saveInvestigation()
 - `js/src/index.js` - Uses `Comment.create` (not `Comment$`) for ARCtrl 3.0.1
 

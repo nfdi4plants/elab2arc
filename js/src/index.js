@@ -226,7 +226,8 @@ window.fullAssay = async function(assayName, tableName = "newtable", firstName, 
 
         // Note: Comment (not Comment$) in ARCtrl 3.0.1+
         let comments_p = arctrl.Comment.create("generation log", comment);
-        const person = arctrl.Person.create(void 0, firstName, familyName, void 0, email, void 0, void 0, void 0, affiliation, [roles], [comments_p]);
+        // ARCtrl order is (orcid, lastName, firstName, ...) - see createPerson() in isa-generation
+        const person = arctrl.Person.create(void 0, familyName, firstName, void 0, email, void 0, void 0, void 0, affiliation, [roles], [comments_p]);
         let comments_m = arctrl.Comment.create("name", "value");
         const myAssay = arctrl.ArcAssay.create("myassay", void 0, void 0, void 0, [growth], void 0, [person], [comments_m]);
 

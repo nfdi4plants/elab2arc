@@ -1252,6 +1252,9 @@ CC BY 4.0
       const adHocNodeIds = {};
 
       if (llmData.protocols) {
+        const resolvedInputs = (window.Elab2ArcISA && window.Elab2ArcISA.resolveProtocolInputs)
+          ? window.Elab2ArcISA.resolveProtocolInputs(llmData)
+          : null;
         llmData.protocols.forEach((protocol, pIdx) => {
           const pid = 'protocol_' + pIdx;
           // Reconcile inputs/outputs to one common, index-paired length -
@@ -1259,18 +1262,21 @@ CC BY 4.0
           // building the xlsx (see reconcileProtocolIO() in
           // isa-generation-20260422-1145.js), so the graph and the xlsx
           // never disagree about which input produced which output.
+          // Inputs are first resolved against upstream materials exactly as
+          // the xlsx generation does (resolveProtocolInputs()).
+          const linked = resolvedInputs ? { ...protocol, inputs: resolvedInputs[pIdx] } : protocol;
           const io = (window.Elab2ArcISA && window.Elab2ArcISA.reconcileProtocolIO)
-            ? window.Elab2ArcISA.reconcileProtocolIO(protocol)
-            : { rowCount: 0, inputs: protocol.inputs || [], outputs: protocol.outputs || [] };
+            ? window.Elab2ArcISA.reconcileProtocolIO(linked)
+            : { rowCount: 0, inputs: linked.inputs || [], outputs: linked.outputs || [] };
 
           const paramTooltip = protocol.parameters && protocol.parameters.length
             ? 'Parameters:\n' + protocol.parameters.map(p =>
-                '• ' + p.name + ': ' + (p.value || '-') + (p.unit ? ' ' + p.unit : '')
+                '• ' + p.name + ': ' + (Array.isArray(p.value) ? p.value.join(' | ') + ' (per row)' : (p.value || '-')) + (p.unit ? ' ' + p.unit : '')
               ).join('\n')
             : undefined;
 
           const paramLines = protocol.parameters && protocol.parameters.length
-            ? protocol.parameters.map(p => `${p.name}: ${p.value || '-'}${p.unit ? ' ' + p.unit : ''}`)
+            ? protocol.parameters.map(p => `${p.name}: ${Array.isArray(p.value) ? p.value.join(' | ') + ' (per row)' : (p.value || '-')}${p.unit ? ' ' + p.unit : ''}`)
             : [];
           const labelText = paramLines.length
             ? [protocol.name || 'Protocol', '──────────', ...paramLines].join('\n')
@@ -1285,7 +1291,7 @@ CC BY 4.0
             widthConstraint: { maximum: 320 }
           });
 
-          if (protocol.inputs) {
+          if (io.inputs.length) {
             io.inputs.forEach((inputName) => {
               const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName] || adHocNodeIds[inputName];
               if (sourceId) {
@@ -1632,6 +1638,9 @@ CC BY 4.0
 
       // --- Create protocol nodes and edges ---
       if (llmData.protocols) {
+        const resolvedInputs = (window.Elab2ArcISA && window.Elab2ArcISA.resolveProtocolInputs)
+          ? window.Elab2ArcISA.resolveProtocolInputs(llmData)
+          : null;
         llmData.protocols.forEach((protocol, pIdx) => {
           const pid = `protocol_${pIdx}`;
           protocolNodeIds[protocol.name] = pid;
@@ -1641,14 +1650,17 @@ CC BY 4.0
           // building the xlsx (see reconcileProtocolIO() in
           // isa-generation-20260422-1145.js), so the graph and the xlsx
           // never disagree about which input produced which output.
+          // Inputs are first resolved against upstream materials exactly as
+          // the xlsx generation does (resolveProtocolInputs()).
+          const linked = resolvedInputs ? { ...protocol, inputs: resolvedInputs[pIdx] } : protocol;
           const io = (window.Elab2ArcISA && window.Elab2ArcISA.reconcileProtocolIO)
-            ? window.Elab2ArcISA.reconcileProtocolIO(protocol)
-            : { rowCount: 0, inputs: protocol.inputs || [], outputs: protocol.outputs || [] };
+            ? window.Elab2ArcISA.reconcileProtocolIO(linked)
+            : { rowCount: 0, inputs: linked.inputs || [], outputs: linked.outputs || [] };
 
           // Build multiline label: name + separator + parameters
           const paramLines = protocol.parameters && protocol.parameters.length
             ? protocol.parameters.map(p =>
-                `${p.name}: ${p.value || '-'}${p.unit ? ' ' + p.unit : ''}`
+                `${p.name}: ${Array.isArray(p.value) ? p.value.join(' | ') + ' (per row)' : (p.value || '-')}${p.unit ? ' ' + p.unit : ''}`
               )
             : [];
           const labelText = paramLines.length
@@ -1658,7 +1670,7 @@ CC BY 4.0
           // Build plain-text tooltip (vis-network title does not render HTML)
           const paramTooltip = protocol.parameters && protocol.parameters.length
             ? 'Parameters:\n' + protocol.parameters.map(p =>
-                `  ${p.name}: ${p.value || '-'}${p.unit ? ' ' + p.unit : ''}`
+                `  ${p.name}: ${Array.isArray(p.value) ? p.value.join(' | ') + ' (per row)' : (p.value || '-')}${p.unit ? ' ' + p.unit : ''}`
               ).join('\n')
             : undefined;
 
@@ -1674,7 +1686,7 @@ CC BY 4.0
           });
 
           // Inputs → Protocol
-          if (protocol.inputs) {
+          if (io.inputs.length) {
             io.inputs.forEach((inputName) => {
               const sourceId = sampleNodeIds[inputName] || outputNodeIds[inputName] || adHocNodeIds[inputName];
               if (sourceId) {
@@ -2061,11 +2073,26 @@ CC BY 4.0
         inv.Title = projectName;
         inv.Description = '';
         inv.SubmissionDate = new Date().toISOString().split('T')[0];
-        const newContact = arctrl.Person.create(void 0, name.split(" ")[0], name.split(" ").slice(-1)[0], window.userId.commit_email, void 0, void 0, void 0, void 0, void 0, void 0);
+        // Same name split as the investigation metadata in processElabEntries (first word =
+        // first name, rest = last name) so a later conversion recognises this contact.
+        // Person fields are named via createPerson(): ARCtrl's positional order is
+        // (orcid, lastName, firstName, ...), and the commit e-mail used to land in midInitials.
+        const nameParts = (name || '').split(' ');
+        const newContact = Elab2ArcISA.createPerson({
+          firstName: nameParts[0] || '',
+          lastName: nameParts.slice(1).join(' ') || nameParts[0] || '',
+          email: window.userId.commit_email || ''
+        });
         inv.Contacts = [newContact];
         newARC = arctrl.ARC.fromArcInvestigation(inv);
 
         await arcWrite(projectName, newARC);
+        // Default .arc files: validation_packages.yml makes arc-validate (invenio) run on the DataHUB,
+        // arc_summary.yml is the (empty) placeholder the ARC specification expects next to it.
+        fs.mkdirSync(projectName + '/.arc', { recursive: true });
+        await fs.promises.writeFile(projectName + '/.arc/validation_packages.yml',
+          'arc_specification: 2.0.0-draft\nvalidation_packages:\n  - name: invenio\n    version: 3.2.0\n');
+        await fs.promises.writeFile(projectName + '/.arc/arc_summary.yml', '');
         await git.add({ fs, dir: projectName, filepath: '.' });
         const gitRoot = projectName + "/";
         await commitPush(
@@ -4019,6 +4046,7 @@ Date: ${timestamp}`;
         try {
           investigation = await Elab2ArcISA.readOrCreateInvestigation(gitRoot, arcName, investigationMetadata);
           console.log(`[ISA Gen] Investigation initialized: ${investigation ? 'loaded' : 'created'}`);
+          if (investigation) Elab2ArcISA.completeInvestigationMetadata(investigation, investigationMetadata);
         } catch (invError) {
           console.warn('[ISA Gen] Could not initialize investigation:', invError);
         }
@@ -4060,6 +4088,14 @@ Date: ${timestamp}`;
 
           const gitName = datahubURL.slice(0, -4); // Remove .git suffix
           const dir = arcName;
+          if (investigation) {
+            // eLabFTW owner as investigation contact (e-mail, ORCID, affiliation as far as eLabFTW knows them)
+            Elab2ArcISA.addInvestigationContact(investigation, {
+              firstName: res.firstname, lastName: res.lastname,
+              email: users.find(e => e.fullname === res.fullname)?.email || '',
+              orcid: res.orcid || '', affiliation: res.team_name || ''
+            });
+          }
           // Process the experiment with progress tracking - pass investigation object
           try {
             await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'experiment', investigation);
@@ -4106,6 +4142,14 @@ Date: ${timestamp}`;
 
           const gitName = datahubURL.slice(0, -4); // Remove .git suffix
           const dir = arcName;
+          if (investigation) {
+            // eLabFTW owner as investigation contact (e-mail, ORCID, affiliation as far as eLabFTW knows them)
+            Elab2ArcISA.addInvestigationContact(investigation, {
+              firstName: res.firstname, lastName: res.lastname,
+              email: users.find(e => e.fullname === res.fullname)?.email || '',
+              orcid: res.orcid || '', affiliation: res.team_name || ''
+            });
+          }
           // Process the resource with progress tracking - pass investigation object
           try {
             await processExperiment(completedEntries, totalEntries, expId, params, res, users, datahubURL, dir, params.instance, 'resource', investigation);
@@ -5301,6 +5345,14 @@ Generated by elab2ARC`
       return { deleted: deletedCount, preserved: preservedCount };
     }
 
+    // Strips the "app/download.php?...f=" prefix of eLabFTW upload URLs so that src/href keep only the stored file path.
+    // The match must stop at the end of the attribute value ([^"'\s>]*?). A greedy "(.*)f=" ran from the first download.php to the LAST
+    // "f=" of the line and silently deleted everything in between, including the first of two images written on one line
+    // (UX511-523 lost 2 of its 7 images this way).
+    function stripDownloadPhp(html) {
+      return html.replace(/app\/download\.php[^"'\s>]*?[?&]f=/g, "");
+    }
+
     async function processExperiment(completedEntries, totalEntries, elabid, params, res, users, datahubURL, arcDir, instance, entryType, investigation = null) {
       // Calculate base progress for this experiment (0-90%, leaving 90-100% for final git push)
       const baseProgress = (completedEntries / totalEntries) * 90;
@@ -5316,7 +5368,7 @@ Generated by elab2ARC`
       // crashing the whole batch on protocol.replace() below.
       let protocol = window.elabEditedBodies[elabid] || res.body || '';
       const elabWWW = params.instance.replace("api/v2/", "");
-      protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
+      protocol = stripDownloadPhp(protocol);
       protocol = protocol.replace('<a href="experiments.php?', '<a target="_blank" href="' + instance.replace("api/v2/", "") + 'experiments.php?');
       protocol = protocol.replace('<a href="database.php?', '<a  target="_blank" href="' + instance.replace("api/v2/", "") + 'experiments.php?');
       const protocolHTML = protocol;
@@ -6345,7 +6397,7 @@ ${res.uploads && res.uploads.length > 0 ?
                     objectURL = objectURL.replace(/&storage=./g, "");
 
                     // Update protocol text replacements
-                    protocol = protocol.replace(/app\/download\.php(.*)f=/g, "");
+                    protocol = stripDownloadPhp(protocol);
                     protocol = protocol.replaceAll(uploadMeta.longname, objectURL);
                     protocol = protocol.replaceAll(uploadMeta.longname2, objectURL);
                     protocol = protocol.replaceAll("&amp;storage=1", "");
@@ -7002,7 +7054,7 @@ ${res.uploads && res.uploads.length > 0 ?
       const roles = new arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
       const comment = "generated by elab2arc"
       let comments_p = arctrl.Comment.create("generation log", comment);
-      const newContact = arctrl.Person.create(void 0, firstname, familyName, void 0, void 0, void 0, void 0, void 0, void 0, void 0);
+      const newContact = Elab2ArcISA.createPerson({ firstName: firstname, lastName: familyName });
 
 
       // for (const ee of isa_inv.Contacts){
@@ -7045,7 +7097,7 @@ ${res.uploads && res.uploads.length > 0 ?
         const roles = new arctrl.OntologyAnnotation("researcher", "SCORO", "http://purl.org/spar/scoro/researcher");
 
         let comments_p = arctrl.Comment.create("generation log", comment);
-        const person = arctrl.Person.create(void 0, firstName, familyName, void 0, email, void 0, void 0, void 0, affiliation, [roles], [comments_p]);
+        const person = Elab2ArcISA.createPerson({ firstName, lastName: familyName, email, affiliation, roles: [roles], comments: [comments_p] });
         let comments_m = arctrl.Comment.create("name", "value");
         let comments_datahub_url = arctrl.Comment.create("datahub_url", "arctest");
 

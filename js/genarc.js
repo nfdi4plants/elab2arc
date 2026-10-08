@@ -143,8 +143,9 @@ for (ele of [... new Set(mmm)]){
                 const id = collaborators_id[i];
                 const phone = collaborators_phone[i];
                 const address = collaborators_address[i];
-                const person = arctrl.Person.create(JSON.stringify(id), firstName, familyName, void 0, JSON.stringify(email?.text? email.text: email), phone, void 0, address, affiliation, [roles], [comments_p]);
-                const person_inv = arctrl.Person.create(JSON.stringify(id), firstName, familyName, void 0, JSON.stringify(email?.text? email.text: email), void 0, void 0, void 0, affiliation, [empty], [comments_p]);
+                // ARCtrl order is (orcid, lastName, firstName, ...) - see createPerson() in isa-generation
+                const person = arctrl.Person.create(JSON.stringify(id), familyName, firstName, void 0, JSON.stringify(email?.text? email.text: email), phone, void 0, address, affiliation, [roles], [comments_p]);
+                const person_inv = arctrl.Person.create(JSON.stringify(id), familyName, firstName, void 0, JSON.stringify(email?.text? email.text: email), void 0, void 0, void 0, affiliation, [empty], [comments_p]);
                 template1.Performers.push(person);
                 studyContacts.push(person);
                 invContacts.push(person_inv);
