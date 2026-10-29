@@ -553,8 +553,9 @@ CC BY 4.0
 
     /**
      * Validates eLabFTW API token format
-     * Expected format: {teamId}-{40 hex characters}
-     * Example: "20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320"
+     * Expected format: optional {teamId}- prefix + hex string of 32+ characters
+     * (eLabFTW shortened its keys to 32 hex chars, so length is checked loosely)
+     * Example (older, prefixed): "20-b8e2485c173f8d8f8893bc7806f37847625d0c922c4ff7cc6b9cecf10b34035f7a243366ccd50a659c9320"
      * @param {string} token - eLabFTW API token to validate
      * @returns {Object} - { valid: boolean, warning: string }
      */
@@ -570,10 +571,10 @@ CC BY 4.0
         return { valid: false, warning: 'eLabFTW token is too short' };
       }
 
-      // Check for expected format: number-hexstring
-      const elabTokenPattern = /^\d+-[a-f0-9]{40,}$/i;
+      // Check for expected format: optional teamId- prefix + hexstring
+      const elabTokenPattern = /^(\d+-)?[a-f0-9]{32,}$/i;
       if (!elabTokenPattern.test(token)) {
-        return { valid: false, warning: 'eLabFTW token format appears invalid (expected: teamId-hexstring)' };
+        return { valid: false, warning: 'eLabFTW token format appears invalid (expected: hexstring, optionally prefixed by teamId-)' };
       }
 
       return { valid: true, warning: '' };
